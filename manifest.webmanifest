@@ -1,0 +1,17 @@
+{
+  "name": "Financat e Mia",
+  "short_name": "Financat",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f5f5f7",
+  "theme_color": "#1d1d1f",
+  "description": "App personal për të regjistruar të ardhurat dhe shpenzimet.",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

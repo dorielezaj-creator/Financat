@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="sq">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#1d1d1f" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Financat" />
+    <title>Financat e Mia</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="icon.svg" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="hero-header">
+        <p>Hi Dorian :)</p>
+        <div class="top-actions">
+          <button class="ghost-export" id="exportBtn" type="button" aria-label="Eksporto të dhënat" title="Eksporto">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11m0 0 4-4m-4 4-4-4M5 17v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2"/></svg>
+          </button>
+          <button id="themeToggle" class="theme-switch" type="button" aria-label="Ndrysho dark mode" aria-pressed="false" title="Dark mode">
+            <span></span>
+          </button>
+        </div>
+      </header>
+
+      <button id="addEntryBtn" class="add-entry-button" type="button" aria-label="Shto zë">+</button>
+
+      <section class="flow-section" aria-labelledby="expenseSectionTitle">
+        <div class="flow-title-row">
+          <h1 id="expenseSectionTitle">Shpenzime</h1>
+          <button id="openLimitsBtn" class="small-settings-button" type="button">Limitet</button>
+        </div>
+        <div class="limit-grid">
+          <span>Muaji</span>
+          <span>Sot</span>
+          <span>Max.</span>
+          <strong id="expenseValue">0 Lekë</strong>
+          <strong class="accent" id="todaySpent">0 Lekë</strong>
+          <strong id="expenseLimitLekValue">150,000 L</strong>
+        </div>
+        <div class="split-track"><div id="spendingRateBar" class="split-fill"></div></div>
+        <div class="limit-grid euro-row">
+          <strong id="expenseAlt">0 €</strong>
+          <strong class="accent" id="todaySpentAlt">0 €</strong>
+          <strong id="expenseLimitEuroValue">1000 €</strong>
+        </div>
+        <div class="split-track"><div id="expenseEuroRateBar" class="split-fill"></div></div>
+        <button id="toggleExpensesBtn" class="month-button" type="button" aria-expanded="true" aria-controls="expensePreviewList" aria-label="Shfaq ose fshih shpenzimet">
+          <span></span>
+          <strong id="currentExpenseMonth">Muaji</strong>
+        </button>
+        <div id="expensePreviewList" class="pill-list"></div>
+      </section>
+
+      <section class="flow-section" aria-labelledby="incomeSectionTitle">
+        <h2 id="incomeSectionTitle">Të ardhura mujore</h2>
+        <div class="limit-grid income-limits">
+          <span>Muaji</span>
+          <span></span>
+          <span>Max. këtë vit</span>
+          <strong id="monthIncomeValue">0 Lekë</strong>
+          <strong></strong>
+          <strong id="incomeLimitLekValue">150,000 L</strong>
+        </div>
+        <div class="split-track"><div id="incomeLekRateBar" class="split-fill"></div></div>
+        <div class="limit-grid euro-row income-limits">
+          <strong id="monthIncomeAlt">0 €</strong>
+          <strong></strong>
+          <strong id="incomeLimitEuroValue">1000 €</strong>
+        </div>
+        <div class="split-track"><div id="incomeEuroRateBar" class="split-fill"></div></div>
+        <button id="toggleIncomeBtn" class="month-button" type="button" aria-expanded="true" aria-controls="incomePreviewList" aria-label="Shfaq ose fshih të ardhurat">
+          <span></span>
+          <strong id="currentIncomeMonth">Muaji</strong>
+        </button>
+        <div id="incomePreviewList" class="pill-list"></div>
+      </section>
+
+      <section class="accounts-summary" aria-labelledby="accountsSummaryTitle">
+        <h2 id="accountsSummaryTitle">Total Llogaritë</h2>
+        <div class="total-pills">
+          <button id="openAccountsBtn" type="button"><span id="accountsLekValue">0 Lekë</span></button>
+          <button type="button"><span id="accountsEuroValue">0 €</span></button>
+        </div>
+        <button id="toggleAccountsBtn" class="month-button accounts-arrow" type="button" aria-expanded="true" aria-controls="accountList" aria-label="Shfaq ose fshih llogaritë">
+          <span></span>
+        </button>
+        <div id="accountList" class="account-list"></div>
+        <button id="newAccountBtn" class="add-account-inline" type="button">
+          <span>+</span>
+          <small>Shto llogari</small>
+        </button>
+      </section>
+
+      <section class="daily-spending-section" aria-labelledby="dailySpendingTitle">
+        <h2 id="dailySpendingTitle">Shpenzimet ditore sipas muajve</h2>
+        <label class="period-select-label">
+          <span class="sr-only">Periudha e grafikut</span>
+          <select id="dailyPeriodInput" aria-label="Periudha e shpenzimeve ditore">
+            <option value="7">Për 1 javë</option>
+            <option value="30">Për 1 muaj</option>
+            <option value="90">Për 3 muaj</option>
+            <option value="180">Për 6 muaj</option>
+          </select>
+        </label>
+        <div class="daily-currency-toggle" role="group" aria-label="Monedha e grafikut">
+          <button class="active" type="button" data-daily-currency="TOTAL">Totali</button>
+          <button type="button" data-daily-currency="ALL">Lekë</button>
+          <button type="button" data-daily-currency="EUR">Euro</button>
+        </div>
+        <label id="exchangeRateRow" class="exchange-rate-row">
+          <span>1 € =</span>
+          <input id="eurToLekRateInput" type="number" inputmode="decimal" min="1" step="0.01" value="93.36" aria-label="Kursi Euro në Lekë për grafikun total" />
+          <span>L</span>
+          <button id="refreshRateBtn" type="button">BSH</button>
+          <small id="exchangeRateStatus">Kurs për grafikun total</small>
+        </label>
+        <div class="daily-stat-grid">
+          <span>Min.</span>
+          <span>Mes.</span>
+          <span>Max.</span>
+          <strong id="dailyMinValue">0 L</strong>
+          <strong class="accent" id="dailyAvgValue">0 L</strong>
+          <strong id="dailyMaxValue">0 L</strong>
+        </div>
+        <div id="dailySpendChart" class="daily-spend-chart" aria-label="Grafik me shpenzime ditore"></div>
+        <p id="dailySelectedValue" class="daily-selected-value" hidden></p>
+      </section>
+
+      <section id="accountsOverlay" class="editor-overlay" hidden>
+        <div class="accounts-panel accounts-window" aria-labelledby="accountsTitle">
+          <div class="section-heading compact">
+            <div>
+              <p class="eyebrow">Bankat</p>
+              <h2 id="accountsTitle">Llogaritë bankare</h2>
+            </div>
+            <button id="closeAccountsBtn" class="icon-button small" type="button" aria-label="Mbyll llogaritë">×</button>
+          </div>
+
+          <div class="accounts-total window-total">
+            <strong id="accountsLekModalValue">0 Lekë</strong>
+            <small id="accountsEuroModalValue">0 €</small>
+          </div>
+
+          <button id="newAccountBtnModal" class="secondary-button compact-button" type="button">+ Shto llogari</button>
+          <div id="accountListModal" class="account-list"></div>
+        </div>
+      </section>
+
+      <section id="expenseArchiveOverlay" class="editor-overlay" hidden>
+        <div class="archive-window" aria-labelledby="expenseArchiveTitle">
+          <div class="archive-header">
+            <h2 id="expenseArchiveTitle">Shpenzimet</h2>
+            <button id="closeExpenseArchiveBtn" class="icon-button small" type="button" aria-label="Mbyll shpenzimet">×</button>
+          </div>
+          <div id="expenseArchiveList" class="archive-list"></div>
+        </div>
+      </section>
+
+      <section id="accountEditorOverlay" class="editor-overlay" hidden>
+        <form id="accountForm" class="editor-sheet" autocomplete="off">
+          <input id="accountIdInput" name="accountId" type="hidden" />
+          <div class="editor-header">
+            <h2 id="accountEditorTitle">Shto llogari</h2>
+            <button id="cancelAccountBtn" class="icon-button small" type="button" aria-label="Mbyll">×</button>
+          </div>
+          <label>
+            Emri i llogarisë
+            <input id="accountNameInput" name="accountName" type="text" maxlength="60" placeholder="p.sh. Biznes Raiffeisen" required />
+          </label>
+          <label>
+            Monedha
+            <select id="accountCurrencyInput" name="accountCurrency">
+              <option value="ALL">Lekë</option>
+              <option value="EUR">Euro</option>
+            </select>
+          </label>
+          <label>
+            Gjendja
+            <input id="accountBalanceInput" name="accountBalance" type="number" inputmode="decimal" min="0" step="0.01" placeholder="p.sh. 150000" required />
+          </label>
+          <label class="checkbox-label">
+            <input id="accountDefaultInput" name="accountDefault" type="checkbox" />
+            Përdore si default
+          </label>
+          <div class="editor-actions">
+            <button id="deleteAccountBtn" class="danger-button" type="button">Fshi</button>
+            <button id="saveAccountBtn" class="secondary-button" type="submit">Ruaj</button>
+          </div>
+        </form>
+      </section>
+
+      <section id="limitsOverlay" class="editor-overlay" hidden>
+        <form id="limitsForm" class="editor-sheet" autocomplete="off">
+          <div class="editor-header">
+            <h2>Limitet mujore</h2>
+            <button id="cancelLimitsBtn" class="icon-button small" type="button" aria-label="Mbyll">×</button>
+          </div>
+          <label>
+            Shpenzime Lekë
+            <input id="expenseLimitLekInput" type="number" inputmode="decimal" min="0" step="1" required />
+          </label>
+          <label>
+            Shpenzime Euro
+            <input id="expenseLimitEuroInput" type="number" inputmode="decimal" min="0" step="0.01" required />
+          </label>
+          <label>
+            Të ardhura Lekë
+            <input id="incomeLimitLekInput" type="number" inputmode="decimal" min="0" step="1" required />
+          </label>
+          <label>
+            Të ardhura Euro
+            <input id="incomeLimitEuroInput" type="number" inputmode="decimal" min="0" step="0.01" required />
+          </label>
+          <button id="saveLimitsBtn" class="secondary-button" type="submit">Ruaj limitet</button>
+        </form>
+      </section>
+
+      <section class="quick-metrics sr-only" aria-label="Matje të shpejta">
+        <article>
+          <span>Sot</span>
+          <strong>0 Lekë</strong>
+          <small>0 €</small>
+        </article>
+        <article>
+          <span>Ky muaj</span>
+          <strong id="monthSpent">0 Lekë</strong>
+          <small id="monthSpentAlt">0 €</small>
+        </article>
+        <article>
+          <span>Mesatarja/ditë</span>
+          <strong id="dailyAverage">0 Lekë</strong>
+          <small id="dailyAverageAlt">0 €</small>
+        </article>
+      </section>
+
+      <section id="entryOverlay" class="editor-overlay" hidden>
+      <section class="entry-panel editor-sheet" aria-labelledby="entryTitle">
+        <div class="section-heading">
+          <h2 id="entryTitle">Regjistro zë</h2>
+          <button id="cancelEntryBtn" class="icon-button small" type="button" aria-label="Mbyll">×</button>
+          <div class="segmented" role="group" aria-label="Lloji i zërit">
+            <button class="active" type="button" data-type="expense">Shpenzime</button>
+            <button type="button" data-type="income">Të ardhura</button>
+          </div>
+        </div>
+
+        <form id="entryForm" autocomplete="off">
+          <div class="form-grid amount-grid">
+            <label>
+              Vlera
+              <input id="amountInput" name="amount" type="number" inputmode="decimal" min="0" step="0.01" placeholder="p.sh. 1200" required />
+            </label>
+            <label>
+              Monedha
+              <select id="currencyInput" name="currency">
+                <option value="ALL">Lekë</option>
+                <option value="EUR">Euro</option>
+              </select>
+            </label>
+          </div>
+
+          <label>
+            Përshkrimi
+            <input id="noteInput" name="note" type="text" maxlength="60" placeholder="p.sh. kafe, qira, rrogë" required />
+          </label>
+
+          <label>
+            Kategoria
+            <select id="categoryInput" name="category"></select>
+          </label>
+
+          <label>
+            Llogaria
+            <select id="bankInput" name="bank" required></select>
+          </label>
+
+          <label>
+            Data
+            <input id="dateInput" name="date" type="date" required />
+          </label>
+
+          <button class="primary-button" type="submit">
+            <span id="submitLabel">Shto shpenzim</span>
+          </button>
+        </form>
+      </section>
+      </section>
+
+      <section class="insights-panel sr-only" aria-labelledby="insightsTitle">
+        <div class="section-heading compact">
+          <h2 id="insightsTitle">Analiza</h2>
+          <select id="monthFilter" aria-label="Filtro muajin"></select>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="categoryChart" height="150" aria-label="Grafiku i shpenzimeve sipas kategorive"></canvas>
+        </div>
+        <div id="categoryList" class="category-list"></div>
+      </section>
+
+      <section class="history-panel sr-only" aria-labelledby="historyTitle">
+        <div class="section-heading compact">
+          <h2 id="historyTitle">Zërat e fundit</h2>
+          <button class="text-button" id="clearBtn" type="button">Pastro</button>
+        </div>
+        <div id="entryList" class="entry-list"></div>
+      </section>
+
+      <section class="backup-panel" aria-label="Kopje rezerve">
+        <label class="import-button">
+          Importo JSON
+          <input id="importInput" type="file" accept="application/json" />
+        </label>
+        <button class="import-button" id="restoreBackupBtn" type="button">Rikthe backup</button>
+      </section>
+    </main>
+
+    <template id="emptyTemplate">
+      <div class="empty-state">
+        <svg viewBox="0 0 120 90" aria-hidden="true">
+          <rect x="16" y="18" width="88" height="58" rx="12"></rect>
+          <path d="M30 38h32M30 52h48M78 31l10 10-10 10"></path>
+        </svg>
+        <p>Nuk ka ende zëra. Shto të parin dhe app-i nis llogaritjet.</p>
+      </div>
+    </template>
+
+    <script src="app.js"></script>
+  </body>
+</html>
