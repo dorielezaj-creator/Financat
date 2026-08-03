@@ -1735,6 +1735,45 @@ body {
   margin: 0 0 34px;
 }
 
+.receipt-ai-tools {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  margin: -8px 0 24px;
+}
+
+.receipt-upload-button {
+  width: max-content;
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 22px;
+  border: 1px solid #c8c8cc;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #000000;
+  cursor: pointer;
+  font-size: 0.92rem;
+  font-weight: 800;
+}
+
+.receipt-upload-button input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.receipt-ai-tools small {
+  min-height: 18px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-align: center;
+}
+
 .entry-panel #entryTitle,
 .entry-panel #cancelEntryBtn {
   position: absolute;
@@ -2165,6 +2204,7 @@ body {
 :root[data-theme="dark"] #limitsForm h2,
 :root[data-theme="dark"] .entry-panel label,
 :root[data-theme="dark"] #accountForm .checkbox-label,
+:root[data-theme="dark"] .receipt-ai-tools small,
 :root[data-theme="dark"] .archive-month summary small {
   color: var(--muted);
 }
@@ -2186,6 +2226,7 @@ body {
 :root[data-theme="dark"] .chart-wrap,
 :root[data-theme="dark"] .archive-window,
 :root[data-theme="dark"] .archive-month summary,
+:root[data-theme="dark"] .receipt-upload-button,
 :root[data-theme="dark"] .secondary-button,
 :root[data-theme="dark"] .danger-button {
   border-color: var(--line);

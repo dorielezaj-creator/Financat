@@ -5,6 +5,8 @@ const BACKUP_KEY = "financat-e-mia:auto-backup";
 const EXCHANGE_RATE_KEY = "financat-e-mia:eur-all-rate:v1";
 const LIMITS_KEY = "financat-e-mia:monthly-limits:v1";
 const THEME_KEY = "financat-e-mia:theme:v1";
+const RECEIPT_AI_ENDPOINT_KEY = "financat-e-mia:receipt-ai-endpoint:v1";
+const RECEIPT_AI_TOKEN_KEY = "financat-e-mia:receipt-ai-token:v1";
 const LEGACY_STORAGE_KEYS = ["financat-e-mia:v1"];
 const DEFAULT_LIMITS = {
   expenseALL: 150000,
@@ -130,6 +132,9 @@ const els = {
   noteInput: document.querySelector("#noteInput"),
   categoryInput: document.querySelector("#categoryInput"),
   dateInput: document.querySelector("#dateInput"),
+  receiptAiTools: document.querySelector("#receiptAiTools"),
+  receiptImageInput: document.querySelector("#receiptImageInput"),
+  receiptAiStatus: document.querySelector("#receiptAiStatus"),
   submitLabel: document.querySelector("#submitLabel"),
   entryList: document.querySelector("#entryList"),
   categoryList: document.querySelector("#categoryList"),
@@ -157,6 +162,7 @@ document.querySelectorAll("[data-type]").forEach((button) => {
 });
 
 els.currencyInput.addEventListener("change", renderBankOptions);
+els.receiptImageInput.addEventListener("change", handleReceiptImage);
 
 els.addEntryBtn.addEventListener("click", () => openEntryEditor("expense"));
 els.openLimitsBtn.addEventListener("click", openLimitsEditor);
@@ -960,8 +966,122 @@ function syncTypeControls() {
   });
 
   els.categoryInput.innerHTML = categories[state.type].map((category) => `<option>${category}</option>`).join("");
+  els.receiptAiTools.hidden = state.type !== "expense";
+  if (state.type !== "expense") setReceiptAiStatus("");
   els.submitLabel.textContent = state.type === "expense" ? "Shto shpenzim" : "Shto të ardhur";
   renderBankOptions();
+}
+
+async function handleReceiptImage(event) {
+  const [file] = event.target.files;
+  if (!file) return;
+
+  try {
+    const endpoint = receiptAiEndpoint();
+    if (!endpoint) {
+      setReceiptAiStatus("AI nuk është lidhur ende.");
+      return;
+    }
+
+    const token = receiptAiToken();
+    state.type = "expense";
+    syncTypeControls();
+    setReceiptAiStatus("Po lexohet fatura...");
+
+    const image = await resizeReceiptImage(file);
+    const formData = new FormData();
+    formData.append("receipt", image, image.name || "receipt.jpg");
+
+    const headers = token ? { "X-Receipt-Token": token } : {};
+    const response = await fetch(endpoint, { method: "POST", headers, body: formData });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || "Fatura nuk u lexua.");
+
+    applyReceiptResult(result);
+    setReceiptAiStatus("U mbush nga fatura. Kontrolloje para se ta ruash.");
+  } catch (error) {
+    setReceiptAiStatus(error.message || "Fatura nuk u lexua.");
+  } finally {
+    event.target.value = "";
+  }
+}
+
+function receiptAiEndpoint() {
+  const saved = localStorage.getItem(RECEIPT_AI_ENDPOINT_KEY);
+  if (saved) return saved;
+
+  const endpoint = prompt("Vendos linkun e AI backend për faturat.");
+  if (!endpoint) return "";
+  localStorage.setItem(RECEIPT_AI_ENDPOINT_KEY, endpoint.trim());
+  return endpoint.trim();
+}
+
+function receiptAiToken() {
+  const saved = localStorage.getItem(RECEIPT_AI_TOKEN_KEY);
+  if (saved) return saved;
+
+  const token = prompt("Vendos kodin sekret të AI backend.");
+  if (!token) return "";
+  localStorage.setItem(RECEIPT_AI_TOKEN_KEY, token.trim());
+  return token.trim();
+}
+
+function applyReceiptResult(result) {
+  const currency = normalizeCurrency(result.currency);
+  const category = categories.expense.includes(result.category) ? result.category : "Tjetër";
+  const amount = Number(result.amount) || 0;
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(result.date || "") ? result.date : todayIso();
+  const description = String(result.description || result.merchant || "Faturë").trim().slice(0, 60);
+
+  els.currencyInput.value = currency;
+  renderBankOptions();
+  els.amountInput.value = amount ? String(amount) : "";
+  els.categoryInput.value = category;
+  els.noteInput.value = description || category;
+  els.dateInput.value = date;
+}
+
+function setReceiptAiStatus(text) {
+  els.receiptAiStatus.textContent = text;
+}
+
+async function resizeReceiptImage(file) {
+  if (!file.type.startsWith("image/")) return file;
+
+  const bitmap = await imageFromFile(file);
+  const maxSide = 1600;
+  const scale = Math.min(maxSide / Math.max(bitmap.width, bitmap.height), 1);
+  const width = Math.max(Math.round(bitmap.width * scale), 1);
+  const height = Math.max(Math.round(bitmap.height * scale), 1);
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  canvas.getContext("2d").drawImage(bitmap, 0, 0, width, height);
+
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.86));
+  return new File([blob || file], "receipt.jpg", { type: "image/jpeg" });
+}
+
+async function imageFromFile(file) {
+  if ("createImageBitmap" in window) {
+    try {
+      return await createImageBitmap(file);
+    } catch {}
+  }
+
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(image);
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Fotoja nuk u hap."));
+    };
+    image.src = url;
+  });
 }
 
 function exportData() {
