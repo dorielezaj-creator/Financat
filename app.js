@@ -995,7 +995,13 @@ async function handleReceiptImage(event) {
     const headers = token ? { "X-Receipt-Token": token } : {};
     const response = await fetch(endpoint, { method: "POST", headers, body: formData });
     const result = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(result.error || "Fatura nuk u lexua.");
+    if (!response.ok) {
+      if (response.status === 401) {
+        localStorage.removeItem(RECEIPT_AI_TOKEN_KEY);
+        throw new Error("Kodi sekret nuk është i saktë. Provo përsëri.");
+      }
+      throw new Error(result.error || "Fatura nuk u lexua.");
+    }
 
     applyReceiptResult(result);
     setReceiptAiStatus("U mbush nga fatura. Kontrolloje para se ta ruash.");
