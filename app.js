@@ -989,17 +989,19 @@ async function handleReceiptImage(event) {
     setReceiptAiStatus("Po lexohet fatura...");
 
     const image = await resizeReceiptImage(file);
-    const formData = new FormData();
-    formData.append("receipt", image, image.name || "receipt.jpg");
+    let response = await sendReceiptRequest(endpoint, token, image);
+    let result = await response.json().catch(() => ({}));
+    if (response.status === 401) {
+      localStorage.removeItem(RECEIPT_AI_TOKEN_KEY);
+      const retryToken = prompt("Kodi sekret nuk është i saktë. Vendose përsëri.");
+      if (!retryToken) throw new Error("Kodi sekret nuk është i saktë.");
+      localStorage.setItem(RECEIPT_AI_TOKEN_KEY, retryToken.trim());
+      setReceiptAiStatus("Po provohet me kodin e ri...");
+      response = await sendReceiptRequest(endpoint, retryToken.trim(), image);
+      result = await response.json().catch(() => ({}));
+    }
 
-    const headers = token ? { "X-Receipt-Token": token } : {};
-    const response = await fetch(endpoint, { method: "POST", headers, body: formData });
-    const result = await response.json().catch(() => ({}));
     if (!response.ok) {
-      if (response.status === 401) {
-        localStorage.removeItem(RECEIPT_AI_TOKEN_KEY);
-        throw new Error("Kodi sekret nuk është i saktë. Provo përsëri.");
-      }
       throw new Error(result.error || "Fatura nuk u lexua.");
     }
 
@@ -1010,6 +1012,13 @@ async function handleReceiptImage(event) {
   } finally {
     event.target.value = "";
   }
+}
+
+function sendReceiptRequest(endpoint, token, image) {
+  const formData = new FormData();
+  formData.append("receipt", image, image.name || "receipt.jpg");
+  const headers = token ? { "X-Receipt-Token": token } : {};
+  return fetch(endpoint, { method: "POST", headers, body: formData });
 }
 
 function receiptAiEndpoint() {
