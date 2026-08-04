@@ -1742,7 +1742,16 @@ body {
   margin: -8px 0 24px;
 }
 
-.receipt-upload-button {
+.receipt-ai-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.receipt-upload-button,
+.receipt-reset-button {
   width: max-content;
   min-height: 42px;
   display: inline-flex;
@@ -1756,6 +1765,10 @@ body {
   cursor: pointer;
   font-size: 0.92rem;
   font-weight: 800;
+}
+
+.receipt-reset-button {
+  color: var(--accent);
 }
 
 .receipt-upload-button input {
@@ -2369,4 +2382,691 @@ body {
 :root[data-theme="dark"] .import-button,
 :root[data-theme="dark"] .text-button {
   color: var(--accent);
+}
+
+/* PDF interface redesign */
+:root {
+  --page: #fbfbfc;
+  --surface: #ffffff;
+  --card: #f6f6f8;
+  --soft-card: #f9f9fa;
+  --ink: #090a0d;
+  --muted: #a8a8ae;
+  --line: #d2d2d8;
+  --track: #e1e1e5;
+  --accent: #34d184;
+  --expense-accent: #ef6f5a;
+  --saving-accent: #6f62db;
+  --income-accent: #34d184;
+  --radius-lg: 34px;
+  --radius-pill: 999px;
+  --soft-shadow: 0 18px 42px rgba(0, 0, 0, 0.055);
+}
+
+:root[data-theme="dark"] {
+  --page: #050506;
+  --surface: #141416;
+  --card: #18181b;
+  --soft-card: #111113;
+  --ink: #f7f7f8;
+  --muted: #9f9fa7;
+  --line: #3d3d43;
+  --track: #2f2f34;
+  --soft-shadow: none;
+}
+
+body {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(52, 209, 132, 0.08), transparent 24rem),
+    var(--page);
+  color: var(--ink);
+}
+
+:root[data-theme="dark"] body {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(52, 209, 132, 0.08), transparent 22rem),
+    var(--page);
+}
+
+.app-shell {
+  width: min(100%, 430px);
+  padding: max(28px, calc(env(safe-area-inset-top) + 28px)) 22px max(126px, calc(env(safe-area-inset-bottom) + 126px));
+  overflow: visible;
+}
+
+.hero-header {
+  align-items: center;
+  margin-bottom: 26px;
+}
+
+.hero-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.hero-header p {
+  color: var(--ink);
+  font-size: clamp(2rem, 9vw, 3rem);
+  font-weight: 850;
+  letter-spacing: 0;
+  line-height: 0.98;
+}
+
+.hero-copy small {
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-weight: 650;
+}
+
+.top-actions {
+  gap: 6px;
+}
+
+.profile-orb {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.88);
+  border-radius: 999px;
+  background: linear-gradient(145deg, #dcdce0, #ffffff);
+  color: #111111;
+  font-weight: 900;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08), 0 8px 22px rgba(0, 0, 0, 0.08);
+}
+
+:root[data-theme="dark"] .profile-orb {
+  border-color: #34343a;
+  background: linear-gradient(145deg, #28282d, #0f0f11);
+  color: #ffffff;
+}
+
+.overview-home {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 34px;
+}
+
+.activity-card,
+.overview-card {
+  border: 1px solid rgba(210, 210, 216, 0.72);
+  background: var(--surface);
+  box-shadow: var(--soft-shadow);
+}
+
+.activity-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 118px;
+  gap: 16px;
+  align-items: center;
+  min-height: 178px;
+  padding: 22px;
+  border-radius: var(--radius-lg);
+}
+
+.activity-copy {
+  min-width: 0;
+}
+
+.activity-copy span,
+.overview-card span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 750;
+}
+
+.activity-copy h2 {
+  margin-top: 4px;
+  color: var(--ink);
+  font-size: 1.16rem;
+  text-align: left;
+}
+
+.activity-copy strong {
+  display: block;
+  margin-top: 18px;
+  font-size: clamp(1.45rem, 7vw, 2rem);
+  font-weight: 900;
+  line-height: 1;
+}
+
+.activity-copy small,
+.overview-card small {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 750;
+}
+
+.activity-visual {
+  display: grid;
+  place-items: center;
+}
+
+.activity-ring {
+  width: 110px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: conic-gradient(
+    var(--expense-accent) 0deg var(--food-end, 0deg),
+    var(--saving-accent) var(--food-end, 0deg) var(--bills-end, 0deg),
+    var(--income-accent) var(--bills-end, 0deg) var(--fun-end, 0deg),
+    var(--track) var(--fun-end, 0deg) 360deg
+  );
+  position: relative;
+}
+
+.activity-ring::after {
+  content: "";
+  position: absolute;
+  inset: 23px;
+  border-radius: 50%;
+  background: var(--surface);
+}
+
+.activity-legend {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.activity-legend span {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.activity-legend i {
+  width: 10px;
+  height: 10px;
+  flex: 0 0 10px;
+  border-radius: 50%;
+}
+
+.legend-food {
+  background: var(--expense-accent);
+}
+
+.legend-bills {
+  background: var(--saving-accent);
+}
+
+.legend-fun {
+  background: var(--income-accent);
+}
+
+.overview-card-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.overview-card {
+  min-height: 126px;
+  display: grid;
+  align-content: space-between;
+  padding: 18px;
+  border-radius: 28px;
+}
+
+.overview-card strong {
+  display: block;
+  margin-top: 16px;
+  color: var(--ink);
+  font-size: 1.16rem;
+  font-weight: 900;
+  line-height: 1.08;
+  overflow-wrap: anywhere;
+}
+
+.income-overview-card {
+  grid-column: 1 / -1;
+}
+
+.expense-overview-card {
+  border-color: color-mix(in srgb, var(--expense-accent) 45%, var(--line));
+  background: color-mix(in srgb, var(--expense-accent) 9%, var(--surface));
+}
+
+.savings-overview-card {
+  border-color: color-mix(in srgb, var(--saving-accent) 42%, var(--line));
+  background: color-mix(in srgb, var(--saving-accent) 9%, var(--surface));
+}
+
+.income-overview-card {
+  border-color: color-mix(in srgb, var(--income-accent) 38%, var(--line));
+  background: color-mix(in srgb, var(--income-accent) 8%, var(--surface));
+}
+
+.add-entry-button {
+  position: fixed;
+  z-index: 12;
+  left: 50%;
+  bottom: max(24px, calc(env(safe-area-inset-bottom) + 24px));
+  transform: translateX(-50%);
+  width: 78px;
+  height: 78px;
+  margin: 0;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  color: var(--accent);
+  box-shadow: 0 18px 34px rgba(0, 0, 0, 0.12);
+  backdrop-filter: blur(16px);
+}
+
+.add-entry-button:active {
+  transform: translateX(-50%) scale(0.97);
+}
+
+.flow-section,
+.accounts-summary,
+.daily-spending-section {
+  margin: 0 0 34px;
+  padding: 28px 0;
+  border: 0;
+  background: transparent;
+}
+
+.flow-section h1,
+.flow-section h2,
+.accounts-summary h2,
+.daily-spending-section h2 {
+  color: var(--muted);
+  font-size: 1.36rem;
+  font-weight: 800;
+}
+
+.small-settings-button {
+  min-height: 36px;
+  padding: 0 16px;
+  border-color: var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.82rem;
+  box-shadow: var(--soft-shadow);
+}
+
+.limit-grid {
+  margin-top: 26px;
+  gap: 12px;
+}
+
+.limit-grid span,
+.daily-stat-grid span {
+  color: var(--muted);
+  font-size: 1.05rem;
+  font-weight: 650;
+}
+
+.limit-grid strong,
+.daily-stat-grid strong {
+  color: var(--ink);
+  font-size: 1.02rem;
+  font-weight: 900;
+}
+
+.split-track {
+  height: 13px;
+  background: var(--track);
+}
+
+.flow-section:first-of-type .split-fill,
+#spendingRateBar,
+#expenseEuroRateBar {
+  background: linear-gradient(90deg, var(--expense-accent) 0 86%, #111111 86% 100%);
+}
+
+#incomeLekRateBar,
+#incomeEuroRateBar {
+  background: linear-gradient(90deg, var(--income-accent), color-mix(in srgb, var(--income-accent) 60%, #111111));
+}
+
+.month-button span,
+.archive-arrow {
+  border-bottom-color: var(--accent);
+}
+
+.pill-row,
+.account-row,
+.archive-month summary {
+  min-height: 64px;
+  border-color: var(--line);
+  background: var(--surface);
+  box-shadow: none;
+}
+
+.entry-title,
+.account-main strong {
+  color: var(--ink);
+  font-size: 1.02rem;
+  font-weight: 850;
+}
+
+.entry-meta,
+.account-main span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.entry-amount,
+.account-balance {
+  color: var(--ink);
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.edit-entry-button,
+.account-actions button,
+.more-row,
+.import-button {
+  color: var(--accent);
+  font-weight: 850;
+}
+
+.accounts-summary {
+  gap: 18px;
+}
+
+.total-pills {
+  gap: 14px;
+}
+
+.total-pills button {
+  min-height: 58px;
+  border-color: var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--soft-shadow);
+}
+
+.add-account-inline {
+  margin-top: 24px;
+}
+
+.add-account-inline span {
+  width: 56px;
+  height: 56px;
+  border-color: var(--line);
+  background: var(--surface);
+  box-shadow: var(--soft-shadow);
+}
+
+.daily-spending-section {
+  padding-top: 10px;
+}
+
+.daily-spend-chart {
+  min-height: 158px;
+  align-items: end;
+  padding-top: 16px;
+}
+
+.daily-spend-chart.is-scrollable {
+  grid-template-columns: repeat(var(--day-count, 7), 15px);
+  gap: 8px;
+  margin-inline: -10px;
+  padding-inline: 10px;
+}
+
+.daily-line {
+  width: 8px;
+  min-height: 22px;
+  border-radius: 999px 999px 6px 6px;
+}
+
+.daily-line.low {
+  width: 4px;
+  background: var(--line);
+}
+
+.daily-line.mid {
+  width: 6px;
+  background: var(--ink);
+}
+
+.daily-line.high,
+.daily-line.is-selected {
+  width: 8px;
+  background: var(--accent);
+}
+
+.daily-selected-value {
+  color: var(--ink);
+  font-size: 0.98rem;
+}
+
+.period-select-label select,
+.daily-currency-toggle,
+.exchange-rate-row input,
+.exchange-rate-row button {
+  border-color: var(--line);
+  background-color: var(--surface);
+  color: var(--ink);
+}
+
+.editor-overlay,
+#entryOverlay,
+#accountEditorOverlay,
+#limitsOverlay {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(18px);
+}
+
+#entryOverlay .entry-panel.editor-sheet,
+#accountEditorOverlay #accountForm.editor-sheet,
+#limitsForm.editor-sheet {
+  width: min(100%, 382px);
+  padding: 52px 30px 34px;
+  border-color: #737379;
+  border-radius: 54px;
+  background: var(--surface);
+}
+
+.entry-panel .segmented {
+  gap: 26px;
+}
+
+.entry-panel .segmented button {
+  border-color: var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 1.08rem;
+  font-weight: 850;
+}
+
+#entryOverlay[data-entry-type="expense"] .segmented button.active {
+  border-color: var(--expense-accent);
+  background: var(--expense-accent);
+  color: #080808;
+}
+
+#entryOverlay[data-entry-type="income"] .segmented button.active {
+  border-color: var(--income-accent);
+  background: var(--income-accent);
+  color: #080808;
+}
+
+.receipt-upload-button,
+.receipt-reset-button {
+  border-color: var(--line);
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.receipt-reset-button {
+  color: var(--accent);
+}
+
+.entry-panel label,
+#accountForm label,
+#limitsForm label,
+#accountForm .checkbox-label {
+  color: var(--muted);
+  font-size: 1.08rem;
+  font-weight: 800;
+}
+
+.entry-panel input,
+.entry-panel select,
+#accountForm input,
+#accountForm select,
+#limitsForm input,
+input,
+select {
+  border-color: #96969d;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.entry-panel .primary-button::before,
+#limitsForm #saveLimitsBtn::before,
+#accountForm.is-editing #saveAccountBtn::before {
+  content: "✓";
+  color: var(--accent);
+  font-size: 2.05rem;
+  font-weight: 850;
+}
+
+#accountForm:not(.is-editing) #saveAccountBtn::before {
+  content: "+";
+  color: var(--accent);
+  font-size: 3rem;
+  font-weight: 300;
+}
+
+.entry-panel .primary-button,
+#accountForm #saveAccountBtn,
+#limitsForm #saveLimitsBtn {
+  justify-self: center;
+  margin-left: auto;
+  margin-right: auto;
+  border-color: #96969d;
+  background: var(--surface);
+  color: transparent;
+}
+
+#accountForm .editor-actions {
+  justify-items: center;
+}
+
+#accountForm #deleteAccountBtn {
+  color: var(--expense-accent);
+}
+
+.accounts-window,
+.archive-window {
+  border-color: #737379;
+  border-radius: 36px 36px 0 0;
+  background: var(--surface);
+}
+
+.window-total {
+  border-radius: 24px;
+  background: var(--card);
+}
+
+:root[data-theme="dark"] .activity-card,
+:root[data-theme="dark"] .overview-card,
+:root[data-theme="dark"] .small-settings-button,
+:root[data-theme="dark"] .total-pills button,
+:root[data-theme="dark"] .add-account-inline span,
+:root[data-theme="dark"] .pill-row,
+:root[data-theme="dark"] .account-row,
+:root[data-theme="dark"] .archive-month summary,
+:root[data-theme="dark"] .period-select-label select,
+:root[data-theme="dark"] .daily-currency-toggle,
+:root[data-theme="dark"] .exchange-rate-row input,
+:root[data-theme="dark"] .exchange-rate-row button,
+:root[data-theme="dark"] .receipt-upload-button,
+:root[data-theme="dark"] .receipt-reset-button {
+  border-color: var(--line);
+  background-color: var(--surface);
+  color: var(--ink);
+}
+
+:root[data-theme="dark"] .activity-ring::after {
+  background: var(--surface);
+}
+
+:root[data-theme="dark"] .expense-overview-card {
+  background: color-mix(in srgb, var(--expense-accent) 12%, var(--surface));
+}
+
+:root[data-theme="dark"] .savings-overview-card {
+  background: color-mix(in srgb, var(--saving-accent) 14%, var(--surface));
+}
+
+:root[data-theme="dark"] .income-overview-card {
+  background: color-mix(in srgb, var(--income-accent) 12%, var(--surface));
+}
+
+:root[data-theme="dark"] #entryOverlay,
+:root[data-theme="dark"] #accountEditorOverlay,
+:root[data-theme="dark"] #limitsOverlay,
+:root[data-theme="dark"] .editor-overlay {
+  background: rgba(5, 5, 6, 0.78);
+}
+
+:root[data-theme="dark"] #entryOverlay .entry-panel.editor-sheet,
+:root[data-theme="dark"] #accountEditorOverlay #accountForm.editor-sheet,
+:root[data-theme="dark"] #limitsForm.editor-sheet,
+:root[data-theme="dark"] .accounts-window,
+:root[data-theme="dark"] .archive-window {
+  border-color: #686870;
+  background: var(--surface);
+}
+
+:root[data-theme="dark"] .flow-section:first-of-type .split-fill,
+:root[data-theme="dark"] #spendingRateBar,
+:root[data-theme="dark"] #expenseEuroRateBar {
+  background: linear-gradient(90deg, var(--expense-accent) 0 86%, #ffffff 86% 100%);
+}
+
+:root[data-theme="dark"] .daily-line.low {
+  background: #56565c;
+}
+
+:root[data-theme="dark"] .daily-line.mid {
+  background: #f7f7f8;
+}
+
+@media (max-width: 390px) {
+  .app-shell {
+    padding-inline: 16px;
+  }
+
+  .activity-card {
+    grid-template-columns: 1fr;
+  }
+
+  .activity-visual {
+    justify-self: center;
+  }
+
+  .overview-card-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .income-overview-card {
+    grid-column: auto;
+  }
+
+  .entry-panel .segmented {
+    gap: 14px;
+  }
+
+  #entryOverlay .entry-panel.editor-sheet,
+  #accountEditorOverlay #accountForm.editor-sheet,
+  #limitsForm.editor-sheet {
+    padding-inline: 24px;
+  }
 }

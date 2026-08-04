@@ -15,7 +15,10 @@
   <body>
     <main class="app-shell">
       <header class="hero-header">
-        <p>Hi Dorian :)</p>
+        <div class="hero-copy">
+          <p>Përmbledhje</p>
+          <small id="todayLabel">Sot</small>
+        </div>
         <div class="top-actions">
           <button class="ghost-export" id="exportBtn" type="button" aria-label="Eksporto të dhënat" title="Eksporto">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11m0 0 4-4m-4 4-4-4M5 17v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2"/></svg>
@@ -23,8 +26,46 @@
           <button id="themeToggle" class="theme-switch" type="button" aria-label="Ndrysho dark mode" aria-pressed="false" title="Dark mode">
             <span></span>
           </button>
+          <div class="profile-orb" aria-hidden="true">D</div>
         </div>
       </header>
+
+      <section class="overview-home" aria-labelledby="overviewTitle">
+        <article class="activity-card">
+          <div class="activity-copy">
+            <span>Aktivitetet</span>
+            <h2 id="overviewTitle">Muaji aktual</h2>
+            <strong id="activityTotal">0 Lekë</strong>
+            <small id="activityTotalAlt">0.00 €</small>
+          </div>
+          <div class="activity-visual" aria-hidden="true">
+            <div id="activityRing" class="activity-ring"></div>
+          </div>
+          <div class="activity-legend" aria-label="Kategoritë kryesore të shpenzimeve">
+            <span><i class="legend-food"></i>Ushqim</span>
+            <span><i class="legend-bills"></i>Fatura</span>
+            <span><i class="legend-fun"></i>Argëtim</span>
+          </div>
+        </article>
+
+        <div class="overview-card-grid">
+          <article class="overview-card expense-overview-card">
+            <span>Shpenzime</span>
+            <strong id="overviewExpenseValue">0 Lekë</strong>
+            <small id="overviewExpenseAlt">0.00 €</small>
+          </article>
+          <article class="overview-card savings-overview-card">
+            <span>Llogaritë</span>
+            <strong id="overviewSavingsValue">0 Lekë</strong>
+            <small id="overviewSavingsAlt">0.00 €</small>
+          </article>
+          <article class="overview-card income-overview-card">
+            <span>Të ardhurat</span>
+            <strong id="overviewIncomeValue">0 Lekë</strong>
+            <small id="overviewIncomeAlt">0.00 €</small>
+          </article>
+        </div>
+      </section>
 
       <button id="addEntryBtn" class="add-entry-button" type="button" aria-label="Shto zë">+</button>
 
@@ -250,10 +291,13 @@
 
         <form id="entryForm" autocomplete="off">
           <div id="receiptAiTools" class="receipt-ai-tools">
-            <label class="receipt-upload-button">
-              Foto fature
-              <input id="receiptImageInput" type="file" accept="image/*" capture="environment" />
-            </label>
+            <div class="receipt-ai-actions">
+              <label class="receipt-upload-button">
+                Foto fature
+                <input id="receiptImageInput" type="file" accept="image/*" capture="environment" />
+              </label>
+              <button id="resetReceiptAiBtn" class="receipt-reset-button" type="button">Rilidh AI</button>
+            </div>
             <small id="receiptAiStatus" aria-live="polite"></small>
           </div>
 

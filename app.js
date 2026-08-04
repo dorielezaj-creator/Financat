@@ -23,8 +23,9 @@ const categories = {
   income: ["Rrogë", "Punë ekstra", "Biznes", "Dhuratë", "Tjetër"],
 };
 
-const colors = ["#1d1d1f", "#6e6e73", "#8e8e93", "#aeaeb2", "#c7c7cc", "#d1d1d6", "#3a3a3c"];
+const colors = ["#ef6f5a", "#6f62db", "#34d184", "#111111", "#b5b5bb", "#dedee3", "#8f8f98"];
 const monthNames = ["janar", "shkurt", "mars", "prill", "maj", "qershor", "korrik", "gusht", "shtator", "tetor", "nëntor", "dhjetor"];
+const dayNames = ["e diel", "e hënë", "e martë", "e mërkurë", "e enjte", "e premte", "e shtunë"];
 
 const state = {
   type: "expense",
@@ -87,6 +88,16 @@ const els = {
   accountsEuroModalValue: document.querySelector("#accountsEuroModalValue"),
   currentExpenseMonth: document.querySelector("#currentExpenseMonth"),
   currentIncomeMonth: document.querySelector("#currentIncomeMonth"),
+  todayLabel: document.querySelector("#todayLabel"),
+  activityTotal: document.querySelector("#activityTotal"),
+  activityTotalAlt: document.querySelector("#activityTotalAlt"),
+  activityRing: document.querySelector("#activityRing"),
+  overviewExpenseValue: document.querySelector("#overviewExpenseValue"),
+  overviewExpenseAlt: document.querySelector("#overviewExpenseAlt"),
+  overviewSavingsValue: document.querySelector("#overviewSavingsValue"),
+  overviewSavingsAlt: document.querySelector("#overviewSavingsAlt"),
+  overviewIncomeValue: document.querySelector("#overviewIncomeValue"),
+  overviewIncomeAlt: document.querySelector("#overviewIncomeAlt"),
   openLimitsBtn: document.querySelector("#openLimitsBtn"),
   limitsOverlay: document.querySelector("#limitsOverlay"),
   limitsForm: document.querySelector("#limitsForm"),
@@ -134,6 +145,7 @@ const els = {
   dateInput: document.querySelector("#dateInput"),
   receiptAiTools: document.querySelector("#receiptAiTools"),
   receiptImageInput: document.querySelector("#receiptImageInput"),
+  resetReceiptAiBtn: document.querySelector("#resetReceiptAiBtn"),
   receiptAiStatus: document.querySelector("#receiptAiStatus"),
   submitLabel: document.querySelector("#submitLabel"),
   entryList: document.querySelector("#entryList"),
@@ -163,6 +175,7 @@ document.querySelectorAll("[data-type]").forEach((button) => {
 
 els.currencyInput.addEventListener("change", renderBankOptions);
 els.receiptImageInput.addEventListener("change", handleReceiptImage);
+els.resetReceiptAiBtn.addEventListener("click", resetReceiptAiConnection);
 
 els.addEntryBtn.addEventListener("click", () => openEntryEditor("expense"));
 els.openLimitsBtn.addEventListener("click", openLimitsEditor);
@@ -388,6 +401,7 @@ function render() {
   setExactValues(els.dailyAverage, els.dailyAverageAlt, dailyAverage);
   if (els.currentExpenseMonth) els.currentExpenseMonth.textContent = monthLabel(currentMonth);
   if (els.currentIncomeMonth) els.currentIncomeMonth.textContent = monthLabel(currentMonth);
+  renderOverview(now, monthEntries, spentMonth, incomeMonth, accountTotals);
   renderLimits();
   renderRates(spentMonth, incomeMonth);
 
@@ -400,6 +414,42 @@ function render() {
   renderDailySpending();
   renderEntries();
   renderCategories();
+}
+
+function renderOverview(now, monthEntries, spentMonth, incomeMonth, accountTotals) {
+  if (els.todayLabel) els.todayLabel.textContent = longDateLabel(now);
+  setExactValues(els.overviewExpenseValue, els.overviewExpenseAlt, spentMonth);
+  setExactValues(els.overviewSavingsValue, els.overviewSavingsAlt, accountTotals);
+  setExactValues(els.overviewIncomeValue, els.overviewIncomeAlt, incomeMonth);
+
+  const activityLekTotal = totalsToLek(spentMonth);
+  if (els.activityTotal) els.activityTotal.textContent = moneyLekShort(activityLekTotal);
+  if (els.activityTotalAlt) els.activityTotalAlt.textContent = formatMoneyTotals(spentMonth);
+  renderActivityRing(monthEntries);
+}
+
+function renderActivityRing(monthEntries) {
+  if (!els.activityRing) return;
+
+  const trackedCategories = ["Ushqim", "Fatura", "Argëtim"];
+  const tracked = trackedCategories.map((category) =>
+    monthEntries
+      .filter((entry) => entry.type === "expense" && entry.category === category)
+      .reduce((sum, entry) => sum + dailyChartAmount(entry, "TOTAL"), 0)
+  );
+  const total = monthEntries
+    .filter((entry) => entry.type === "expense")
+    .reduce((sum, entry) => sum + dailyChartAmount(entry, "TOTAL"), 0);
+
+  let cursor = 0;
+  const degrees = tracked.map((value) => {
+    cursor += total > 0 ? (value / total) * 360 : 0;
+    return Math.min(cursor, 360);
+  });
+
+  els.activityRing.style.setProperty("--food-end", `${degrees[0] || 0}deg`);
+  els.activityRing.style.setProperty("--bills-end", `${degrees[1] || degrees[0] || 0}deg`);
+  els.activityRing.style.setProperty("--fun-end", `${degrees[2] || degrees[1] || degrees[0] || 0}deg`);
 }
 
 function renderRates(spentMonth, incomeMonth = emptyMoneyTotals()) {
@@ -961,6 +1011,7 @@ function drawChart(rows) {
 }
 
 function syncTypeControls() {
+  if (els.entryOverlay) els.entryOverlay.dataset.entryType = state.type;
   document.querySelectorAll("[data-type]").forEach((button) => {
     button.classList.toggle("active", button.dataset.type === state.type);
   });
@@ -1019,6 +1070,12 @@ function sendReceiptRequest(endpoint, token, image) {
   formData.append("receipt", image, image.name || "receipt.jpg");
   const headers = token ? { "X-Receipt-Token": token } : {};
   return fetch(endpoint, { method: "POST", headers, body: formData });
+}
+
+function resetReceiptAiConnection() {
+  localStorage.removeItem(RECEIPT_AI_ENDPOINT_KEY);
+  localStorage.removeItem(RECEIPT_AI_TOKEN_KEY);
+  setReceiptAiStatus("AI u rivendos. Kliko Foto fature dhe vendose përsëri.");
 }
 
 function receiptAiEndpoint() {
@@ -1479,6 +1536,10 @@ function formatMoneyTotals(totals) {
   return parts.length ? parts.join(" / ") : `${moneyLek(0)} / ${moneyEuro(0)}`;
 }
 
+function totalsToLek(totals) {
+  return (Number(totals.ALL) || 0) + (Number(totals.EUR) || 0) * state.exchangeRate;
+}
+
 function moneyLek(value) {
   return new Intl.NumberFormat("sq-AL", { maximumFractionDigits: 0 }).format(value || 0) + " Lekë";
 }
@@ -1527,6 +1588,13 @@ function moneyOriginal(entry) {
 function formatDate(value) {
   const date = parseLocalDate(value);
   return `${String(date.getDate()).padStart(2, "0")} ${monthNames[date.getMonth()].slice(0, 3)} ${date.getFullYear()}`;
+}
+
+function longDateLabel(date) {
+  const dayName = dayNames[date.getDay()];
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = monthNames[date.getMonth()];
+  return `${dayName}, ${day} ${month.charAt(0).toUpperCase()}${month.slice(1)}`;
 }
 
 function monthLabel(key) {
