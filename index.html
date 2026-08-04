@@ -7,6 +7,9 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Financat" />
     <title>Financat e Mia</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="icon.svg" />
@@ -32,37 +35,68 @@
 
       <section class="overview-home" aria-labelledby="overviewTitle">
         <article class="activity-card">
-          <div class="activity-copy">
-            <span>Aktivitetet</span>
-            <h2 id="overviewTitle">Muaji aktual</h2>
-            <strong id="activityTotal">0 Lekë</strong>
-            <small id="activityTotalAlt">0.00 €</small>
-          </div>
-          <div class="activity-visual" aria-hidden="true">
-            <div id="activityRing" class="activity-ring"></div>
-          </div>
-          <div class="activity-legend" aria-label="Kategoritë kryesore të shpenzimeve">
-            <span><i class="legend-food"></i>Ushqim</span>
-            <span><i class="legend-bills"></i>Fatura</span>
-            <span><i class="legend-fun"></i>Argëtim</span>
+          <h2 id="overviewTitle">Aktivitetet</h2>
+          <div class="activity-body">
+            <div class="activity-visual" aria-hidden="true">
+              <div id="activityRing" class="activity-ring">
+                <span class="ring-outer"></span>
+                <span class="ring-middle"></span>
+                <span class="ring-inner"></span>
+              </div>
+            </div>
+            <div class="activity-breakdown" aria-label="Kategoritë kryesore të shpenzimeve">
+              <div class="activity-breakdown-row food">
+                <span>Ushqim</span>
+                <strong id="activityFoodValue">0 L / 0€</strong>
+              </div>
+              <div class="activity-breakdown-row bills">
+                <span>Fatura</span>
+                <strong id="activityBillsValue">0 L / 0€</strong>
+              </div>
+              <div class="activity-breakdown-row fun">
+                <span>Argëtim</span>
+                <strong id="activityFunValue">0 L / 0€</strong>
+              </div>
+            </div>
           </div>
         </article>
 
         <div class="overview-card-grid">
           <article class="overview-card expense-overview-card">
-            <span>Shpenzime</span>
-            <strong id="overviewExpenseValue">0 Lekë</strong>
-            <small id="overviewExpenseAlt">0.00 €</small>
+            <div class="overview-card-head">
+              <div>
+                <h2>Shpenzime</h2>
+                <span>Sot</span>
+                <strong id="overviewExpenseValue">0 L / 0€</strong>
+              </div>
+              <button id="overviewExpenseOpen" class="overview-arrow" type="button" aria-label="Hap shpenzimet">›</button>
+            </div>
+            <div class="overview-progress"><span id="overviewExpenseProgress"></span></div>
           </article>
           <article class="overview-card savings-overview-card">
-            <span>Llogaritë</span>
-            <strong id="overviewSavingsValue">0 Lekë</strong>
-            <small id="overviewSavingsAlt">0.00 €</small>
+            <div class="overview-card-head">
+              <div>
+                <h2>Kursimet</h2>
+                <span>Sot</span>
+                <strong id="overviewSavingsValue">0 L / 0€</strong>
+              </div>
+              <button id="overviewSavingsOpen" class="overview-arrow" type="button" aria-label="Hap llogaritë">›</button>
+            </div>
+            <div class="overview-progress"><span id="overviewSavingsProgress"></span></div>
           </article>
           <article class="overview-card income-overview-card">
-            <span>Të ardhurat</span>
-            <strong id="overviewIncomeValue">0 Lekë</strong>
-            <small id="overviewIncomeAlt">0.00 €</small>
+            <div class="overview-card-head">
+              <div>
+                <h2>Të ardhurat</h2>
+                <span>Totali</span>
+                <strong id="overviewIncomeValue">0 L / 0€</strong>
+              </div>
+              <button id="overviewIncomeOpen" class="overview-arrow" type="button" aria-label="Hap të ardhurat">›</button>
+            </div>
+            <div id="incomeMiniChart" class="income-mini-chart" aria-hidden="true"></div>
+            <div class="income-month-labels" aria-hidden="true">
+              <span>Jan</span><span>Shk</span><span>Mar</span><span>Pri</span><span>Maj</span><span>Qer</span><span>Kor</span><span>Gus</span><span>Sht</span><span>Tet</span><span>Nen</span><span>Dhj</span>
+            </div>
           </article>
         </div>
       </section>

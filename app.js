@@ -89,15 +89,19 @@ const els = {
   currentExpenseMonth: document.querySelector("#currentExpenseMonth"),
   currentIncomeMonth: document.querySelector("#currentIncomeMonth"),
   todayLabel: document.querySelector("#todayLabel"),
-  activityTotal: document.querySelector("#activityTotal"),
-  activityTotalAlt: document.querySelector("#activityTotalAlt"),
   activityRing: document.querySelector("#activityRing"),
+  activityFoodValue: document.querySelector("#activityFoodValue"),
+  activityBillsValue: document.querySelector("#activityBillsValue"),
+  activityFunValue: document.querySelector("#activityFunValue"),
   overviewExpenseValue: document.querySelector("#overviewExpenseValue"),
-  overviewExpenseAlt: document.querySelector("#overviewExpenseAlt"),
+  overviewExpenseProgress: document.querySelector("#overviewExpenseProgress"),
   overviewSavingsValue: document.querySelector("#overviewSavingsValue"),
-  overviewSavingsAlt: document.querySelector("#overviewSavingsAlt"),
+  overviewSavingsProgress: document.querySelector("#overviewSavingsProgress"),
   overviewIncomeValue: document.querySelector("#overviewIncomeValue"),
-  overviewIncomeAlt: document.querySelector("#overviewIncomeAlt"),
+  overviewExpenseOpen: document.querySelector("#overviewExpenseOpen"),
+  overviewSavingsOpen: document.querySelector("#overviewSavingsOpen"),
+  overviewIncomeOpen: document.querySelector("#overviewIncomeOpen"),
+  incomeMiniChart: document.querySelector("#incomeMiniChart"),
   openLimitsBtn: document.querySelector("#openLimitsBtn"),
   limitsOverlay: document.querySelector("#limitsOverlay"),
   limitsForm: document.querySelector("#limitsForm"),
@@ -178,6 +182,9 @@ els.receiptImageInput.addEventListener("change", handleReceiptImage);
 els.resetReceiptAiBtn.addEventListener("click", resetReceiptAiConnection);
 
 els.addEntryBtn.addEventListener("click", () => openEntryEditor("expense"));
+els.overviewExpenseOpen?.addEventListener("click", () => scrollToSection("#expenseSectionTitle"));
+els.overviewSavingsOpen?.addEventListener("click", () => scrollToSection("#accountsSummaryTitle"));
+els.overviewIncomeOpen?.addEventListener("click", () => scrollToSection("#incomeSectionTitle"));
 els.openLimitsBtn.addEventListener("click", openLimitsEditor);
 els.cancelLimitsBtn.addEventListener("click", closeLimitsEditor);
 els.limitsOverlay.addEventListener("click", (event) => {
@@ -401,7 +408,7 @@ function render() {
   setExactValues(els.dailyAverage, els.dailyAverageAlt, dailyAverage);
   if (els.currentExpenseMonth) els.currentExpenseMonth.textContent = monthLabel(currentMonth);
   if (els.currentIncomeMonth) els.currentIncomeMonth.textContent = monthLabel(currentMonth);
-  renderOverview(now, monthEntries, spentMonth, incomeMonth, accountTotals);
+  renderOverview(now, monthEntries, spentToday, spentMonth, incomeMonth, accountTotals);
   renderLimits();
   renderRates(spentMonth, incomeMonth);
 
@@ -416,40 +423,58 @@ function render() {
   renderCategories();
 }
 
-function renderOverview(now, monthEntries, spentMonth, incomeMonth, accountTotals) {
+function renderOverview(now, monthEntries, spentToday, spentMonth, incomeMonth, accountTotals) {
   if (els.todayLabel) els.todayLabel.textContent = longDateLabel(now);
-  setExactValues(els.overviewExpenseValue, els.overviewExpenseAlt, spentMonth);
-  setExactValues(els.overviewSavingsValue, els.overviewSavingsAlt, accountTotals);
-  setExactValues(els.overviewIncomeValue, els.overviewIncomeAlt, incomeMonth);
+  if (els.overviewExpenseValue) els.overviewExpenseValue.textContent = moneyPairCompact(spentToday);
+  if (els.overviewSavingsValue) els.overviewSavingsValue.textContent = moneyPairCompact(accountTotals);
+  if (els.overviewIncomeValue) els.overviewIncomeValue.textContent = moneyPairCompact(incomeMonth);
+  if (els.overviewExpenseProgress) els.overviewExpenseProgress.style.width = `${limitPercent(totalsToLek(spentMonth), state.limits.expenseALL + state.limits.expenseEUR * state.exchangeRate)}%`;
+  if (els.overviewSavingsProgress) {
+    const savingsTotal = totalsToLek(accountTotals);
+    const spendingTotal = totalsToLek(spentMonth);
+    const savingsRate = savingsTotal > 0 ? Math.min((savingsTotal / Math.max(savingsTotal + spendingTotal, 1)) * 100, 100) : 0;
+    els.overviewSavingsProgress.style.width = `${savingsRate}%`;
+  }
 
-  const activityLekTotal = totalsToLek(spentMonth);
-  if (els.activityTotal) els.activityTotal.textContent = moneyLekShort(activityLekTotal);
-  if (els.activityTotalAlt) els.activityTotalAlt.textContent = formatMoneyTotals(spentMonth);
   renderActivityRing(monthEntries);
+  renderIncomeMiniChart();
 }
 
 function renderActivityRing(monthEntries) {
   if (!els.activityRing) return;
 
   const trackedCategories = ["Ushqim", "Fatura", "Argëtim"];
-  const tracked = trackedCategories.map((category) =>
+  const trackedTotals = trackedCategories.map((category) =>
     monthEntries
       .filter((entry) => entry.type === "expense" && entry.category === category)
-      .reduce((sum, entry) => sum + dailyChartAmount(entry, "TOTAL"), 0)
+      .reduce(sumMoneyTotals, emptyMoneyTotals())
   );
-  const total = monthEntries
-    .filter((entry) => entry.type === "expense")
-    .reduce((sum, entry) => sum + dailyChartAmount(entry, "TOTAL"), 0);
+  const tracked = trackedTotals.map(totalsToLek);
+  const max = Math.max(...tracked, 1);
+  const fallbackArcs = [318, 250, 215];
+  const arcs = tracked.map((value, index) => (value > 0 ? Math.max(78, Math.round((value / max) * 318)) : fallbackArcs[index]));
 
-  let cursor = 0;
-  const degrees = tracked.map((value) => {
-    cursor += total > 0 ? (value / total) * 360 : 0;
-    return Math.min(cursor, 360);
+  els.activityRing.style.setProperty("--food-arc", `${arcs[0]}deg`);
+  els.activityRing.style.setProperty("--bills-arc", `${arcs[1]}deg`);
+  els.activityRing.style.setProperty("--fun-arc", `${arcs[2]}deg`);
+  if (els.activityFoodValue) els.activityFoodValue.textContent = moneyPairCompact(trackedTotals[0]);
+  if (els.activityBillsValue) els.activityBillsValue.textContent = moneyPairCompact(trackedTotals[1]);
+  if (els.activityFunValue) els.activityFunValue.textContent = moneyPairCompact(trackedTotals[2]);
+}
+
+function renderIncomeMiniChart() {
+  if (!els.incomeMiniChart) return;
+  const year = new Date().getFullYear();
+  const monthly = Array.from({ length: 12 }, (_, monthIndex) => {
+    const key = `${year}-${String(monthIndex + 1).padStart(2, "0")}`;
+    return state.entries
+      .filter((entry) => entry.type === "income" && entry.date.startsWith(key))
+      .reduce((sum, entry) => sum + dailyChartAmount(entry, "TOTAL"), 0);
   });
-
-  els.activityRing.style.setProperty("--food-end", `${degrees[0] || 0}deg`);
-  els.activityRing.style.setProperty("--bills-end", `${degrees[1] || degrees[0] || 0}deg`);
-  els.activityRing.style.setProperty("--fun-end", `${degrees[2] || degrees[1] || degrees[0] || 0}deg`);
+  const max = Math.max(...monthly, 1);
+  els.incomeMiniChart.innerHTML = monthly
+    .map((value, index) => `<span style="height:${Math.max(28, Math.round((value / max) * 78))}px" title="${monthNames[index]}: ${moneyLekShort(value)}"></span>`)
+    .join("");
 }
 
 function renderRates(spentMonth, incomeMonth = emptyMoneyTotals()) {
@@ -550,6 +575,11 @@ function setListVisibility(button, targets, visible) {
   targets.forEach((target) => {
     if (target) target.hidden = !visible;
   });
+}
+
+function scrollToSection(selector) {
+  const target = document.querySelector(selector);
+  target?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function openEntryEditor(type = state.type, entryId = "") {
@@ -1540,6 +1570,10 @@ function totalsToLek(totals) {
   return (Number(totals.ALL) || 0) + (Number(totals.EUR) || 0) * state.exchangeRate;
 }
 
+function moneyPairCompact(totals) {
+  return `${moneyLekShort(totals.ALL)} / ${moneyEuroCompact(totals.EUR)}`;
+}
+
 function moneyLek(value) {
   return new Intl.NumberFormat("sq-AL", { maximumFractionDigits: 0 }).format(value || 0) + " Lekë";
 }
@@ -1554,6 +1588,10 @@ function moneyEuroShort(value) {
 
 function moneyEuroNoDecimals(value) {
   return new Intl.NumberFormat("sq-AL", { maximumFractionDigits: 0 }).format(value || 0) + " €";
+}
+
+function moneyEuroCompact(value) {
+  return new Intl.NumberFormat("sq-AL", { maximumFractionDigits: 0 }).format(value || 0) + "€";
 }
 
 function formatRateInput(value) {

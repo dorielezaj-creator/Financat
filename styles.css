@@ -3070,3 +3070,416 @@ select {
     padding-inline: 24px;
   }
 }
+
+/* First page matched to the supplied PDF/screenshot */
+:root {
+  --home-bg: #ffffff;
+  --home-card: #f8f8f8;
+  --home-text: #000000;
+  --home-muted: #8e8e93;
+  --home-soft-track: #eee4e2;
+  --home-purple-track: #deddea;
+  --pdf-expense: #ff634f;
+  --pdf-purple: #6b55df;
+  --pdf-green: #05d977;
+  font-family: "Inter", Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+:root[data-theme="dark"] {
+  --home-bg: #050506;
+  --home-card: #141416;
+  --home-text: #f7f7f8;
+  --home-muted: #9b9ba3;
+  --home-soft-track: #2d2423;
+  --home-purple-track: #2b283c;
+}
+
+body {
+  background: var(--home-bg);
+  color: var(--home-text);
+  font-family: "Inter", Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+:root[data-theme="dark"] body {
+  background: var(--home-bg);
+}
+
+.app-shell {
+  width: min(100%, 544px);
+  padding: max(52px, calc(env(safe-area-inset-top) + 36px)) 20px max(44px, calc(env(safe-area-inset-bottom) + 44px));
+}
+
+.hero-header {
+  min-height: 72px;
+  align-items: flex-start;
+  margin: 0 0 22px;
+}
+
+.hero-copy {
+  gap: 6px;
+}
+
+.hero-header p {
+  color: var(--home-text);
+  font-size: clamp(2rem, 6vw, 2.25rem);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.015em;
+}
+
+.hero-copy small {
+  color: var(--home-muted);
+  font-size: clamp(1rem, 3.5vw, 1.18rem);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.top-actions {
+  align-items: flex-start;
+}
+
+.ghost-export,
+.profile-orb {
+  display: none;
+}
+
+.theme-switch {
+  width: 72px;
+  height: 72px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: radial-gradient(circle at 50% 38%, #e7d2c2 0 25%, #7b4f32 26% 46%, #df584f 47% 58%, #2c1913 59% 100%);
+  overflow: hidden;
+  box-shadow: none;
+}
+
+.theme-switch span {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: transparent;
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.7);
+  transform: none;
+}
+
+.theme-switch span::before {
+  content: "D";
+  color: #ffffff;
+  font-size: 1.35rem;
+  font-weight: 900;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+}
+
+.theme-switch[aria-pressed="true"] span {
+  transform: none;
+}
+
+.overview-home {
+  gap: 14px;
+  min-height: auto;
+  margin: 0;
+}
+
+.activity-card,
+.overview-card {
+  border: 0;
+  background: var(--home-card);
+  box-shadow: none;
+}
+
+.activity-card {
+  min-height: 304px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  padding: 26px 34px 30px;
+  border-radius: 34px;
+}
+
+.activity-card h2 {
+  color: var(--home-text);
+  font-size: clamp(1.55rem, 5vw, 1.9rem);
+  font-weight: 500;
+  line-height: 1;
+  text-align: left;
+}
+
+.activity-body {
+  display: grid;
+  grid-template-columns: minmax(174px, 0.95fr) minmax(0, 1.15fr);
+  gap: 18px;
+  align-items: center;
+}
+
+.activity-visual {
+  justify-self: center;
+}
+
+.activity-ring {
+  width: clamp(172px, 37vw, 198px);
+  height: clamp(172px, 37vw, 198px);
+  position: relative;
+  background: transparent;
+}
+
+.activity-ring span {
+  position: absolute;
+  border-radius: 999px;
+}
+
+.ring-outer {
+  inset: 0;
+  background: conic-gradient(from 200deg, var(--pdf-green) 0deg var(--food-arc, 318deg), rgba(5, 217, 119, 0.1) var(--food-arc, 318deg) 360deg);
+  -webkit-mask: radial-gradient(circle, transparent 62%, #000 63%);
+  mask: radial-gradient(circle, transparent 62%, #000 63%);
+}
+
+.ring-middle {
+  inset: 26px;
+  background: conic-gradient(from 318deg, var(--pdf-purple) 0deg var(--bills-arc, 250deg), rgba(107, 85, 223, 0.08) var(--bills-arc, 250deg) 360deg);
+  -webkit-mask: radial-gradient(circle, transparent 59%, #000 60%);
+  mask: radial-gradient(circle, transparent 59%, #000 60%);
+}
+
+.ring-inner {
+  inset: 53px;
+  background: conic-gradient(from 300deg, var(--pdf-expense) 0deg var(--fun-arc, 215deg), rgba(255, 99, 79, 0.08) var(--fun-arc, 215deg) 360deg);
+  -webkit-mask: radial-gradient(circle, transparent 52%, #000 53%);
+  mask: radial-gradient(circle, transparent 52%, #000 53%);
+}
+
+.activity-breakdown {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+
+.activity-breakdown-row {
+  display: grid;
+  gap: 4px;
+}
+
+.activity-breakdown-row span {
+  color: var(--home-text);
+  font-size: clamp(1.02rem, 4vw, 1.32rem);
+  font-weight: 600;
+  line-height: 1;
+}
+
+.activity-breakdown-row strong {
+  font-size: clamp(1.25rem, 5vw, 1.65rem);
+  font-weight: 700;
+  line-height: 1.05;
+  white-space: nowrap;
+}
+
+.activity-breakdown-row.food strong {
+  color: var(--pdf-expense);
+}
+
+.activity-breakdown-row.bills strong {
+  color: var(--pdf-purple);
+}
+
+.activity-breakdown-row.fun strong {
+  color: var(--pdf-green);
+}
+
+.overview-card-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+.overview-card {
+  min-height: 226px;
+  display: grid;
+  align-content: start;
+  gap: 24px;
+  padding: 28px 33px;
+  border-radius: 34px;
+}
+
+.overview-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.overview-card h2 {
+  color: var(--home-text);
+  font-size: clamp(1.55rem, 5vw, 1.85rem);
+  font-weight: 500;
+  line-height: 1;
+  text-align: left;
+}
+
+.overview-card span {
+  display: block;
+  margin-top: 14px;
+  color: var(--home-text);
+  font-size: clamp(1rem, 3.7vw, 1.3rem);
+  font-weight: 500;
+  line-height: 1;
+}
+
+.overview-card strong {
+  display: block;
+  margin-top: 6px;
+  color: var(--home-text);
+  font-size: clamp(1.72rem, 6vw, 2rem);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.018em;
+}
+
+.overview-arrow {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  display: grid;
+  place-items: center;
+  margin-top: 0;
+  border: 0;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #000000;
+  cursor: pointer;
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 0.72;
+  padding: 0 0 3px;
+}
+
+:root[data-theme="dark"] .overview-arrow {
+  background: #1f1f23;
+  color: #ffffff;
+}
+
+.overview-progress {
+  height: 52px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--home-soft-track);
+}
+
+.overview-progress span {
+  width: 0%;
+  max-width: 100%;
+  height: 100%;
+  display: block;
+  margin: 0;
+  border-radius: inherit;
+  transition: width 220ms ease;
+}
+
+.expense-overview-card .overview-progress span {
+  background: var(--pdf-expense);
+}
+
+.savings-overview-card .overview-progress {
+  background: var(--home-purple-track);
+}
+
+.savings-overview-card .overview-progress span {
+  background: var(--pdf-purple);
+}
+
+.income-overview-card {
+  min-height: 294px;
+}
+
+.income-mini-chart {
+  height: 80px;
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  align-items: end;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.income-mini-chart span {
+  width: 100%;
+  max-width: 26px;
+  min-height: 28px;
+  justify-self: center;
+  margin: 0;
+  border-radius: 999px;
+  background: var(--pdf-green);
+}
+
+.income-month-labels {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: -12px;
+  color: var(--home-text);
+  font-size: clamp(0.55rem, 2.4vw, 0.84rem);
+  font-weight: 800;
+  text-align: center;
+}
+
+.add-entry-button {
+  position: static;
+  transform: none;
+  width: 104px;
+  height: 104px;
+  margin: 40px auto 18px;
+  border: 0;
+  background: #fbfbfb;
+  color: #000000;
+  box-shadow: none;
+  font-size: 5rem;
+  font-weight: 400;
+  line-height: 0.9;
+}
+
+.add-entry-button:active {
+  transform: scale(0.98);
+}
+
+:root[data-theme="dark"] .add-entry-button {
+  background: #111113;
+  color: #ffffff;
+}
+
+.flow-section:first-of-type {
+  margin-top: 52px;
+}
+
+@media (max-width: 430px) {
+  .app-shell {
+    padding-inline: 16px;
+  }
+
+  .activity-card {
+    padding: 24px 24px 28px;
+  }
+
+  .activity-body {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  .activity-breakdown {
+    grid-template-columns: 1fr;
+  }
+
+  .activity-breakdown-row strong {
+    white-space: normal;
+  }
+
+  .overview-card {
+    padding: 26px 26px;
+  }
+
+  .income-mini-chart {
+    gap: 6px;
+  }
+}
