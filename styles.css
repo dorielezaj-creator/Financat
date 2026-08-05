@@ -74,7 +74,7 @@ button {
   width: min(100%, 544px);
   min-height: 100vh;
   margin: 0 auto;
-  padding: max(44px, calc(env(safe-area-inset-top) + 28px)) 20px max(42px, calc(env(safe-area-inset-bottom) + 42px));
+  padding: max(44px, calc(env(safe-area-inset-top) + 28px)) 20px max(150px, calc(env(safe-area-inset-bottom) + 132px));
 }
 
 .hero-header {
@@ -121,7 +121,6 @@ p {
   gap: 8px;
 }
 
-.ghost-export,
 .profile-orb {
   display: none;
 }
@@ -285,36 +284,47 @@ p {
 
 .overview-card-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
   width: 100%;
 }
 
 .overview-card {
   width: 100%;
-  min-height: 226px;
+  min-height: 214px;
   display: grid;
   align-content: start;
-  gap: 24px;
-  padding: 27px 33px 29px;
+  gap: 18px;
+  padding: 25px 28px 27px;
+  overflow: hidden;
 }
 
-.income-overview-card {
-  min-height: 294px;
+.overview-card h2 {
+  font-size: clamp(23px, 5.7vw, 29px);
+}
+
+.monthly-income-card,
+.savings-goal-card {
+  min-height: 232px;
 }
 
 .overview-card-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 18px;
+  gap: 12px;
+  min-width: 0;
+}
+
+.overview-card-head > div {
+  min-width: 0;
 }
 
 .overview-card span {
   display: block;
-  margin: 15px 0 0;
+  margin: 10px 0 0;
   color: var(--text);
-  font-size: 20px;
+  font-size: clamp(18px, 4.1vw, 22px);
   font-weight: 500;
   line-height: 1;
 }
@@ -323,11 +333,11 @@ p {
   display: block;
   margin: 7px 0 0;
   color: var(--text);
-  font-size: clamp(25px, 6vw, 31px);
+  font-size: clamp(23px, 5vw, 31px);
   font-weight: 600;
   letter-spacing: -0.02em;
-  line-height: 1.03;
-  white-space: nowrap;
+  line-height: 1.02;
+  overflow-wrap: anywhere;
 }
 
 .overview-arrow {
@@ -346,18 +356,43 @@ p {
   padding: 0 0 4px;
 }
 
-.overview-progress {
-  height: 52px;
+.dual-progress {
+  display: grid;
+  gap: 13px;
+  margin-top: auto;
+}
+
+.mini-progress-row {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+}
+
+.mini-progress-row b {
+  color: #000000;
+  font-size: 20px;
+  font-weight: 850;
+  line-height: 1;
+  text-align: center;
+}
+
+:root[data-theme="dark"] .mini-progress-row b {
+  color: var(--text);
+}
+
+.mini-track {
+  height: 42px;
   overflow: hidden;
   border-radius: 999px;
-  background: var(--expense-track);
+  background: #e7e7e8;
 }
 
-.savings-overview-card .overview-progress {
-  background: var(--purple-track);
+:root[data-theme="dark"] .mini-track {
+  background: #2a2a2e;
 }
 
-.overview-progress span {
+.mini-track span {
   display: block;
   width: 0%;
   height: 100%;
@@ -366,68 +401,180 @@ p {
   transition: width 220ms ease;
 }
 
-.expense-overview-card .overview-progress span {
+.lek-fill {
   background: var(--expense);
 }
 
-.savings-overview-card .overview-progress span {
-  background: var(--purple);
-}
-
-.income-mini-chart {
-  height: 80px;
-  display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-  align-items: end;
-  gap: 10px;
-  margin: 5px 0 0;
-}
-
-.income-mini-chart span {
-  width: 100%;
-  max-width: 26px;
-  min-height: 28px;
-  display: block;
-  justify-self: center;
-  margin: 0;
-  border-radius: 999px;
+.euro-fill {
   background: var(--green);
 }
 
-.income-month-labels {
+.weekday-chart {
+  min-height: 96px;
   display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 6px;
-  margin: -12px 0 0;
+  align-items: end;
+  margin-top: auto;
+}
+
+.weekday-group {
+  display: grid;
+  gap: 8px;
+  align-items: end;
+  justify-items: center;
+}
+
+.weekday-bars {
+  width: 100%;
+  min-height: 74px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 12px));
+  justify-content: center;
+  align-items: end;
+  gap: 5px;
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(to right, transparent calc(50% - 0.5px), rgba(0, 0, 0, 0.08) 50%, transparent calc(50% + 0.5px));
+}
+
+:root[data-theme="dark"] .weekday-bars {
+  background: linear-gradient(to right, transparent calc(50% - 0.5px), rgba(255, 255, 255, 0.09) 50%, transparent calc(50% + 0.5px));
+}
+
+.weekday-bar {
+  width: 11px;
+  min-height: 0;
+  border-radius: 999px 999px 0 0;
+}
+
+.weekday-bar.lek {
+  background: var(--expense);
+}
+
+.weekday-bar.euro {
+  background: var(--green);
+}
+
+.weekday-group strong {
+  margin: 0;
   color: var(--text);
   font-size: 14px;
   font-weight: 800;
   line-height: 1;
-  text-align: center;
+  white-space: nowrap;
+}
+
+.monthly-income-card #overviewMonthlyIncomeLek,
+.monthly-income-card .euro-line {
+  color: var(--purple);
+}
+
+.monthly-income-card .euro-line {
+  margin-top: 3px;
+}
+
+.latest-income-date,
+.savings-goal-meta {
+  display: block;
+  align-self: end;
+  color: var(--text);
+  font-size: clamp(15px, 3.8vw, 20px);
+  font-weight: 500;
+  line-height: 1;
+}
+
+.savings-goal-meta {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.savings-trend-chart {
+  min-height: 88px;
+  display: grid;
+  grid-template-columns: repeat(31, minmax(2px, 1fr));
+  align-items: center;
+  gap: 2px;
+  margin-top: auto;
+  padding: 0 2px;
+  background:
+    linear-gradient(to bottom, transparent calc(50% - 0.5px), var(--line) 50%, transparent calc(50% + 0.5px)),
+    repeating-linear-gradient(to right, transparent 0 7px, rgba(0, 0, 0, 0.08) 7px 8px);
+}
+
+:root[data-theme="dark"] .savings-trend-chart {
+  background:
+    linear-gradient(to bottom, transparent calc(50% - 0.5px), var(--line) 50%, transparent calc(50% + 0.5px)),
+    repeating-linear-gradient(to right, transparent 0 7px, rgba(255, 255, 255, 0.08) 7px 8px);
+}
+
+.saving-bar {
+  width: 5px;
+  min-height: 7px;
+  justify-self: center;
+  border-radius: 999px;
+  background: var(--purple);
+}
+
+.saving-bar.positive {
+  background: var(--purple);
+}
+
+.saving-bar.negative {
+  background: var(--expense);
+}
+
+.saving-bar.neutral {
+  background: var(--line);
 }
 
 .add-entry-button {
-  position: static;
-  transform: none;
-  width: 104px;
-  height: 104px;
+  position: fixed;
+  left: 50%;
+  bottom: max(18px, calc(env(safe-area-inset-bottom) + 18px));
+  z-index: 18;
+  transform: translateX(-50%);
+  width: clamp(84px, 20vw, 104px);
+  height: clamp(84px, 20vw, 104px);
   display: grid;
   place-items: center;
-  margin: 40px auto 18px;
+  margin: 0;
   border: 0;
   border-radius: 999px;
   background: #fbfbfb;
   color: #000000;
-  box-shadow: none;
-  font-size: 76px;
-  font-weight: 400;
-  line-height: 0.95;
+  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.16);
+  font-size: 0;
+  line-height: 0;
+}
+
+.add-entry-button::before,
+.add-entry-button::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: block;
+  border-radius: 999px;
+  background: currentColor;
+  transform: translate(-50%, -50%);
+}
+
+.add-entry-button::before {
+  width: 42%;
+  height: 6px;
+}
+
+.add-entry-button::after {
+  width: 6px;
+  height: 42%;
 }
 
 :root[data-theme="dark"] .add-entry-button {
   border: 1px solid var(--line);
   background: var(--card);
   color: var(--text);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.45);
 }
 
 .flow-section,
@@ -609,7 +756,6 @@ p {
 .edit-entry-button,
 .account-actions button,
 .more-row,
-.import-button,
 .text-button {
   border: 0;
   background: transparent;
@@ -787,14 +933,74 @@ p {
 }
 
 .backup-panel {
-  display: flex;
-  justify-content: center;
-  gap: 18px;
-  flex-wrap: wrap;
-  padding: 32px 0 0;
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  margin: -8px 0 16px;
+  padding: 0;
 }
 
-.import-button input {
+.backup-toggle {
+  width: 46px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--green);
+  padding: 0;
+}
+
+.backup-toggle span {
+  width: 0;
+  height: 0;
+  display: block;
+  border-left: 11px solid transparent;
+  border-right: 11px solid transparent;
+  border-top: 13px solid currentColor;
+  transition: transform 180ms ease;
+}
+
+.backup-panel.is-open .backup-toggle span {
+  transform: rotate(180deg);
+}
+
+.backup-actions {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.backup-actions[hidden] {
+  display: none;
+}
+
+.backup-button {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.backup-button.export-button {
+  border-color: var(--text);
+  background: var(--text);
+  color: var(--bg);
+}
+
+.backup-button input {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -1111,12 +1317,28 @@ select:focus {
 @media (max-width: 430px) {
   .app-shell {
     padding-inline: 14px;
+    padding-bottom: max(140px, calc(env(safe-area-inset-bottom) + 124px));
   }
 
   .activity-card,
   .overview-card {
     border-radius: 30px;
     padding-inline: 24px;
+  }
+
+  .overview-card-grid {
+    gap: 10px;
+  }
+
+  .overview-card {
+    min-height: 184px;
+    gap: 12px;
+    padding: 19px 16px 20px;
+  }
+
+  .monthly-income-card,
+  .savings-goal-card {
+    min-height: 204px;
   }
 
   .activity-body {
@@ -1137,9 +1359,17 @@ select:focus {
     inset: 40px;
   }
 
-  .overview-card h2,
   .activity-card h2 {
     font-size: 26px;
+  }
+
+  .overview-card h2 {
+    font-size: clamp(21px, 6vw, 24px);
+  }
+
+  .overview-card span {
+    margin-top: 8px;
+    font-size: 16px;
   }
 
   .activity-breakdown-row span {
@@ -1151,16 +1381,56 @@ select:focus {
   }
 
   .overview-card strong {
-    font-size: 25px;
+    font-size: clamp(19px, 5.3vw, 22px);
   }
 
-  .income-mini-chart {
-    gap: 5px;
+  .overview-arrow {
+    width: 26px;
+    height: 26px;
+    flex-basis: 26px;
+    font-size: 28px;
   }
 
-  .income-month-labels {
+  .mini-progress-row {
+    grid-template-columns: 22px minmax(0, 1fr);
+    gap: 7px;
+  }
+
+  .mini-progress-row b {
+    font-size: 17px;
+  }
+
+  .mini-track {
+    height: 34px;
+  }
+
+  .weekday-chart {
+    min-height: 82px;
     gap: 3px;
-    font-size: 10px;
+  }
+
+  .weekday-bars {
+    min-height: 58px;
+    grid-template-columns: repeat(2, minmax(0, 9px));
+    gap: 3px;
+  }
+
+  .weekday-bar {
+    width: 8px;
+  }
+
+  .weekday-group strong {
+    font-size: 12px;
+  }
+
+  .latest-income-date,
+  .savings-goal-meta {
+    font-size: 13px;
+  }
+
+  .savings-trend-chart {
+    min-height: 70px;
+    gap: 1px;
   }
 
   .form-grid {
@@ -1171,11 +1441,23 @@ select:focus {
 @media (max-width: 360px) {
   .activity-card,
   .overview-card {
-    padding-inline: 20px;
+    padding-inline: 14px;
   }
 
   .activity-body {
     grid-template-columns: 1fr;
+  }
+
+  .overview-card {
+    min-height: 176px;
+  }
+
+  .overview-card h2 {
+    font-size: 20px;
+  }
+
+  .overview-card strong {
+    font-size: 18px;
   }
 
   .activity-breakdown-row strong {

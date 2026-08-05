@@ -23,15 +23,26 @@
           <small id="todayLabel">Sot</small>
         </div>
         <div class="top-actions">
-          <button class="ghost-export" id="exportBtn" type="button" aria-label="Eksporto të dhënat" title="Eksporto">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11m0 0 4-4m-4 4-4-4M5 17v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2"/></svg>
-          </button>
           <button id="themeToggle" class="theme-switch" type="button" aria-label="Ndrysho dark mode" aria-pressed="false" title="Dark mode">
             <span></span>
           </button>
           <div class="profile-orb" aria-hidden="true">D</div>
         </div>
       </header>
+
+      <section class="backup-panel is-collapsed" id="backupPanel" aria-label="Kopje rezerve">
+        <button class="backup-toggle" id="backupToggle" type="button" aria-expanded="false" aria-controls="backupActions" aria-label="Shfaq backup">
+          <span></span>
+        </button>
+        <div class="backup-actions" id="backupActions" hidden>
+          <button class="backup-button export-button" id="exportBtn" type="button">Eksporto JSON</button>
+          <label class="backup-button">
+            Importo JSON
+            <input id="importInput" type="file" accept=".json,application/json,text/json" />
+          </label>
+          <button class="backup-button" id="restoreBackupBtn" type="button">Rikthe backup</button>
+        </div>
+      </section>
 
       <section class="overview-home pdf-home-v2" aria-labelledby="overviewTitle">
         <article class="activity-card">
@@ -62,41 +73,63 @@
         </article>
 
         <div class="overview-card-grid">
-          <article class="overview-card expense-overview-card">
+          <article class="overview-card daily-expense-card">
             <div class="overview-card-head">
               <div>
                 <h2>Shpenzime</h2>
                 <span>Sot</span>
-                <strong id="overviewExpenseValue">0 L / 0€</strong>
+                <strong id="overviewDailyExpenseValue">0 L / 0€</strong>
               </div>
-              <button id="overviewExpenseOpen" class="overview-arrow" type="button" aria-label="Hap shpenzimet">›</button>
+              <button id="overviewDailyExpenseOpen" class="overview-arrow" type="button" aria-label="Hap shpenzimet ditore">›</button>
             </div>
-            <div class="overview-progress"><span id="overviewExpenseProgress"></span></div>
+            <div class="dual-progress" aria-hidden="true">
+              <div class="mini-progress-row">
+                <b>L</b>
+                <div class="mini-track"><span id="dailyLekBar" class="lek-fill"></span></div>
+              </div>
+              <div class="mini-progress-row">
+                <b>€</b>
+                <div class="mini-track"><span id="dailyEuroBar" class="euro-fill"></span></div>
+              </div>
+            </div>
           </article>
-          <article class="overview-card savings-overview-card">
+
+          <article class="overview-card weekday-expense-card">
             <div class="overview-card-head">
               <div>
-                <h2>Kursimet</h2>
-                <span>Sot</span>
-                <strong id="overviewSavingsValue">0 L / 0€</strong>
+                <h2>Shpenzime</h2>
+                <span id="overviewWeekMonth">Muaji</span>
+                <strong id="overviewWeekExpenseValue">0 L / 0€</strong>
               </div>
-              <button id="overviewSavingsOpen" class="overview-arrow" type="button" aria-label="Hap llogaritë">›</button>
+              <button id="overviewWeekExpenseOpen" class="overview-arrow" type="button" aria-label="Hap shpenzimet sipas javës">›</button>
             </div>
-            <div class="overview-progress"><span id="overviewSavingsProgress"></span></div>
+            <div id="weekdayExpenseChart" class="weekday-chart" aria-hidden="true"></div>
           </article>
-          <article class="overview-card income-overview-card">
+
+          <article class="overview-card monthly-income-card">
             <div class="overview-card-head">
               <div>
                 <h2>Të ardhurat</h2>
-                <span>Totali</span>
-                <strong id="overviewIncomeValue">0 L / 0€</strong>
+                <span>Këtë muaj</span>
+                <strong id="overviewMonthlyIncomeLek">0 L</strong>
+                <strong id="overviewMonthlyIncomeEuro" class="euro-line">0€</strong>
               </div>
-              <button id="overviewIncomeOpen" class="overview-arrow" type="button" aria-label="Hap të ardhurat">›</button>
+              <button id="overviewMonthlyIncomeOpen" class="overview-arrow" type="button" aria-label="Hap të ardhurat">›</button>
             </div>
-            <div id="incomeMiniChart" class="income-mini-chart" aria-hidden="true"></div>
-            <div class="income-month-labels" aria-hidden="true">
-              <span>Jan</span><span>Shk</span><span>Mar</span><span>Pri</span><span>Maj</span><span>Qer</span><span>Kor</span><span>Gus</span><span>Sht</span><span>Tet</span><span>Nen</span><span>Dhj</span>
+            <small id="overviewLatestIncomeDate" class="latest-income-date">Pa të ardhura</small>
+          </article>
+
+          <article class="overview-card savings-goal-card">
+            <div class="overview-card-head">
+              <div>
+                <h2>Kursimet</h2>
+                <span id="overviewSavingsGoalMonth">Muaji</span>
+                <strong id="overviewSavingsGoalValue">0 L</strong>
+              </div>
+              <button id="overviewSavingsGoalOpen" class="overview-arrow" type="button" aria-label="Hap kursimet">›</button>
             </div>
+            <div id="savingsTrendChart" class="savings-trend-chart" aria-hidden="true"></div>
+            <small id="overviewSavingsGoalMeta" class="savings-goal-meta">Objektiv 10,000 L për 12 muaj</small>
           </article>
         </div>
       </section>
@@ -395,13 +428,6 @@
         <div id="entryList" class="entry-list"></div>
       </section>
 
-      <section class="backup-panel" aria-label="Kopje rezerve">
-        <label class="import-button">
-          Importo JSON
-          <input id="importInput" type="file" accept="application/json" />
-        </label>
-        <button class="import-button" id="restoreBackupBtn" type="button">Rikthe backup</button>
-      </section>
     </main>
 
     <template id="emptyTemplate">

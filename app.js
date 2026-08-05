@@ -17,6 +17,8 @@ const DEFAULT_LIMITS = {
 const DEFAULT_EUR_TO_ALL_RATE = 93.36;
 const BANK_OF_ALBANIA_RATE_URL = "https://www.bankofalbania.org/Markets/Official_exchange_rate/";
 const EXPENSE_PREVIEW_LIMIT = 10;
+const DEFAULT_SAVINGS_GOAL_ALL = 10000;
+const DEFAULT_SAVINGS_GOAL_MONTHS = 12;
 
 const categories = {
   expense: ["Ushqim", "Transport", "Shtëpi", "Fatura", "Argëtim", "Shëndet", "Tjetër"],
@@ -93,15 +95,23 @@ const els = {
   activityFoodValue: document.querySelector("#activityFoodValue"),
   activityBillsValue: document.querySelector("#activityBillsValue"),
   activityFunValue: document.querySelector("#activityFunValue"),
-  overviewExpenseValue: document.querySelector("#overviewExpenseValue"),
-  overviewExpenseProgress: document.querySelector("#overviewExpenseProgress"),
-  overviewSavingsValue: document.querySelector("#overviewSavingsValue"),
-  overviewSavingsProgress: document.querySelector("#overviewSavingsProgress"),
-  overviewIncomeValue: document.querySelector("#overviewIncomeValue"),
-  overviewExpenseOpen: document.querySelector("#overviewExpenseOpen"),
-  overviewSavingsOpen: document.querySelector("#overviewSavingsOpen"),
-  overviewIncomeOpen: document.querySelector("#overviewIncomeOpen"),
-  incomeMiniChart: document.querySelector("#incomeMiniChart"),
+  overviewDailyExpenseValue: document.querySelector("#overviewDailyExpenseValue"),
+  overviewWeekExpenseValue: document.querySelector("#overviewWeekExpenseValue"),
+  overviewWeekMonth: document.querySelector("#overviewWeekMonth"),
+  overviewMonthlyIncomeLek: document.querySelector("#overviewMonthlyIncomeLek"),
+  overviewMonthlyIncomeEuro: document.querySelector("#overviewMonthlyIncomeEuro"),
+  overviewLatestIncomeDate: document.querySelector("#overviewLatestIncomeDate"),
+  overviewSavingsGoalValue: document.querySelector("#overviewSavingsGoalValue"),
+  overviewSavingsGoalMonth: document.querySelector("#overviewSavingsGoalMonth"),
+  overviewSavingsGoalMeta: document.querySelector("#overviewSavingsGoalMeta"),
+  dailyLekBar: document.querySelector("#dailyLekBar"),
+  dailyEuroBar: document.querySelector("#dailyEuroBar"),
+  weekdayExpenseChart: document.querySelector("#weekdayExpenseChart"),
+  savingsTrendChart: document.querySelector("#savingsTrendChart"),
+  overviewDailyExpenseOpen: document.querySelector("#overviewDailyExpenseOpen"),
+  overviewWeekExpenseOpen: document.querySelector("#overviewWeekExpenseOpen"),
+  overviewMonthlyIncomeOpen: document.querySelector("#overviewMonthlyIncomeOpen"),
+  overviewSavingsGoalOpen: document.querySelector("#overviewSavingsGoalOpen"),
   openLimitsBtn: document.querySelector("#openLimitsBtn"),
   limitsOverlay: document.querySelector("#limitsOverlay"),
   limitsForm: document.querySelector("#limitsForm"),
@@ -157,6 +167,9 @@ const els = {
   categoryChart: document.querySelector("#categoryChart"),
   monthFilter: document.querySelector("#monthFilter"),
   clearBtn: document.querySelector("#clearBtn"),
+  backupPanel: document.querySelector("#backupPanel"),
+  backupToggle: document.querySelector("#backupToggle"),
+  backupActions: document.querySelector("#backupActions"),
   exportBtn: document.querySelector("#exportBtn"),
   themeToggle: document.querySelector("#themeToggle"),
   importInput: document.querySelector("#importInput"),
@@ -182,9 +195,10 @@ els.receiptImageInput.addEventListener("change", handleReceiptImage);
 els.resetReceiptAiBtn.addEventListener("click", resetReceiptAiConnection);
 
 els.addEntryBtn.addEventListener("click", () => openEntryEditor("expense"));
-els.overviewExpenseOpen?.addEventListener("click", () => scrollToSection("#expenseSectionTitle"));
-els.overviewSavingsOpen?.addEventListener("click", () => scrollToSection("#accountsSummaryTitle"));
-els.overviewIncomeOpen?.addEventListener("click", () => scrollToSection("#incomeSectionTitle"));
+els.overviewDailyExpenseOpen?.addEventListener("click", () => scrollToSection("#expenseSectionTitle"));
+els.overviewWeekExpenseOpen?.addEventListener("click", () => scrollToSection("#expenseSectionTitle"));
+els.overviewMonthlyIncomeOpen?.addEventListener("click", () => scrollToSection("#incomeSectionTitle"));
+els.overviewSavingsGoalOpen?.addEventListener("click", () => scrollToSection("#accountsSummaryTitle"));
 els.openLimitsBtn.addEventListener("click", openLimitsEditor);
 els.cancelLimitsBtn.addEventListener("click", closeLimitsEditor);
 els.limitsOverlay.addEventListener("click", (event) => {
@@ -375,6 +389,14 @@ document.querySelectorAll("[data-daily-currency]").forEach((button) => {
   });
 });
 els.exportBtn.addEventListener("click", exportData);
+els.backupToggle.addEventListener("click", () => {
+  const isOpen = els.backupToggle.getAttribute("aria-expanded") === "true";
+  els.backupToggle.setAttribute("aria-expanded", String(!isOpen));
+  els.backupToggle.setAttribute("aria-label", isOpen ? "Shfaq backup" : "Fshih backup");
+  els.backupPanel.classList.toggle("is-open", !isOpen);
+  els.backupPanel.classList.toggle("is-collapsed", isOpen);
+  els.backupActions.hidden = isOpen;
+});
 els.themeToggle.addEventListener("click", () => {
   state.theme = state.theme === "dark" ? "light" : "dark";
   saveTheme();
@@ -425,19 +447,105 @@ function render() {
 
 function renderOverview(now, monthEntries, spentToday, spentMonth, incomeMonth, accountTotals) {
   if (els.todayLabel) els.todayLabel.textContent = longDateLabel(now);
-  if (els.overviewExpenseValue) els.overviewExpenseValue.textContent = moneyPairCompact(spentToday);
-  if (els.overviewSavingsValue) els.overviewSavingsValue.textContent = moneyPairCompact(accountTotals);
-  if (els.overviewIncomeValue) els.overviewIncomeValue.textContent = moneyPairCompact(incomeMonth);
-  if (els.overviewExpenseProgress) els.overviewExpenseProgress.style.width = `${limitPercent(totalsToLek(spentMonth), state.limits.expenseALL + state.limits.expenseEUR * state.exchangeRate)}%`;
-  if (els.overviewSavingsProgress) {
-    const savingsTotal = totalsToLek(accountTotals);
-    const spendingTotal = totalsToLek(spentMonth);
-    const savingsRate = savingsTotal > 0 ? Math.min((savingsTotal / Math.max(savingsTotal + spendingTotal, 1)) * 100, 100) : 0;
-    els.overviewSavingsProgress.style.width = `${savingsRate}%`;
+  if (els.overviewDailyExpenseValue) els.overviewDailyExpenseValue.textContent = moneyPairCompact(spentToday);
+  if (els.overviewWeekExpenseValue) els.overviewWeekExpenseValue.textContent = moneyPairCompact(spentMonth);
+  const overviewMonth = capitalizeFirst(monthNames[now.getMonth()]);
+  if (els.overviewWeekMonth) els.overviewWeekMonth.textContent = overviewMonth;
+  if (els.overviewSavingsGoalMonth) els.overviewSavingsGoalMonth.textContent = overviewMonth;
+  if (els.overviewMonthlyIncomeLek) els.overviewMonthlyIncomeLek.textContent = moneyLekShort(incomeMonth.ALL);
+  if (els.overviewMonthlyIncomeEuro) els.overviewMonthlyIncomeEuro.textContent = moneyEuroCompact(incomeMonth.EUR);
+
+  const latestIncome = latestEntry("income", monthKey(now));
+  if (els.overviewLatestIncomeDate) els.overviewLatestIncomeDate.textContent = latestIncome ? formatSlashDate(latestIncome.date) : "Pa të ardhura këtë muaj";
+
+  renderDailyExpenseOverview(spentToday);
+  renderWeekdayExpenseChart(monthEntries);
+  renderSavingsGoalOverview(now, monthEntries);
+  renderActivityRing(monthEntries);
+}
+
+function renderDailyExpenseOverview(spentToday) {
+  const today = new Date();
+  const dailyLekLimit = state.limits.expenseALL / daysInMonth(today);
+  const dailyEuroLimit = state.limits.expenseEUR / daysInMonth(today);
+  if (els.dailyLekBar) els.dailyLekBar.style.width = `${limitPercent(spentToday.ALL, dailyLekLimit)}%`;
+  if (els.dailyEuroBar) els.dailyEuroBar.style.width = `${limitPercent(spentToday.EUR, dailyEuroLimit)}%`;
+}
+
+function renderWeekdayExpenseChart(monthEntries) {
+  if (!els.weekdayExpenseChart) return;
+
+  const weekdayOrder = [1, 2, 3, 4, 5, 6, 0];
+  const weekdayLabels = ["H", "M", "M", "E", "P", "S", "D"];
+  const totals = weekdayOrder.map((day) => ({ day, ALL: 0, EUR: 0 }));
+
+  monthEntries.forEach((entry) => {
+    if (entry.type !== "expense") return;
+    const day = parseLocalDate(entry.date).getDay();
+    const row = totals.find((item) => item.day === day);
+    if (!row) return;
+    row[normalizeCurrency(entry.currency)] += Number(entry.amount) || 0;
+  });
+
+  const maxLek = Math.max(...totals.map((item) => item.ALL), 1);
+  const maxEuro = Math.max(...totals.map((item) => item.EUR), 1);
+  els.weekdayExpenseChart.innerHTML = "";
+
+  totals.forEach((item, index) => {
+    const lekHeight = item.ALL > 0 ? Math.max(20, Math.round((item.ALL / maxLek) * 62)) : 0;
+    const euroHeight = item.EUR > 0 ? Math.max(20, Math.round((item.EUR / maxEuro) * 62)) : 0;
+    const group = document.createElement("div");
+    group.className = "weekday-group";
+    group.innerHTML = `
+      <div class="weekday-bars">
+        <span class="weekday-bar lek" style="height:${lekHeight}px"></span>
+        <span class="weekday-bar euro" style="height:${euroHeight}px"></span>
+      </div>
+      <strong>${weekdayLabels[index]}</strong>
+    `;
+    els.weekdayExpenseChart.append(group);
+  });
+}
+
+function renderSavingsGoalOverview(now, monthEntries) {
+  if (!els.overviewSavingsGoalValue && !els.savingsTrendChart) return;
+
+  const targetAll = DEFAULT_SAVINGS_GOAL_ALL;
+  const dailyTarget = Math.max(targetAll / (DEFAULT_SAVINGS_GOAL_MONTHS * 30), 1);
+  if (els.overviewSavingsGoalValue) els.overviewSavingsGoalValue.textContent = `${moneyLekShort(dailyTarget)}/ditë`;
+  if (els.overviewSavingsGoalMeta) {
+    els.overviewSavingsGoalMeta.textContent = `Objektiv ${moneyLekShort(targetAll)} për ${DEFAULT_SAVINGS_GOAL_MONTHS} muaj`;
   }
 
-  renderActivityRing(monthEntries);
-  renderIncomeMiniChart();
+  renderSavingsTrendChart(now, monthEntries, dailyTarget);
+}
+
+function renderSavingsTrendChart(now, monthEntries, dailyTarget) {
+  if (!els.savingsTrendChart) return;
+
+  const currentMonth = monthKey(now);
+  const totalDays = daysInMonth(now);
+  const days = Array.from({ length: totalDays }, (_, index) => `${currentMonth}-${String(index + 1).padStart(2, "0")}`);
+  const totalsByDay = new Map(days.map((day) => [day, 0]));
+
+  monthEntries.forEach((entry) => {
+    const signedAmount = entry.type === "income" ? dailyChartAmount(entry, "TOTAL") : -dailyChartAmount(entry, "TOTAL");
+    totalsByDay.set(entry.date, (totalsByDay.get(entry.date) || 0) + signedAmount);
+  });
+
+  const values = days.map((date) => totalsByDay.get(date) || 0);
+  const maxAbs = Math.max(...values.map((value) => Math.abs(value)), dailyTarget, 1);
+  els.savingsTrendChart.innerHTML = "";
+
+  values.forEach((value, index) => {
+    const height = Math.max(7, Math.round((Math.abs(value) / maxAbs) * 48));
+    const bar = document.createElement("span");
+    bar.className = value >= dailyTarget ? "saving-bar positive" : value < 0 ? "saving-bar negative" : "saving-bar neutral";
+    bar.style.height = `${height}px`;
+    bar.style.transform = value < 0 ? "translateY(50%)" : "translateY(-50%)";
+    bar.title = `${formatSlashDate(days[index])}: ${moneyLekShort(value)}`;
+    els.savingsTrendChart.append(bar);
+  });
 }
 
 function renderActivityRing(monthEntries) {
@@ -460,21 +568,6 @@ function renderActivityRing(monthEntries) {
   if (els.activityFoodValue) els.activityFoodValue.textContent = moneyPairCompact(trackedTotals[0]);
   if (els.activityBillsValue) els.activityBillsValue.textContent = moneyPairCompact(trackedTotals[1]);
   if (els.activityFunValue) els.activityFunValue.textContent = moneyPairCompact(trackedTotals[2]);
-}
-
-function renderIncomeMiniChart() {
-  if (!els.incomeMiniChart) return;
-  const year = new Date().getFullYear();
-  const monthly = Array.from({ length: 12 }, (_, monthIndex) => {
-    const key = `${year}-${String(monthIndex + 1).padStart(2, "0")}`;
-    return state.entries
-      .filter((entry) => entry.type === "income" && entry.date.startsWith(key))
-      .reduce((sum, entry) => sum + dailyChartAmount(entry, "TOTAL"), 0);
-  });
-  const max = Math.max(...monthly, 1);
-  els.incomeMiniChart.innerHTML = monthly
-    .map((value, index) => `<span style="height:${Math.max(28, Math.round((value / max) * 78))}px" title="${monthNames[index]}: ${moneyLekShort(value)}"></span>`)
-    .join("");
 }
 
 function renderRates(spentMonth, incomeMonth = emptyMoneyTotals()) {
@@ -1187,7 +1280,16 @@ async function imageFromFile(file) {
 }
 
 function exportData() {
-  const blob = new Blob([JSON.stringify({ entries: state.entries, banks: state.banks }, null, 2)], { type: "application/json" });
+  const backup = {
+    app: "financat-e-mia",
+    version: 3,
+    exportedAt: new Date().toISOString(),
+    entries: state.entries,
+    banks: state.banks,
+    limits: state.limits,
+    exchangeRate: state.exchangeRate,
+  };
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
@@ -1204,14 +1306,17 @@ function importData(event) {
   reader.onload = () => {
     try {
       const parsed = JSON.parse(reader.result);
-      if (!Array.isArray(parsed.entries)) throw new Error("Format i pavlefshëm");
+      const parsedEntries = Array.isArray(parsed) ? parsed : Array.isArray(parsed.entries) ? parsed.entries : [];
 
-      const importedEntries = parsed.entries.filter(isValidEntry);
+      const importedEntries = parsedEntries.filter(isValidEntry).map(normalizeEntryForImport);
       const importedBanks = Array.isArray(parsed.banks)
         ? parsed.banks.filter(isValidBank)
         : legacySavingsToBanks(normalizeMoneyTotals(parsed.savings));
+      const importedLimits = parsed.limits ? normalizeLimits(parsed.limits) : null;
+      const importedExchangeRate = Number(parsed.exchangeRate);
+      const hasExchangeRate = importedExchangeRate > 0;
 
-      if (!importedEntries.length && !importedBanks?.length) {
+      if (!importedEntries.length && !importedBanks?.length && !importedLimits && !hasExchangeRate) {
         alert("Ky backup nuk ka të dhëna për t'u importuar.");
         return;
       }
@@ -1220,13 +1325,18 @@ function importData(event) {
       const beforeCount = state.entries.length;
       state.entries = mergeEntries(state.entries, importedEntries);
       if (importedBanks?.length) state.banks = mergeBanks(state.banks, importedBanks);
+      if (importedLimits) state.limits = importedLimits;
+      if (hasExchangeRate) state.exchangeRate = importedExchangeRate;
       ensureDefaultBanks();
       saveBanks();
       saveEntries();
+      saveLimits();
+      saveExchangeRate(state.exchangeRate);
+      els.eurToLekRateInput.value = formatRateInput(state.exchangeRate);
       render();
 
       const addedCount = state.entries.length - beforeCount;
-      alert(`Importi u krye. U shtuan ${addedCount} hyrje të reja.`);
+      alert(`Importi u krye. U lexuan ${importedEntries.length} zëra (${addedCount} të rinj), ${importedBanks?.length || 0} llogari bankare dhe konfigurimet e backup-it.`);
     } catch {
       alert("Nuk u importuan të dhënat. Kontrollo skedarin JSON.");
     } finally {
@@ -1318,16 +1428,19 @@ function saveBanks() {
 
 function loadLimits() {
   try {
-    const saved = JSON.parse(localStorage.getItem(LIMITS_KEY));
-    return {
-      expenseALL: positiveNumber(saved?.expenseALL, DEFAULT_LIMITS.expenseALL),
-      expenseEUR: positiveNumber(saved?.expenseEUR, DEFAULT_LIMITS.expenseEUR),
-      incomeALL: positiveNumber(saved?.incomeALL, DEFAULT_LIMITS.incomeALL),
-      incomeEUR: positiveNumber(saved?.incomeEUR, DEFAULT_LIMITS.incomeEUR),
-    };
+    return normalizeLimits(JSON.parse(localStorage.getItem(LIMITS_KEY)));
   } catch {
     return { ...DEFAULT_LIMITS };
   }
+}
+
+function normalizeLimits(limits) {
+  return {
+    expenseALL: positiveNumber(limits?.expenseALL, DEFAULT_LIMITS.expenseALL),
+    expenseEUR: positiveNumber(limits?.expenseEUR, DEFAULT_LIMITS.expenseEUR),
+    incomeALL: positiveNumber(limits?.incomeALL, DEFAULT_LIMITS.incomeALL),
+    incomeEUR: positiveNumber(limits?.incomeEUR, DEFAULT_LIMITS.incomeEUR),
+  };
 }
 
 function saveLimits() {
@@ -1402,6 +1515,8 @@ function createAutoBackup() {
     JSON.stringify({
       entries: state.entries,
       banks: state.banks,
+      limits: state.limits,
+      exchangeRate: state.exchangeRate,
       savedAt: new Date().toISOString(),
     })
   );
@@ -1421,8 +1536,13 @@ function restoreAutoBackup() {
     createAutoBackup();
     state.entries = backup.entries.filter(isValidEntry);
     state.banks = normalizeBanks(Array.isArray(backup.banks) ? backup.banks.filter(isValidBank) : loadBanks());
+    state.limits = backup.limits ? normalizeLimits(backup.limits) : state.limits;
+    state.exchangeRate = Number(backup.exchangeRate) > 0 ? Number(backup.exchangeRate) : state.exchangeRate;
     saveEntries();
     saveBanks();
+    saveLimits();
+    saveExchangeRate(state.exchangeRate);
+    els.eurToLekRateInput.value = formatRateInput(state.exchangeRate);
     render();
   } catch {
     alert("Backup-i lokal nuk mund të lexohet.");
@@ -1459,14 +1579,7 @@ function ensureDefaultBanks() {
 }
 
 function normalizeBanks(banks) {
-  const normalized = banks.map((bank) => ({
-    id: bank.id || crypto.randomUUID(),
-    name: String(bank.name || "Llogari").trim(),
-    currency: normalizeCurrency(bank.currency),
-    balance: Number(bank.balance) || 0,
-    isDefault: Boolean(bank.isDefault),
-    createdAt: bank.createdAt || new Date().toISOString(),
-  }));
+  const normalized = banks.map(normalizeBankRecord);
 
   ["ALL", "EUR"].forEach((currency) => {
     const sameCurrency = normalized.filter((bank) => bank.currency === currency);
@@ -1480,20 +1593,41 @@ function normalizeBanks(banks) {
 }
 
 function mergeBanks(currentBanks, importedBanks) {
-  const merged = [...currentBanks];
-  const seen = new Set(currentBanks.map((bank) => bank.id));
+  const merged = [];
+  const byId = new Map();
+  const byIdentity = new Map();
 
-  importedBanks.forEach((bank) => {
-    if (seen.has(bank.id)) {
-      const existing = merged.find((item) => item.id === bank.id);
-      Object.assign(existing, normalizeBanks([bank])[0]);
+  [...currentBanks, ...importedBanks].forEach((bank) => {
+    const normalized = normalizeBankRecord(bank);
+    const existing = byId.get(normalized.id) || byIdentity.get(bankIdentity(normalized));
+    if (existing) {
+      Object.assign(existing, normalized, {
+        id: existing.id || normalized.id,
+        createdAt: existing.createdAt || normalized.createdAt,
+      });
       return;
     }
-    seen.add(bank.id);
-    merged.push(normalizeBanks([bank])[0]);
+    merged.push(normalized);
+    byId.set(normalized.id, normalized);
+    byIdentity.set(bankIdentity(normalized), normalized);
   });
 
   return normalizeBanks(merged);
+}
+
+function normalizeBankRecord(bank) {
+  return {
+    id: bank.id || crypto.randomUUID(),
+    name: String(bank.name || "Llogari").trim(),
+    currency: normalizeCurrency(bank.currency),
+    balance: Number(bank.balance) || 0,
+    isDefault: Boolean(bank.isDefault),
+    createdAt: bank.createdAt || new Date().toISOString(),
+  };
+}
+
+function bankIdentity(bank) {
+  return `${normalizeCurrency(bank.currency)}|${String(bank.name || "").trim().toLowerCase()}`;
 }
 
 function isValidEntry(entry) {
@@ -1504,11 +1638,29 @@ function isValidBank(bank) {
   return bank && bank.name && ["ALL", "EUR"].includes(normalizeCurrency(bank.currency));
 }
 
+function normalizeEntryForImport(entry) {
+  return {
+    ...entry,
+    id: entry.id || crypto.randomUUID(),
+    amount: Number(entry.amount) || 0,
+    currency: normalizeCurrency(entry.currency),
+    category: entry.category || (entry.type === "income" ? "Tjetër" : "Tjetër"),
+    note: String(entry.note || "").trim(),
+    date: entry.date,
+    createdAt: entry.createdAt || new Date().toISOString(),
+  };
+}
+
 function mergeEntries(currentEntries, importedEntries) {
-  const merged = [...currentEntries];
-  const seen = new Set(currentEntries.map(entryKey));
+  const merged = currentEntries.map(normalizeEntryForImport);
+  const byId = new Map(merged.filter((entry) => entry.id).map((entry) => [entry.id, entry]));
+  const seen = new Set(merged.map(entryKey));
 
   importedEntries.forEach((entry) => {
+    if (entry.id && byId.has(entry.id)) {
+      Object.assign(byId.get(entry.id), entry);
+      return;
+    }
     const key = entryKey(entry);
     if (seen.has(key)) return;
     seen.add(key);
@@ -1623,9 +1775,21 @@ function moneyOriginal(entry) {
   return normalizeCurrency(entry.currency) === "EUR" ? moneyEuro(entry.amount) : moneyLek(entry.amount);
 }
 
+function latestEntry(type, month = "") {
+  return state.entries
+    .filter((entry) => entry.type === type && (!month || entry.date.startsWith(month)))
+    .slice()
+    .sort((a, b) => b.date.localeCompare(a.date) || new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date))[0];
+}
+
 function formatDate(value) {
   const date = parseLocalDate(value);
   return `${String(date.getDate()).padStart(2, "0")} ${monthNames[date.getMonth()].slice(0, 3)} ${date.getFullYear()}`;
+}
+
+function formatSlashDate(value) {
+  const date = parseLocalDate(value);
+  return `${String(date.getDate()).padStart(2, "0")}/${String(date.getMonth() + 1).padStart(2, "0")}/${date.getFullYear()}`;
 }
 
 function longDateLabel(date) {
@@ -1638,6 +1802,10 @@ function longDateLabel(date) {
 function monthLabel(key) {
   const [year, month] = key.split("-");
   return `${monthNames[Number(month) - 1]} ${year}`;
+}
+
+function capitalizeFirst(value) {
+  return `${String(value).charAt(0).toUpperCase()}${String(value).slice(1)}`;
 }
 
 function todayIso() {
@@ -1674,6 +1842,10 @@ function addDays(date, days) {
   const next = new Date(date);
   next.setDate(next.getDate() + days);
   return next;
+}
+
+function daysInMonth(date) {
+  return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
 }
 
 function positiveNumber(value, fallback) {
