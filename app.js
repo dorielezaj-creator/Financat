@@ -13,12 +13,15 @@ const DEFAULT_LIMITS = {
   expenseEUR: 1000,
   incomeALL: 150000,
   incomeEUR: 1000,
+  savingsALL: 100000,
+  savingsEUR: 1000,
 };
 const DEFAULT_EUR_TO_ALL_RATE = 93.36;
 const BANK_OF_ALBANIA_RATE_URL = "https://www.bankofalbania.org/Markets/Official_exchange_rate/";
 const EXPENSE_PREVIEW_LIMIT = 10;
 const DEFAULT_SAVINGS_GOAL_ALL = 10000;
 const DEFAULT_SAVINGS_GOAL_MONTHS = 12;
+let limitsEditorMode = "all";
 
 const categories = {
   expense: ["Ushqim", "Transport", "Shtëpi", "Fatura", "Argëtim", "Shëndet", "Tjetër"],
@@ -95,23 +98,27 @@ const els = {
   activityFoodValue: document.querySelector("#activityFoodValue"),
   activityBillsValue: document.querySelector("#activityBillsValue"),
   activityFunValue: document.querySelector("#activityFunValue"),
-  overviewDailyExpenseValue: document.querySelector("#overviewDailyExpenseValue"),
-  overviewWeekExpenseValue: document.querySelector("#overviewWeekExpenseValue"),
-  overviewWeekMonth: document.querySelector("#overviewWeekMonth"),
-  overviewMonthlyIncomeLek: document.querySelector("#overviewMonthlyIncomeLek"),
-  overviewMonthlyIncomeEuro: document.querySelector("#overviewMonthlyIncomeEuro"),
-  overviewLatestIncomeDate: document.querySelector("#overviewLatestIncomeDate"),
-  overviewSavingsGoalValue: document.querySelector("#overviewSavingsGoalValue"),
-  overviewSavingsGoalMonth: document.querySelector("#overviewSavingsGoalMonth"),
-  overviewSavingsGoalMeta: document.querySelector("#overviewSavingsGoalMeta"),
-  dailyLekBar: document.querySelector("#dailyLekBar"),
-  dailyEuroBar: document.querySelector("#dailyEuroBar"),
-  weekdayExpenseChart: document.querySelector("#weekdayExpenseChart"),
-  savingsTrendChart: document.querySelector("#savingsTrendChart"),
-  overviewDailyExpenseOpen: document.querySelector("#overviewDailyExpenseOpen"),
-  overviewWeekExpenseOpen: document.querySelector("#overviewWeekExpenseOpen"),
-  overviewMonthlyIncomeOpen: document.querySelector("#overviewMonthlyIncomeOpen"),
-  overviewSavingsGoalOpen: document.querySelector("#overviewSavingsGoalOpen"),
+  homeExpenseMonthLek: document.querySelector("#homeExpenseMonthLek"),
+  homeExpenseTodayLek: document.querySelector("#homeExpenseTodayLek"),
+  homeExpenseLimitLek: document.querySelector("#homeExpenseLimitLek"),
+  homeExpenseMonthEuro: document.querySelector("#homeExpenseMonthEuro"),
+  homeExpenseTodayEuro: document.querySelector("#homeExpenseTodayEuro"),
+  homeExpenseLimitEuro: document.querySelector("#homeExpenseLimitEuro"),
+  homeExpenseLekProgress: document.querySelector("#homeExpenseLekProgress"),
+  homeExpenseEuroProgress: document.querySelector("#homeExpenseEuroProgress"),
+  homeIncomeMonthLek: document.querySelector("#homeIncomeMonthLek"),
+  homeIncomeMonthEuro: document.querySelector("#homeIncomeMonthEuro"),
+  homeIncomeYearLek: document.querySelector("#homeIncomeYearLek"),
+  homeIncomeYearEuro: document.querySelector("#homeIncomeYearEuro"),
+  homeSavingsMonthLek: document.querySelector("#homeSavingsMonthLek"),
+  homeSavingsMonthEuro: document.querySelector("#homeSavingsMonthEuro"),
+  homeSavingsYearLek: document.querySelector("#homeSavingsYearLek"),
+  homeSavingsYearEuro: document.querySelector("#homeSavingsYearEuro"),
+  incomeYearDots: document.querySelector("#incomeYearDots"),
+  savingsYearDots: document.querySelector("#savingsYearDots"),
+  homeExpenseOpen: document.querySelector("#homeExpenseOpen"),
+  homeIncomeLimitOpen: document.querySelector("#homeIncomeLimitOpen"),
+  homeSavingsLimitOpen: document.querySelector("#homeSavingsLimitOpen"),
   openLimitsBtn: document.querySelector("#openLimitsBtn"),
   limitsOverlay: document.querySelector("#limitsOverlay"),
   limitsForm: document.querySelector("#limitsForm"),
@@ -120,6 +127,9 @@ const els = {
   expenseLimitEuroInput: document.querySelector("#expenseLimitEuroInput"),
   incomeLimitLekInput: document.querySelector("#incomeLimitLekInput"),
   incomeLimitEuroInput: document.querySelector("#incomeLimitEuroInput"),
+  savingsLimitLekInput: document.querySelector("#savingsLimitLekInput"),
+  savingsLimitEuroInput: document.querySelector("#savingsLimitEuroInput"),
+  autoIncomeLimitNote: document.querySelector("#autoIncomeLimitNote"),
   expenseLimitLekValue: document.querySelector("#expenseLimitLekValue"),
   expenseLimitEuroValue: document.querySelector("#expenseLimitEuroValue"),
   incomeLimitLekValue: document.querySelector("#incomeLimitLekValue"),
@@ -134,6 +144,9 @@ const els = {
   expenseArchiveOverlay: document.querySelector("#expenseArchiveOverlay"),
   closeExpenseArchiveBtn: document.querySelector("#closeExpenseArchiveBtn"),
   expenseArchiveList: document.querySelector("#expenseArchiveList"),
+  incomeArchiveOverlay: document.querySelector("#incomeArchiveOverlay"),
+  closeIncomeArchiveBtn: document.querySelector("#closeIncomeArchiveBtn"),
+  incomeArchiveList: document.querySelector("#incomeArchiveList"),
   todaySpent: document.querySelector("#todaySpent"),
   todaySpentAlt: document.querySelector("#todaySpentAlt"),
   monthSpent: document.querySelector("#monthSpent"),
@@ -162,6 +175,7 @@ const els = {
   resetReceiptAiBtn: document.querySelector("#resetReceiptAiBtn"),
   receiptAiStatus: document.querySelector("#receiptAiStatus"),
   submitLabel: document.querySelector("#submitLabel"),
+  deleteEntryBtn: document.querySelector("#deleteEntryBtn"),
   entryList: document.querySelector("#entryList"),
   categoryList: document.querySelector("#categoryList"),
   categoryChart: document.querySelector("#categoryChart"),
@@ -195,11 +209,11 @@ els.receiptImageInput.addEventListener("change", handleReceiptImage);
 els.resetReceiptAiBtn.addEventListener("click", resetReceiptAiConnection);
 
 els.addEntryBtn.addEventListener("click", () => openEntryEditor("expense"));
-els.overviewDailyExpenseOpen?.addEventListener("click", () => scrollToSection("#expenseSectionTitle"));
-els.overviewWeekExpenseOpen?.addEventListener("click", () => scrollToSection("#expenseSectionTitle"));
-els.overviewMonthlyIncomeOpen?.addEventListener("click", () => scrollToSection("#incomeSectionTitle"));
-els.overviewSavingsGoalOpen?.addEventListener("click", () => scrollToSection("#accountsSummaryTitle"));
-els.openLimitsBtn.addEventListener("click", openLimitsEditor);
+els.homeExpenseOpen?.addEventListener("click", openExpenseArchive);
+els.homeIncomeLimitOpen?.addEventListener("click", openIncomeArchive);
+els.incomeYearDots?.addEventListener("click", openIncomeArchive);
+els.homeSavingsLimitOpen?.addEventListener("click", () => openLimitsEditor("savings"));
+els.openLimitsBtn.addEventListener("click", () => openLimitsEditor("expense"));
 els.cancelLimitsBtn.addEventListener("click", closeLimitsEditor);
 els.limitsOverlay.addEventListener("click", (event) => {
   if (event.target === els.limitsOverlay) closeLimitsEditor();
@@ -211,6 +225,8 @@ els.limitsForm.addEventListener("submit", (event) => {
     expenseEUR: Math.max(Number(els.expenseLimitEuroInput.value) || 0, 0),
     incomeALL: Math.max(Number(els.incomeLimitLekInput.value) || 0, 0),
     incomeEUR: Math.max(Number(els.incomeLimitEuroInput.value) || 0, 0),
+    savingsALL: Math.max(Number(els.savingsLimitLekInput.value) || 0, 0),
+    savingsEUR: Math.max(Number(els.savingsLimitEuroInput.value) || 0, 0),
   };
   saveLimits();
   closeLimitsEditor();
@@ -220,6 +236,7 @@ els.toggleExpensesBtn.addEventListener("click", () => toggleList("expenses"));
 els.toggleIncomeBtn.addEventListener("click", () => toggleList("income"));
 els.toggleAccountsBtn.addEventListener("click", () => toggleList("accounts"));
 els.cancelEntryBtn.addEventListener("click", closeEntryEditor);
+els.deleteEntryBtn.addEventListener("click", () => deleteEntry(state.editingEntryId, { closeEditor: true }));
 els.entryOverlay.addEventListener("click", (event) => {
   if (event.target === els.entryOverlay) closeEntryEditor();
 });
@@ -341,11 +358,16 @@ els.entryForm.addEventListener("submit", (event) => {
 
 els.entryList.addEventListener("click", handleEntryListClick);
 els.expensePreviewList.addEventListener("click", handleExpensePreviewClick);
-els.incomePreviewList.addEventListener("click", handleEntryListClick);
+els.incomePreviewList.addEventListener("click", handleIncomePreviewClick);
 els.expenseArchiveList.addEventListener("click", handleEntryListClick);
+els.incomeArchiveList.addEventListener("click", handleEntryListClick);
 els.closeExpenseArchiveBtn.addEventListener("click", closeExpenseArchive);
+els.closeIncomeArchiveBtn.addEventListener("click", closeIncomeArchive);
 els.expenseArchiveOverlay.addEventListener("click", (event) => {
   if (event.target === els.expenseArchiveOverlay) closeExpenseArchive();
+});
+els.incomeArchiveOverlay.addEventListener("click", (event) => {
+  if (event.target === els.incomeArchiveOverlay) closeIncomeArchive();
 });
 
 els.clearBtn.addEventListener("click", () => {
@@ -410,11 +432,16 @@ function render() {
   const accountTotals = bankTotals();
   const now = new Date();
   const currentMonth = monthKey(now);
+  const currentYear = String(now.getFullYear());
   const today = todayIso();
   const monthEntries = state.entries.filter((entry) => entry.date.startsWith(currentMonth));
+  const yearEntries = state.entries.filter((entry) => entry.date.startsWith(currentYear));
   const spentToday = state.entries.filter((entry) => entry.type === "expense" && entry.date === today).reduce(sumMoneyTotals, emptyMoneyTotals());
   const spentMonth = monthEntries.filter((entry) => entry.type === "expense").reduce(sumMoneyTotals, emptyMoneyTotals());
-  const incomeMonth = monthEntries.filter((entry) => entry.type === "income").reduce(sumMoneyTotals, emptyMoneyTotals());
+  const spentYear = yearEntries.filter((entry) => entry.type === "expense").reduce(sumMoneyTotals, emptyMoneyTotals());
+  const incomeMonthlyTotals = monthlyTotalsByType(now.getFullYear(), "income");
+  const incomeMonth = incomeMonthlyTotals[now.getMonth()];
+  const incomeYear = addMoneyTotals(incomeMonthlyTotals);
   const dayOfMonth = now.getDate();
   const dailyAverage = divideMoneyTotals(spentMonth, dayOfMonth);
 
@@ -430,7 +457,7 @@ function render() {
   setExactValues(els.dailyAverage, els.dailyAverageAlt, dailyAverage);
   if (els.currentExpenseMonth) els.currentExpenseMonth.textContent = monthLabel(currentMonth);
   if (els.currentIncomeMonth) els.currentIncomeMonth.textContent = monthLabel(currentMonth);
-  renderOverview(now, monthEntries, spentToday, spentMonth, incomeMonth, accountTotals);
+  renderOverview(now, monthEntries, yearEntries, spentToday, spentMonth, spentYear, incomeMonth, incomeYear, incomeMonthlyTotals, accountTotals);
   renderLimits();
   renderRates(spentMonth, incomeMonth);
 
@@ -445,23 +472,137 @@ function render() {
   renderCategories();
 }
 
-function renderOverview(now, monthEntries, spentToday, spentMonth, incomeMonth, accountTotals) {
+function renderOverview(now, monthEntries, yearEntries, spentToday, spentMonth, spentYear, incomeMonth, incomeYear, incomeMonthlyTotals, accountTotals) {
   if (els.todayLabel) els.todayLabel.textContent = longDateLabel(now);
-  if (els.overviewDailyExpenseValue) els.overviewDailyExpenseValue.textContent = moneyPairCompact(spentToday);
-  if (els.overviewWeekExpenseValue) els.overviewWeekExpenseValue.textContent = moneyPairCompact(spentMonth);
-  const overviewMonth = capitalizeFirst(monthNames[now.getMonth()]);
-  if (els.overviewWeekMonth) els.overviewWeekMonth.textContent = overviewMonth;
-  if (els.overviewSavingsGoalMonth) els.overviewSavingsGoalMonth.textContent = overviewMonth;
-  if (els.overviewMonthlyIncomeLek) els.overviewMonthlyIncomeLek.textContent = moneyLekShort(incomeMonth.ALL);
-  if (els.overviewMonthlyIncomeEuro) els.overviewMonthlyIncomeEuro.textContent = moneyEuroCompact(incomeMonth.EUR);
 
-  const latestIncome = latestEntry("income", monthKey(now));
-  if (els.overviewLatestIncomeDate) els.overviewLatestIncomeDate.textContent = latestIncome ? formatSlashDate(latestIncome.date) : "Pa të ardhura këtë muaj";
+  const savingsMonth = subtractMoneyTotals(incomeMonth, spentMonth);
+  const savingsYear = subtractMoneyTotals(incomeYear, spentYear);
+  const currentYear = now.getFullYear();
 
-  renderDailyExpenseOverview(spentToday);
-  renderWeekdayExpenseChart(monthEntries);
-  renderSavingsGoalOverview(now, monthEntries);
+  renderHomeExpenseCard(spentToday, spentMonth);
+  renderHomeYearCard({
+    type: "income",
+    monthTotals: incomeMonth,
+    yearTotals: incomeYear,
+    monthlyTotals: incomeMonthlyTotals,
+    limitALL: state.limits.incomeALL,
+    limitEUR: state.limits.incomeEUR,
+  });
+  renderHomeYearCard({
+    type: "savings",
+    monthTotals: savingsMonth,
+    yearTotals: savingsYear,
+    monthlyTotals: monthlySavingsTotals(currentYear),
+    limitALL: state.limits.savingsALL,
+    limitEUR: state.limits.savingsEUR,
+  });
   renderActivityRing(monthEntries);
+}
+
+function renderHomeExpenseCard(spentToday, spentMonth) {
+  if (els.homeExpenseMonthLek) els.homeExpenseMonthLek.textContent = moneyLekShort(spentMonth.ALL);
+  if (els.homeExpenseTodayLek) els.homeExpenseTodayLek.textContent = moneyLekShort(spentToday.ALL);
+  if (els.homeExpenseLimitLek) els.homeExpenseLimitLek.textContent = moneyLekShort(state.limits.expenseALL);
+  if (els.homeExpenseMonthEuro) els.homeExpenseMonthEuro.textContent = moneyEuroCompact(spentMonth.EUR);
+  if (els.homeExpenseTodayEuro) els.homeExpenseTodayEuro.textContent = moneyEuroCompact(spentToday.EUR);
+  if (els.homeExpenseLimitEuro) els.homeExpenseLimitEuro.textContent = moneyEuroCompact(state.limits.expenseEUR);
+  setHomeProgress(els.homeExpenseLekProgress, spentMonth.ALL, spentToday.ALL, state.limits.expenseALL);
+  setHomeProgress(els.homeExpenseEuroProgress, spentMonth.EUR, spentToday.EUR, state.limits.expenseEUR);
+}
+
+function setHomeProgress(track, monthValue, todayValue, limit) {
+  if (!track) return;
+
+  const monthWidth = limitPercent(Math.max(monthValue, 0), limit);
+  const todayWidth = limitPercent(Math.max(todayValue, 0), limit);
+  const todayLeft = Math.max(monthWidth - todayWidth, 0);
+  track.style.setProperty("--month-width", `${monthWidth}%`);
+  track.style.setProperty("--today-width", `${todayWidth}%`);
+  track.style.setProperty("--today-left", `${todayLeft}%`);
+}
+
+function renderHomeYearCard({ type, monthTotals, yearTotals, monthlyTotals, limitALL, limitEUR }) {
+  const prefix = type === "income" ? "Income" : "Savings";
+  const accent = type === "income" ? "green" : "purple";
+
+  setText(els[`home${prefix}MonthLek`], moneyLekShort(monthTotals.ALL));
+  setText(els[`home${prefix}MonthEuro`], moneyEuroCompact(monthTotals.EUR));
+  setText(els[`home${prefix}YearLek`], moneyLekShort(yearTotals.ALL));
+  setText(els[`home${prefix}YearEuro`], moneyEuroCompact(yearTotals.EUR));
+  renderMonthlyDotChart(els[type === "income" ? "incomeYearDots" : "savingsYearDots"], monthlyTotals, limitALL, limitEUR, accent);
+}
+
+function renderMonthlyDotChart(container, monthlyTotals, limitALL, limitEUR, accent) {
+  if (!container) return;
+
+  const limitTotalLek = Math.max((Number(limitALL) || 0) + (Number(limitEUR) || 0) * state.exchangeRate, 1);
+  const currentMonthIndex = new Date().getMonth();
+  container.innerHTML = "";
+
+  monthlyTotals.forEach((totals, index) => {
+    const rawValueLek = totalsToLek(totals);
+    const hasValue = Boolean(Number(totals.ALL) || Number(totals.EUR));
+    const isCurrentMonth = index === currentMonthIndex;
+    if (!hasValue && !isCurrentMonth) return;
+
+    const ratio = clamp01(Math.max(rawValueLek, 0) / limitTotalLek);
+    const dot = document.createElement("span");
+    dot.className = `month-dot ${accent}-dot ${monthlyDotTone(ratio)}`;
+    dot.classList.toggle("is-current", isCurrentMonth);
+    dot.classList.toggle("is-negative", rawValueLek < 0);
+    dot.style.left = `${((index + 0.5) / 12) * 100}%`;
+    dot.style.top = `${rawValueLek < 0 ? 88 : 88 - ratio * 76}%`;
+    dot.title = `${capitalizeFirst(monthNames[index])}: ${moneyPairCompact(totals)}`;
+    container.append(dot);
+  });
+}
+
+function monthlyDotTone(ratio) {
+  if (ratio >= 0.625) return "high";
+  if (ratio >= 0.33) return "mid";
+  return "low";
+}
+
+function monthlyTotalsByType(year, type) {
+  const months = Array.from({ length: 12 }, () => emptyMoneyTotals());
+  state.entries.forEach((entry) => {
+    if (entry.type !== type) return;
+    const date = parseLocalDate(entry.date);
+    if (date.getFullYear() !== year) return;
+    addEntryAmount(months[date.getMonth()], entry);
+  });
+  return months;
+}
+
+function monthlySavingsTotals(year) {
+  const income = monthlyTotalsByType(year, "income");
+  const expenses = monthlyTotalsByType(year, "expense");
+  return income.map((totals, index) => subtractMoneyTotals(totals, expenses[index]));
+}
+
+function addMoneyTotals(items) {
+  return items.reduce(
+    (total, item) => ({
+      ALL: total.ALL + (Number(item?.ALL) || 0),
+      EUR: total.EUR + (Number(item?.EUR) || 0),
+    }),
+    emptyMoneyTotals()
+  );
+}
+
+function subtractMoneyTotals(left, right) {
+  return {
+    ALL: (Number(left?.ALL) || 0) - (Number(right?.ALL) || 0),
+    EUR: (Number(left?.EUR) || 0) - (Number(right?.EUR) || 0),
+  };
+}
+
+function setText(element, text) {
+  if (element) element.textContent = text;
+}
+
+function clamp01(value) {
+  return Math.max(0, Math.min(Number(value) || 0, 1));
 }
 
 function renderDailyExpenseOverview(spentToday) {
@@ -636,18 +777,34 @@ function closeAccountsWindow() {
   els.accountsOverlay.hidden = true;
 }
 
-function openLimitsEditor() {
+function openLimitsEditor(mode = "all") {
+  limitsEditorMode = mode;
   els.expenseLimitLekInput.value = state.limits.expenseALL;
   els.expenseLimitEuroInput.value = state.limits.expenseEUR;
   els.incomeLimitLekInput.value = state.limits.incomeALL;
   els.incomeLimitEuroInput.value = state.limits.incomeEUR;
+  els.savingsLimitLekInput.value = state.limits.savingsALL;
+  els.savingsLimitEuroInput.value = state.limits.savingsEUR;
+  syncIncomeLimitFields();
   els.limitsOverlay.hidden = false;
-  els.expenseLimitLekInput.focus();
+  const focusTarget =
+    mode === "savings" ? els.savingsLimitLekInput : mode === "income" ? els.incomeLimitLekInput : els.expenseLimitLekInput;
+  focusTarget.focus();
 }
 
 function closeLimitsEditor() {
   els.limitsOverlay.hidden = true;
   els.limitsForm.reset();
+  syncIncomeLimitFields();
+  limitsEditorMode = "all";
+}
+
+function syncIncomeLimitFields() {
+  els.incomeLimitLekInput.readOnly = false;
+  els.incomeLimitEuroInput.readOnly = false;
+  els.incomeLimitLekInput.classList.remove("is-readonly");
+  els.incomeLimitEuroInput.classList.remove("is-readonly");
+  if (els.autoIncomeLimitNote) els.autoIncomeLimitNote.hidden = true;
 }
 
 function toggleList(key) {
@@ -691,6 +848,7 @@ function openEntryEditor(type = state.type, entryId = "") {
     els.bankInput.value = entry.bankId || "";
   }
   els.submitLabel.textContent = entry ? "Ruaj ndryshimet" : state.type === "expense" ? "Shto shpenzim" : "Shto të ardhur";
+  els.deleteEntryBtn.hidden = !entry;
   els.entryOverlay.hidden = false;
   els.amountInput.focus();
 }
@@ -699,6 +857,7 @@ function closeEntryEditor() {
   state.editingEntryId = "";
   els.entryOverlay.hidden = true;
   els.entryForm.reset();
+  els.deleteEntryBtn.hidden = true;
   els.dateInput.value = todayIso();
   syncTypeControls();
 }
@@ -762,14 +921,20 @@ function handleEntryListClick(event) {
   }
 
   if (!deleteButton) return;
-  const entry = state.entries.find((item) => item.id === deleteButton.dataset.delete);
+  deleteEntry(deleteButton.dataset.delete);
+}
+
+function deleteEntry(entryId, options = {}) {
+  const entry = state.entries.find((item) => item.id === entryId);
   if (!entry) return;
+  if (!confirm("A dëshiron ta fshish këtë zë?")) return;
 
   createAutoBackup();
   if (entry.bankId) applyBankDelta(entry.bankId, entry.type === "income" ? -entry.amount : entry.amount);
   state.entries = state.entries.filter((item) => item.id !== entry.id);
   saveBanks();
   saveEntries();
+  if (options.closeEditor) closeEntryEditor();
   render();
 }
 
@@ -794,53 +959,42 @@ function renderMonthFilter() {
 function renderPreviewEntries() {
   const currentMonth = monthKey(new Date());
   const expenseEntries = state.entries.filter((entry) => entry.type === "expense" && entry.date.startsWith(currentMonth));
-  renderExpensePreviewList(expenseEntries, currentMonth);
-  renderPreviewList(
-    els.incomePreviewList,
-    state.entries.filter((entry) => entry.type === "income" && entry.date.startsWith(currentMonth)).slice(0, 4),
-    "Nuk ka të ardhura këtë muaj."
-  );
+  const incomeEntries = state.entries.filter((entry) => entry.type === "income" && entry.date.startsWith(currentMonth));
+  renderEntryPreviewList("expense", els.expensePreviewList, expenseEntries, currentMonth);
+  renderEntryPreviewList("income", els.incomePreviewList, incomeEntries, currentMonth);
   if (!els.expenseArchiveOverlay.hidden) renderExpenseArchive();
+  if (!els.incomeArchiveOverlay.hidden) renderIncomeArchive();
 }
 
-function renderPreviewList(container, entries, emptyText) {
+function renderEntryPreviewList(type, container, entries, currentMonth) {
+  const hasArchive = entries.length > EXPENSE_PREVIEW_LIMIT || hasOtherEntryMonths(type, currentMonth);
+  const emptyText = type === "income" ? "Nuk ka të ardhura këtë muaj." : "Nuk ka shpenzime këtë muaj.";
   container.innerHTML = "";
+
   if (!entries.length) {
     container.innerHTML = `<div class="empty-line">${emptyText}</div>`;
-    return;
-  }
-
-  entries.forEach((entry) => container.append(createEntryRow(entry, "preview")));
-}
-
-function renderExpensePreviewList(entries, currentMonth) {
-  const hasArchive = entries.length > EXPENSE_PREVIEW_LIMIT || hasOtherExpenseMonths(currentMonth);
-  els.expensePreviewList.innerHTML = "";
-
-  if (!entries.length) {
-    els.expensePreviewList.innerHTML = `<div class="empty-line">Nuk ka shpenzime këtë muaj.</div>`;
   } else {
-    entries.slice(0, EXPENSE_PREVIEW_LIMIT).forEach((entry) => els.expensePreviewList.append(createEntryRow(entry, "preview")));
+    entries.slice(0, EXPENSE_PREVIEW_LIMIT).forEach((entry) => container.append(createEntryRow(entry, "preview")));
   }
 
-  if (hasArchive) els.expensePreviewList.append(createMoreRow());
+  if (hasArchive) container.append(createMoreRow(type));
 }
 
-function createMoreRow() {
+function createMoreRow(type) {
   const button = document.createElement("button");
   button.className = "more-row";
   button.type = "button";
-  button.dataset.openExpenseArchive = "true";
+  button.dataset.openArchive = type;
   button.textContent = "More";
   return button;
 }
 
-function hasOtherExpenseMonths(currentMonth) {
-  return state.entries.some((entry) => entry.type === "expense" && !entry.date.startsWith(currentMonth));
+function hasOtherEntryMonths(type, currentMonth) {
+  return state.entries.some((entry) => entry.type === type && !entry.date.startsWith(currentMonth));
 }
 
 function handleExpensePreviewClick(event) {
-  const moreButton = event.target.closest("[data-open-expense-archive]");
+  const moreButton = event.target.closest("[data-open-archive='expense']");
   if (moreButton) {
     openExpenseArchive();
     return;
@@ -849,8 +1003,18 @@ function handleExpensePreviewClick(event) {
   handleEntryListClick(event);
 }
 
+function handleIncomePreviewClick(event) {
+  const moreButton = event.target.closest("[data-open-archive='income']");
+  if (moreButton) {
+    openIncomeArchive();
+    return;
+  }
+
+  handleEntryListClick(event);
+}
+
 function openExpenseArchive() {
-  renderExpenseArchive();
+  renderEntryArchive("expense");
   els.expenseArchiveOverlay.hidden = false;
 }
 
@@ -859,13 +1023,32 @@ function closeExpenseArchive() {
 }
 
 function renderExpenseArchive() {
-  const months = expenseMonths();
+  renderEntryArchive("expense");
+}
+
+function openIncomeArchive() {
+  renderEntryArchive("income");
+  els.incomeArchiveOverlay.hidden = false;
+}
+
+function closeIncomeArchive() {
+  els.incomeArchiveOverlay.hidden = true;
+}
+
+function renderIncomeArchive() {
+  renderEntryArchive("income");
+}
+
+function renderEntryArchive(type) {
+  const months = entryMonths(type);
   const currentMonth = monthKey(new Date());
   const hasCurrentMonth = months.some((month) => month.key === currentMonth);
+  const list = type === "income" ? els.incomeArchiveList : els.expenseArchiveList;
+  const emptyText = type === "income" ? "Nuk ka të ardhura për t'u shfaqur." : "Nuk ka shpenzime për t'u shfaqur.";
 
-  els.expenseArchiveList.innerHTML = "";
+  list.innerHTML = "";
   if (!months.length) {
-    els.expenseArchiveList.innerHTML = `<div class="empty-line">Nuk ka shpenzime për t'u shfaqur.</div>`;
+    list.innerHTML = `<div class="empty-line">${emptyText}</div>`;
     return;
   }
 
@@ -885,14 +1068,14 @@ function renderExpenseArchive() {
     list.className = "archive-month-list";
     month.entries.forEach((entry) => list.append(createEntryRow(entry, "preview")));
     details.append(summary, list);
-    els.expenseArchiveList.append(details);
+    (type === "income" ? els.incomeArchiveList : els.expenseArchiveList).append(details);
   });
 }
 
-function expenseMonths() {
+function entryMonths(type) {
   const groups = new Map();
   const sortedEntries = state.entries
-    .filter((entry) => entry.type === "expense")
+    .filter((entry) => entry.type === type)
     .slice()
     .sort((a, b) => b.date.localeCompare(a.date) || new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date));
 
@@ -1349,12 +1532,12 @@ function importData(event) {
 function loadEntries() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    if (Array.isArray(saved)) return saved.filter(isValidEntry);
+    if (Array.isArray(saved)) return saved.filter(isValidEntry).map(normalizeEntryForImport);
 
     for (const key of LEGACY_STORAGE_KEYS) {
       const legacy = JSON.parse(localStorage.getItem(key));
       if (Array.isArray(legacy)) {
-        const entries = legacy.filter(isValidEntry);
+        const entries = legacy.filter(isValidEntry).map(normalizeEntryForImport);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
         return entries;
       }
@@ -1440,6 +1623,8 @@ function normalizeLimits(limits) {
     expenseEUR: positiveNumber(limits?.expenseEUR, DEFAULT_LIMITS.expenseEUR),
     incomeALL: positiveNumber(limits?.incomeALL, DEFAULT_LIMITS.incomeALL),
     incomeEUR: positiveNumber(limits?.incomeEUR, DEFAULT_LIMITS.incomeEUR),
+    savingsALL: positiveNumber(limits?.savingsALL, DEFAULT_LIMITS.savingsALL),
+    savingsEUR: positiveNumber(limits?.savingsEUR, DEFAULT_LIMITS.savingsEUR),
   };
 }
 
@@ -1534,7 +1719,7 @@ function restoreAutoBackup() {
     if (!confirmed) return;
 
     createAutoBackup();
-    state.entries = backup.entries.filter(isValidEntry);
+    state.entries = backup.entries.filter(isValidEntry).map(normalizeEntryForImport);
     state.banks = normalizeBanks(Array.isArray(backup.banks) ? backup.banks.filter(isValidBank) : loadBanks());
     state.limits = backup.limits ? normalizeLimits(backup.limits) : state.limits;
     state.exchangeRate = Number(backup.exchangeRate) > 0 ? Number(backup.exchangeRate) : state.exchangeRate;
@@ -1631,7 +1816,7 @@ function bankIdentity(bank) {
 }
 
 function isValidEntry(entry) {
-  return entry && ["income", "expense"].includes(entry.type) && Number(entry.amount) > 0 && entry.note && entry.date;
+  return entry && ["income", "expense"].includes(normalizeEntryType(entry.type)) && Number(entry.amount) > 0 && entry.date;
 }
 
 function isValidBank(bank) {
@@ -1639,16 +1824,30 @@ function isValidBank(bank) {
 }
 
 function normalizeEntryForImport(entry) {
+  const type = normalizeEntryType(entry.type);
   return {
     ...entry,
     id: entry.id || crypto.randomUUID(),
+    type,
     amount: Number(entry.amount) || 0,
     currency: normalizeCurrency(entry.currency),
-    category: entry.category || (entry.type === "income" ? "Tjetër" : "Tjetër"),
-    note: String(entry.note || "").trim(),
+    category: entry.category || "Tjetër",
+    note: String(entry.note || entry.description || entry.category || (type === "income" ? "Të ardhura" : "Shpenzim")).trim(),
     date: entry.date,
     createdAt: entry.createdAt || new Date().toISOString(),
   };
+}
+
+function normalizeEntryType(type) {
+  const value = String(type || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  if (["income", "incomes", "te ardhura", "e ardhur", "ardhura", "hyrje"].includes(value)) return "income";
+  if (["expense", "expenses", "shpenzim", "shpenzime", "dalje"].includes(value)) return "expense";
+  return "";
 }
 
 function mergeEntries(currentEntries, importedEntries) {

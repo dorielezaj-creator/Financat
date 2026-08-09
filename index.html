@@ -73,70 +73,97 @@
         </article>
 
         <div class="overview-card-grid">
-          <article class="overview-card daily-expense-card">
+          <article class="overview-card home-expense-card">
             <div class="overview-card-head">
+              <h2>Shpenzime</h2>
+              <button id="homeExpenseOpen" class="overview-arrow" type="button" aria-label="Hap listën e shpenzimeve">›</button>
+            </div>
+            <div class="home-metric-row">
               <div>
-                <h2>Shpenzime</h2>
+                <span>Muaji</span>
+                <strong id="homeExpenseMonthLek">0 L</strong>
+              </div>
+              <div>
                 <span>Sot</span>
-                <strong id="overviewDailyExpenseValue">0 L / 0€</strong>
+                <strong id="homeExpenseTodayLek" class="green-value">0 L</strong>
               </div>
-              <button id="overviewDailyExpenseOpen" class="overview-arrow" type="button" aria-label="Hap shpenzimet ditore">›</button>
+              <div>
+                <span>Max</span>
+                <strong id="homeExpenseLimitLek">150,000 L</strong>
+              </div>
             </div>
-            <div class="dual-progress" aria-hidden="true">
-              <div class="mini-progress-row">
-                <b>L</b>
-                <div class="mini-track"><span id="dailyLekBar" class="lek-fill"></span></div>
+            <div id="homeExpenseLekProgress" class="home-progress expense-progress" aria-hidden="true">
+              <span class="month-fill"></span>
+              <span class="today-fill"></span>
+            </div>
+            <div class="home-metric-row compact">
+              <div>
+                <strong id="homeExpenseMonthEuro">0€</strong>
               </div>
-              <div class="mini-progress-row">
-                <b>€</b>
-                <div class="mini-track"><span id="dailyEuroBar" class="euro-fill"></span></div>
+              <div>
+                <strong id="homeExpenseTodayEuro" class="green-value">0€</strong>
               </div>
+              <div>
+                <strong id="homeExpenseLimitEuro">1000€</strong>
+              </div>
+            </div>
+            <div id="homeExpenseEuroProgress" class="home-progress expense-progress" aria-hidden="true">
+              <span class="month-fill"></span>
+              <span class="today-fill"></span>
             </div>
           </article>
 
-          <article class="overview-card weekday-expense-card">
+          <article class="overview-card home-year-card income-year-card">
             <div class="overview-card-head">
-              <div>
-                <h2>Shpenzime</h2>
-                <span id="overviewWeekMonth">Muaji</span>
-                <strong id="overviewWeekExpenseValue">0 L / 0€</strong>
-              </div>
-              <button id="overviewWeekExpenseOpen" class="overview-arrow" type="button" aria-label="Hap shpenzimet sipas javës">›</button>
+              <h2>Të ardhura</h2>
+              <button id="homeIncomeLimitOpen" class="overview-arrow" type="button" aria-label="Hap listën e të ardhurave">›</button>
             </div>
-            <div id="weekdayExpenseChart" class="weekday-chart" aria-hidden="true"></div>
-          </article>
-
-          <article class="overview-card monthly-income-card">
-            <div class="overview-card-head">
+            <div class="year-card-values">
               <div>
-                <h2>Të ardhurat</h2>
                 <span>Këtë muaj</span>
-                <strong id="overviewMonthlyIncomeLek">0 L</strong>
-                <strong id="overviewMonthlyIncomeEuro" class="euro-line">0€</strong>
+                <strong id="homeIncomeMonthLek" class="green-value">0 L</strong>
+                <strong id="homeIncomeMonthEuro" class="green-value euro-line">0€</strong>
               </div>
-              <button id="overviewMonthlyIncomeOpen" class="overview-arrow" type="button" aria-label="Hap të ardhurat">›</button>
+              <div>
+                <span>Këtë vit</span>
+                <strong id="homeIncomeYearLek">0 L</strong>
+                <strong id="homeIncomeYearEuro" class="euro-line">0€</strong>
+              </div>
             </div>
-            <small id="overviewLatestIncomeDate" class="latest-income-date">Pa të ardhura</small>
+            <div id="incomeYearDots" class="monthly-dot-chart green-chart" aria-label="Grafik i të ardhurave sipas muajve"></div>
+            <div class="month-letter-row" aria-hidden="true">
+              <span>J</span><span>S</span><span>M</span><span>P</span><span>M</span><span>Q</span><span>K</span><span>G</span><span>S</span><span>T</span><span>N</span><span>D</span>
+            </div>
           </article>
 
-          <article class="overview-card savings-goal-card">
+          <article class="overview-card home-year-card savings-year-card">
             <div class="overview-card-head">
-              <div>
-                <h2>Kursimet</h2>
-                <span id="overviewSavingsGoalMonth">Muaji</span>
-                <strong id="overviewSavingsGoalValue">0 L</strong>
-              </div>
-              <button id="overviewSavingsGoalOpen" class="overview-arrow" type="button" aria-label="Hap kursimet">›</button>
+              <h2>Kursimet</h2>
+              <button id="homeSavingsLimitOpen" class="overview-arrow" type="button" aria-label="Ndrysho limitet e kursimeve">›</button>
             </div>
-            <div id="savingsTrendChart" class="savings-trend-chart" aria-hidden="true"></div>
-            <small id="overviewSavingsGoalMeta" class="savings-goal-meta">Objektiv 10,000 L për 12 muaj</small>
+            <div class="year-card-values">
+              <div>
+                <span>Këtë muaj</span>
+                <strong id="homeSavingsMonthLek" class="purple-value">0 L</strong>
+                <strong id="homeSavingsMonthEuro" class="purple-value euro-line">0€</strong>
+              </div>
+              <div>
+                <span>Këtë vit</span>
+                <strong id="homeSavingsYearLek">0 L</strong>
+                <strong id="homeSavingsYearEuro" class="euro-line">0€</strong>
+              </div>
+            </div>
+            <div id="savingsYearDots" class="monthly-dot-chart purple-chart" aria-label="Grafik i kursimeve sipas muajve"></div>
+            <div class="month-letter-row" aria-hidden="true">
+              <span>J</span><span>S</span><span>M</span><span>P</span><span>M</span><span>Q</span><span>K</span><span>G</span><span>S</span><span>T</span><span>N</span><span>D</span>
+            </div>
           </article>
         </div>
       </section>
 
       <button id="addEntryBtn" class="add-entry-button" type="button" aria-label="Shto zë">+</button>
 
-      <section class="flow-section" aria-labelledby="expenseSectionTitle">
+      <section class="flow-section home-hidden-panel" aria-labelledby="expenseSectionTitle" aria-hidden="true">
         <div class="flow-title-row">
           <h1 id="expenseSectionTitle">Shpenzime</h1>
           <button id="openLimitsBtn" class="small-settings-button" type="button">Limitet</button>
@@ -163,7 +190,7 @@
         <div id="expensePreviewList" class="pill-list"></div>
       </section>
 
-      <section class="flow-section" aria-labelledby="incomeSectionTitle">
+      <section class="flow-section home-hidden-panel" aria-labelledby="incomeSectionTitle" aria-hidden="true">
         <h2 id="incomeSectionTitle">Të ardhura mujore</h2>
         <div class="limit-grid income-limits">
           <span>Muaji</span>
@@ -203,7 +230,7 @@
         </button>
       </section>
 
-      <section class="daily-spending-section" aria-labelledby="dailySpendingTitle">
+      <section class="daily-spending-section home-hidden-panel" aria-labelledby="dailySpendingTitle" aria-hidden="true">
         <h2 id="dailySpendingTitle">Shpenzimet ditore sipas muajve</h2>
         <label class="period-select-label">
           <span class="sr-only">Periudha e grafikut</span>
@@ -258,13 +285,23 @@
         </div>
       </section>
 
-      <section id="expenseArchiveOverlay" class="editor-overlay" hidden>
+      <section id="expenseArchiveOverlay" class="editor-overlay entry-page-overlay" hidden>
         <div class="archive-window" aria-labelledby="expenseArchiveTitle">
           <div class="archive-header">
             <h2 id="expenseArchiveTitle">Shpenzimet</h2>
-            <button id="closeExpenseArchiveBtn" class="icon-button small" type="button" aria-label="Mbyll shpenzimet">×</button>
+            <button id="closeExpenseArchiveBtn" class="icon-button small" type="button" aria-label="Kthehu">×</button>
           </div>
           <div id="expenseArchiveList" class="archive-list"></div>
+        </div>
+      </section>
+
+      <section id="incomeArchiveOverlay" class="editor-overlay entry-page-overlay" hidden>
+        <div class="archive-window" aria-labelledby="incomeArchiveTitle">
+          <div class="archive-header">
+            <h2 id="incomeArchiveTitle">Të ardhurat</h2>
+            <button id="closeIncomeArchiveBtn" class="icon-button small" type="button" aria-label="Kthehu">×</button>
+          </div>
+          <div id="incomeArchiveList" class="archive-list"></div>
         </div>
       </section>
 
@@ -322,6 +359,15 @@
           <label>
             Të ardhura Euro
             <input id="incomeLimitEuroInput" type="number" inputmode="decimal" min="0" step="0.01" required />
+          </label>
+          <small id="autoIncomeLimitNote" class="field-note" hidden>Të ardhurat merren automatikisht nga zërat e këtij muaji.</small>
+          <label>
+            Kursime Lekë
+            <input id="savingsLimitLekInput" type="number" inputmode="decimal" min="0" step="1" required />
+          </label>
+          <label>
+            Kursime Euro
+            <input id="savingsLimitEuroInput" type="number" inputmode="decimal" min="0" step="0.01" required />
           </label>
           <button id="saveLimitsBtn" class="secondary-button" type="submit">Ruaj limitet</button>
         </form>
@@ -402,9 +448,12 @@
             <input id="dateInput" name="date" type="date" required />
           </label>
 
-          <button class="primary-button" type="submit">
-            <span id="submitLabel">Shto shpenzim</span>
-          </button>
+          <div class="entry-form-actions">
+            <button id="deleteEntryBtn" class="danger-button entry-delete-button" type="button" hidden>Fshi zërin</button>
+            <button class="primary-button" type="submit">
+              <span id="submitLabel">Shto shpenzim</span>
+            </button>
+          </div>
         </form>
       </section>
       </section>
