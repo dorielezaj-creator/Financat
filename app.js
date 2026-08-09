@@ -478,12 +478,14 @@ function renderOverview(now, monthEntries, yearEntries, spentToday, spentMonth, 
   const savingsMonth = subtractMoneyTotals(incomeMonth, spentMonth);
   const savingsYear = subtractMoneyTotals(incomeYear, spentYear);
   const currentYear = now.getFullYear();
+  const currentMonthIndex = now.getMonth();
+  const savingsMonthlyTotals = monthlySavingsTotals(currentYear);
 
   renderHomeExpenseCard(spentToday, spentMonth);
   renderHomeYearCard({
     type: "income",
     monthTotals: incomeMonth,
-    yearTotals: incomeYear,
+    averageTotals: monthlyAverageTotals(incomeMonthlyTotals, currentMonthIndex),
     monthlyTotals: incomeMonthlyTotals,
     limitALL: state.limits.incomeALL,
     limitEUR: state.limits.incomeEUR,
@@ -491,8 +493,8 @@ function renderOverview(now, monthEntries, yearEntries, spentToday, spentMonth, 
   renderHomeYearCard({
     type: "savings",
     monthTotals: savingsMonth,
-    yearTotals: savingsYear,
-    monthlyTotals: monthlySavingsTotals(currentYear),
+    averageTotals: monthlyAverageTotals(savingsMonthlyTotals, currentMonthIndex),
+    monthlyTotals: savingsMonthlyTotals,
     limitALL: state.limits.savingsALL,
     limitEUR: state.limits.savingsEUR,
   });
@@ -521,14 +523,14 @@ function setHomeProgress(track, monthValue, todayValue, limit) {
   track.style.setProperty("--today-left", `${todayLeft}%`);
 }
 
-function renderHomeYearCard({ type, monthTotals, yearTotals, monthlyTotals, limitALL, limitEUR }) {
+function renderHomeYearCard({ type, monthTotals, averageTotals, monthlyTotals, limitALL, limitEUR }) {
   const prefix = type === "income" ? "Income" : "Savings";
   const accent = type === "income" ? "green" : "purple";
 
   setText(els[`home${prefix}MonthLek`], moneyLekShort(monthTotals.ALL));
   setText(els[`home${prefix}MonthEuro`], moneyEuroCompact(monthTotals.EUR));
-  setText(els[`home${prefix}YearLek`], moneyLekShort(yearTotals.ALL));
-  setText(els[`home${prefix}YearEuro`], moneyEuroCompact(yearTotals.EUR));
+  setText(els[`home${prefix}YearLek`], moneyLekShort(averageTotals.ALL));
+  setText(els[`home${prefix}YearEuro`], moneyEuroCompact(averageTotals.EUR));
   renderMonthlyDotChart(els[type === "income" ? "incomeYearDots" : "savingsYearDots"], monthlyTotals, limitALL, limitEUR, accent);
 }
 
@@ -578,6 +580,11 @@ function monthlySavingsTotals(year) {
   const income = monthlyTotalsByType(year, "income");
   const expenses = monthlyTotalsByType(year, "expense");
   return income.map((totals, index) => subtractMoneyTotals(totals, expenses[index]));
+}
+
+function monthlyAverageTotals(monthlyTotals, currentMonthIndex) {
+  const months = monthlyTotals.slice(0, currentMonthIndex + 1);
+  return divideMoneyTotals(addMoneyTotals(months), Math.max(months.length, 1));
 }
 
 function addMoneyTotals(items) {
