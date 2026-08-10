@@ -332,6 +332,13 @@ p {
   font-weight: 500;
 }
 
+.quick-metric-card .quick-metric-note {
+  color: var(--muted);
+  font-size: clamp(13px, 3.2vw, 16px);
+  font-weight: 700;
+  line-height: 1.1;
+}
+
 .quick-metric-card strong {
   display: block;
   color: var(--text);

@@ -138,6 +138,7 @@ const els = {
   quickExpenseDays: document.querySelector("#quickExpenseDays"),
   quickExpenseLek: document.querySelector("#quickExpenseLek"),
   quickExpenseEuro: document.querySelector("#quickExpenseEuro"),
+  quickAverageNote: document.querySelector("#quickAverageNote"),
   quickAverageLek: document.querySelector("#quickAverageLek"),
   quickAverageEuro: document.querySelector("#quickAverageEuro"),
   quickSavingsLek: document.querySelector("#quickSavingsLek"),
@@ -633,22 +634,24 @@ function renderOverview(now, monthEntries, yearEntries, spentToday, spentMonth, 
 function renderQuickMetrics(now, spentToday, spentMonthToDate, accountTotals, incomeMonth) {
   const daysElapsed = Math.max(now.getDate(), 1);
   const monthDays = daysInMonth(now);
-  const projectedMonth = multiplyMoneyTotals(divideMoneyTotals(spentMonthToDate, daysElapsed), monthDays);
+  const dailyAverage = divideMoneyTotals(spentMonthToDate, daysElapsed);
+  const projectedMonth = multiplyMoneyTotals(dailyAverage, monthDays);
   const savingsPlan = savingsGoalPlan(now, incomeMonth);
   const todaySavingsLek = savingsPlan.dailySpendBudgetLek - totalsToLek(spentToday);
   const remainingSpendBudgetLek = savingsPlan.monthlySpendBudgetLek - totalsToLek(spentMonthToDate);
 
   setText(els.quickAccountLek, moneyLekShort(accountTotals.ALL));
   setText(els.quickAccountEuro, moneyEuroCompact(accountTotals.EUR));
-  setText(els.quickExpenseDays, `për ${daysElapsed} ditë`);
+  setText(els.quickExpenseDays, monthToDateLabel(now));
   setText(els.quickExpenseLek, moneyLekShort(spentMonthToDate.ALL));
   setText(els.quickExpenseEuro, moneyEuroCompact(spentMonthToDate.EUR));
+  setText(els.quickAverageNote, `mes. ${moneyLekShort(dailyAverage.ALL)} / ${moneyEuroCompact(dailyAverage.EUR)}/ditë`);
   setText(els.quickAverageLek, moneyLekShort(projectedMonth.ALL));
   setText(els.quickAverageEuro, moneyEuroCompact(projectedMonth.EUR));
   setText(els.quickSavingsLek, moneyLekShort(todaySavingsLek));
   setText(els.quickSavingsEuro, moneyEuroCompact(todaySavingsLek / state.exchangeRate));
   setText(els.quickBalanceLek, moneyLekShort(remainingSpendBudgetLek));
-  setText(els.quickBalanceEuro, moneyEuroCompact(remainingSpendBudgetLek / state.exchangeRate));
+  setText(els.quickBalanceEuro, `≈ ${moneyEuroCompact(remainingSpendBudgetLek / state.exchangeRate)}`);
 }
 
 function renderHomeExpenseCard(spentToday, spentMonth) {
@@ -2645,6 +2648,12 @@ function moneyEuroNoDecimals(value) {
 
 function moneyEuroCompact(value) {
   return new Intl.NumberFormat("sq-AL", { maximumFractionDigits: 0 }).format(value || 0) + "€";
+}
+
+function monthToDateLabel(date) {
+  const day = Math.max(date.getDate(), 1);
+  const month = monthNames[date.getMonth()];
+  return day === 1 ? `1 ${month}` : `1-${day} ${month}`;
 }
 
 function formatRateInput(value) {

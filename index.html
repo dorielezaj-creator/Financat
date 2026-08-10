@@ -10,10 +10,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
-    <link rel="manifest" href="manifest.webmanifest" />
-    <link rel="icon" href="icon.svg" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="icon.svg" />
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="manifest" href="manifest.webmanifest?v=20260811-2" />
+    <link rel="icon" href="icon.svg?v=20260811-2" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="icon.svg?v=20260811-2" />
+    <link rel="stylesheet" href="styles.css?v=20260811-2" />
   </head>
   <body>
     <main class="app-shell">
@@ -86,7 +86,7 @@
 
           <article class="quick-metric-card">
             <button id="quickExpenseOpen" class="overview-arrow" type="button" aria-label="Hap listën e shpenzimeve">›</button>
-            <h2>Shpenzimet</h2>
+            <h2>Shpenzuar</h2>
             <span id="quickExpenseDays">për 0 ditë</span>
             <strong id="quickExpenseLek" class="expense-value">0 L</strong>
             <strong id="quickExpenseEuro" class="expense-value euro-line">0€</strong>
@@ -94,24 +94,24 @@
 
           <article class="quick-metric-card">
             <button id="quickAverageOpen" class="overview-arrow" type="button" aria-label="Ndrysho limitet e shpenzimeve">›</button>
-            <h2>Mes. Mujore</h2>
-            <span>Këtë muaj</span>
+            <h2>Me këtë ritëm</h2>
+            <span id="quickAverageNote" class="quick-metric-note">mes. 0 L/ditë</span>
             <strong id="quickAverageLek" class="purple-value">0 L</strong>
             <strong id="quickAverageEuro" class="purple-value euro-line">0€</strong>
           </article>
 
           <article class="quick-metric-card">
             <button id="quickSavingsOpen" class="overview-arrow" type="button" aria-label="Ndrysho objektivin e kursimeve">›</button>
-            <h2>Kursimet</h2>
-            <span>Sot</span>
+            <h2>Kursyer sot</h2>
+            <span>nga buxheti ditor</span>
             <strong id="quickSavingsLek" class="green-value">0 L</strong>
             <strong id="quickSavingsEuro" class="green-value euro-line">0€</strong>
           </article>
 
           <article class="quick-metric-card">
             <button id="quickBalanceOpen" class="overview-arrow" type="button" aria-label="Ndrysho objektivin e kursimeve">›</button>
-            <h2>Buxheti</h2>
-            <span>Të mbetur</span>
+            <h2>Mund të shpenzosh</h2>
+            <span>deri fund muaji</span>
             <strong id="quickBalanceLek" class="purple-value">0 L</strong>
             <strong id="quickBalanceEuro" class="purple-value euro-line">0€</strong>
           </article>
@@ -669,6 +669,6 @@
       </div>
     </template>
 
-    <script src="app.js"></script>
+    <script src="app.js?v=20260811-2"></script>
   </body>
 </html>
