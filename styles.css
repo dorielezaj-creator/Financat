@@ -173,6 +173,7 @@ p {
   padding: 0;
 }
 
+.total-balance-card,
 .activity-card,
 .overview-card {
   border: 0;
@@ -181,12 +182,62 @@ p {
   box-shadow: none;
 }
 
+.total-balance-card {
+  position: relative;
+  display: grid;
+  gap: 16px;
+  padding: 26px 32px 28px;
+}
+
+.total-balance-card .overview-arrow {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+}
+
+.total-balance-card h2 {
+  margin: 0;
+  padding-right: 42px;
+  color: var(--text);
+  font-size: clamp(26px, 6.4vw, 34px);
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1;
+}
+
+.total-balance-values {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.total-balance-values div {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.total-balance-values span {
+  color: var(--muted);
+  font-size: clamp(15px, 3.5vw, 18px);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.total-balance-values strong {
+  display: block;
+  font-size: clamp(30px, 7vw, 42px);
+  font-weight: 800;
+  line-height: 0.98;
+  overflow-wrap: anywhere;
+}
+
 .activity-card {
-  min-height: 304px;
+  min-height: 258px;
   display: grid;
   grid-template-columns: 1fr;
-  gap: 22px;
-  padding: 26px 32px 30px;
+  gap: 18px;
+  padding: 24px 30px 28px;
 }
 
 .activity-card h2,
@@ -201,8 +252,8 @@ p {
 
 .activity-body {
   display: grid;
-  grid-template-columns: 44% minmax(0, 1fr);
-  gap: 18px;
+  grid-template-columns: 40% minmax(0, 1fr);
+  gap: 16px;
   align-items: center;
 }
 
@@ -212,8 +263,8 @@ p {
 }
 
 .activity-ring {
-  width: clamp(152px, 35vw, 188px);
-  height: clamp(152px, 35vw, 188px);
+  width: clamp(136px, 31vw, 164px);
+  height: clamp(136px, 31vw, 164px);
   position: relative;
   background: transparent;
 }
@@ -232,14 +283,14 @@ p {
 }
 
 .ring-middle {
-  inset: 29px;
+  inset: 25px;
   background: conic-gradient(from 324deg, var(--purple) 0deg var(--bills-arc, 250deg), rgba(107, 85, 223, 0.1) var(--bills-arc, 250deg) 360deg);
   -webkit-mask: radial-gradient(circle, transparent 58%, #000 59%);
   mask: radial-gradient(circle, transparent 58%, #000 59%);
 }
 
 .ring-inner {
-  inset: 57px;
+  inset: 49px;
   background: conic-gradient(from 306deg, var(--expense) 0deg var(--fun-arc, 215deg), rgba(255, 99, 79, 0.1) var(--fun-arc, 215deg) 360deg);
   -webkit-mask: radial-gradient(circle, transparent 50%, #000 51%);
   mask: radial-gradient(circle, transparent 50%, #000 51%);
@@ -247,7 +298,7 @@ p {
 
 .activity-breakdown {
   display: grid;
-  gap: 20px;
+  gap: 16px;
   min-width: 0;
 }
 
@@ -267,7 +318,7 @@ p {
 
 .activity-breakdown-row strong {
   display: block;
-  font-size: clamp(21px, 4.8vw, 28px);
+  font-size: clamp(20px, 4.3vw, 25px);
   font-weight: 700;
   letter-spacing: 0;
   line-height: 1.03;
@@ -351,15 +402,6 @@ p {
   color: var(--expense);
 }
 
-.quick-metric-card.account-total-card {
-  min-height: 112px;
-  gap: 22px;
-}
-
-.quick-metric-card.account-total-card h2 {
-  font-size: clamp(22px, 5.1vw, 28px);
-}
-
 .quick-metric-card h2 .metric-title-sub {
   display: block;
   margin-top: 2px;
@@ -367,10 +409,6 @@ p {
   font-size: clamp(16px, 3.8vw, 20px);
   font-weight: 500;
   line-height: 1.04;
-}
-
-.quick-metric-card.account-total-card strong {
-  font-size: clamp(27px, 6.6vw, 36px);
 }
 
 .overview-card-grid {
@@ -1090,34 +1128,43 @@ p {
   display: grid;
   justify-items: center;
   gap: 10px;
-  margin: -8px 0 16px;
+  margin: 18px 0 0;
   padding: 0;
 }
 
 .backup-toggle {
-  width: 46px;
-  height: 30px;
-  display: grid;
-  place-items: center;
-  border: 0;
+  width: auto;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid var(--line);
   border-radius: 999px;
-  background: transparent;
-  color: var(--green);
-  padding: 0;
+  background: var(--card);
+  color: var(--muted);
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.backup-toggle::before {
+  content: "Backup";
 }
 
 .backup-toggle span {
-  width: 0;
-  height: 0;
+  width: 8px;
+  height: 8px;
   display: block;
-  border-left: 11px solid transparent;
-  border-right: 11px solid transparent;
-  border-top: 13px solid currentColor;
+  border: solid currentColor;
+  border-width: 0 2px 2px 0;
+  transform: translateY(-1px) rotate(45deg);
   transition: transform 180ms ease;
 }
 
 .backup-panel.is-open .backup-toggle span {
-  transform: rotate(180deg);
+  transform: translateY(2px) rotate(-135deg);
 }
 
 .backup-actions {
@@ -1409,8 +1456,126 @@ p {
   line-height: 0.95;
 }
 
+.archive-search {
+  position: relative;
+  margin: -4px 0 16px;
+}
+
+.archive-search input {
+  width: 100%;
+  min-height: 54px;
+  padding: 0 56px 0 22px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  outline: 0;
+  background: var(--card);
+  color: var(--text);
+  font: inherit;
+  font-size: 18px;
+  font-weight: 850;
+}
+
+.archive-search input::placeholder {
+  color: var(--muted);
+  opacity: 0.78;
+}
+
+.archive-search input:focus {
+  border-color: color-mix(in srgb, var(--green) 46%, var(--line));
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--green) 18%, transparent);
+}
+
+.archive-search button {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  transform: translateY(-50%);
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+  color: var(--muted);
+  font-size: 24px;
+  font-weight: 900;
+  line-height: 1;
+}
+
 .entry-page-overlay .archive-list {
   padding-top: 8px;
+}
+
+.undo-toast {
+  position: fixed;
+  left: 50%;
+  bottom: max(18px, calc(env(safe-area-inset-bottom) + 14px));
+  z-index: 120;
+  width: min(calc(100% - 32px), 430px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 12px 12px 18px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--sheet) 92%, transparent);
+  color: var(--text);
+  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.22);
+  transform: translate(-50%, 18px);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+  backdrop-filter: blur(18px);
+}
+
+.undo-toast[hidden],
+.archive-search button[hidden] {
+  display: none;
+}
+
+.undo-toast.is-visible {
+  transform: translate(-50%, 0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.undo-toast span {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.undo-toast button {
+  min-height: 34px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--green);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+#undoToastBtn {
+  padding: 0 12px;
+  background: color-mix(in srgb, var(--green) 14%, transparent);
+}
+
+#undoToastClose {
+  width: 34px;
+  padding: 0;
+  color: var(--muted);
+  font-size: 22px;
+  line-height: 1;
 }
 
 .income-year-card .monthly-dot-chart {
@@ -1955,11 +2120,6 @@ select:focus {
     border-radius: 26px;
   }
 
-  .quick-metric-card.account-total-card {
-    min-height: 104px;
-    gap: 18px;
-  }
-
   .quick-metric-card .overview-arrow {
     top: 17px;
     right: 17px;
@@ -1973,10 +2133,37 @@ select:focus {
     font-size: clamp(20px, 5.8vw, 24px);
   }
 
+  .total-balance-card {
+    border-radius: 30px;
+    padding: 22px 24px 24px;
+  }
+
+  .total-balance-card .overview-arrow {
+    top: 20px;
+    right: 20px;
+  }
+
+  .total-balance-card h2 {
+    font-size: clamp(24px, 6.2vw, 28px);
+  }
+
+  .total-balance-values {
+    gap: 10px;
+  }
+
+  .total-balance-values strong {
+    font-size: clamp(24px, 7.2vw, 32px);
+  }
+
   .activity-card,
   .overview-card {
     border-radius: 30px;
     padding-inline: 24px;
+  }
+
+  .activity-card {
+    min-height: 238px;
+    gap: 16px;
   }
 
   .overview-card-grid {
@@ -2097,6 +2284,10 @@ select:focus {
 
 @media (max-width: 360px) {
   .quick-metric-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .total-balance-values {
     grid-template-columns: 1fr;
   }
 

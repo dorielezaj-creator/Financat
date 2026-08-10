@@ -10,10 +10,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
-    <link rel="manifest" href="manifest.webmanifest?v=20260811-2" />
-    <link rel="icon" href="icon.svg?v=20260811-2" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="icon.svg?v=20260811-2" />
-    <link rel="stylesheet" href="styles.css?v=20260811-2" />
+    <link rel="manifest" href="manifest.webmanifest?v=20260811-4" />
+    <link rel="icon" href="icon.svg?v=20260811-4" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="icon.svg?v=20260811-4" />
+    <link rel="stylesheet" href="styles.css?v=20260811-4" />
   </head>
   <body>
     <main class="app-shell">
@@ -30,21 +30,22 @@
         </div>
       </header>
 
-      <section class="backup-panel is-collapsed" id="backupPanel" aria-label="Kopje rezerve">
-        <button class="backup-toggle" id="backupToggle" type="button" aria-expanded="false" aria-controls="backupActions" aria-label="Shfaq backup">
-          <span></span>
-        </button>
-        <div class="backup-actions" id="backupActions" hidden>
-          <button class="backup-button export-button" id="exportBtn" type="button">Eksporto JSON</button>
-          <label class="backup-button">
-            Importo JSON
-            <input id="importInput" type="file" accept=".json,application/json,text/json" />
-          </label>
-          <button class="backup-button" id="restoreBackupBtn" type="button">Rikthe backup</button>
-        </div>
-      </section>
-
       <section class="overview-home pdf-home-v2" aria-labelledby="overviewTitle">
+        <article class="total-balance-card" aria-label="Gjendja totale e llogarive">
+          <button id="quickAccountsOpen" class="overview-arrow" type="button" aria-label="Hap llogaritë bankare">›</button>
+          <h2>Gjendja totale</h2>
+          <div class="total-balance-values">
+            <div>
+              <span>Lekë</span>
+              <strong id="quickAccountLek" class="green-value">0 L</strong>
+            </div>
+            <div>
+              <span>Euro</span>
+              <strong id="quickAccountEuro" class="green-value">0€</strong>
+            </div>
+          </div>
+        </article>
+
         <article class="activity-card">
           <h2 id="overviewTitle">Aktivitetet</h2>
           <div class="activity-body">
@@ -73,17 +74,6 @@
         </article>
 
         <div class="quick-metric-grid" aria-label="Përmbledhje e shpejtë">
-          <article class="quick-metric-card account-total-card">
-            <h2>Gjendja <span class="metric-title-sub">lekë</span></h2>
-            <strong id="quickAccountLek" class="green-value">0 L</strong>
-          </article>
-
-          <article class="quick-metric-card account-total-card">
-            <button id="quickAccountsOpen" class="overview-arrow" type="button" aria-label="Hap llogaritë bankare">›</button>
-            <h2>Gjendja <span class="metric-title-sub">euro</span></h2>
-            <strong id="quickAccountEuro" class="green-value">0€</strong>
-          </article>
-
           <article class="quick-metric-card">
             <button id="quickExpenseOpen" class="overview-arrow" type="button" aria-label="Hap listën e shpenzimeve">›</button>
             <h2>Shpenzuar</h2>
@@ -203,6 +193,20 @@
               <span>J</span><span>S</span><span>M</span><span>P</span><span>M</span><span>Q</span><span>K</span><span>G</span><span>S</span><span>T</span><span>N</span><span>D</span>
             </div>
           </article>
+        </div>
+      </section>
+
+      <section class="backup-panel is-collapsed" id="backupPanel" aria-label="Kopje rezerve">
+        <button class="backup-toggle" id="backupToggle" type="button" aria-expanded="false" aria-controls="backupActions" aria-label="Shfaq backup">
+          <span></span>
+        </button>
+        <div class="backup-actions" id="backupActions" hidden>
+          <button class="backup-button export-button" id="exportBtn" type="button">Eksporto JSON</button>
+          <label class="backup-button">
+            Importo JSON
+            <input id="importInput" type="file" accept=".json,application/json,text/json" />
+          </label>
+          <button class="backup-button" id="restoreBackupBtn" type="button">Rikthe backup</button>
         </div>
       </section>
 
@@ -336,6 +340,11 @@
             <h2 id="expenseArchiveTitle">Shpenzimet</h2>
             <button id="closeExpenseArchiveBtn" class="icon-button small" type="button" aria-label="Kthehu">×</button>
           </div>
+          <div class="archive-search" role="search">
+            <label class="sr-only" for="expenseArchiveSearch">Kërko shpenzime</label>
+            <input id="expenseArchiveSearch" type="search" placeholder="Kërko zë, kategori, llogari..." autocomplete="off" />
+            <button id="expenseArchiveSearchClear" type="button" aria-label="Pastro kërkimin" hidden>×</button>
+          </div>
           <div id="expenseArchiveList" class="archive-list"></div>
         </div>
       </section>
@@ -345,6 +354,11 @@
           <div class="archive-header">
             <h2 id="incomeArchiveTitle">Të ardhurat</h2>
             <button id="closeIncomeArchiveBtn" class="icon-button small" type="button" aria-label="Kthehu">×</button>
+          </div>
+          <div class="archive-search" role="search">
+            <label class="sr-only" for="incomeArchiveSearch">Kërko të ardhura</label>
+            <input id="incomeArchiveSearch" type="search" placeholder="Kërko zë, kategori, llogari..." autocomplete="off" />
+            <button id="incomeArchiveSearchClear" type="button" aria-label="Pastro kërkimin" hidden>×</button>
           </div>
           <div id="incomeArchiveList" class="archive-list"></div>
         </div>
@@ -658,6 +672,11 @@
       </section>
 
     </main>
+    <div id="undoToast" class="undo-toast" role="status" aria-live="polite" hidden>
+      <span id="undoToastMessage">Veprimi u krye.</span>
+      <button id="undoToastBtn" type="button">Rikthe</button>
+      <button id="undoToastClose" type="button" aria-label="Mbyll njoftimin">×</button>
+    </div>
 
     <template id="emptyTemplate">
       <div class="empty-state">
@@ -669,6 +688,6 @@
       </div>
     </template>
 
-    <script src="app.js?v=20260811-2"></script>
+    <script src="app.js?v=20260811-4"></script>
   </body>
 </html>

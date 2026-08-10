@@ -50,6 +50,14 @@ const state = {
   selectedDailyDate: "",
   incomeDetailRange: "week",
   savingsDetailRange: "month",
+  archiveSearch: {
+    expense: "",
+    income: "",
+  },
+  undo: {
+    timer: 0,
+    action: null,
+  },
   theme: loadTheme(),
   exchangeRate: loadExchangeRate(),
   limits: loadLimits(),
@@ -169,9 +177,13 @@ const els = {
   incomePreviewList: document.querySelector("#incomePreviewList"),
   expenseArchiveOverlay: document.querySelector("#expenseArchiveOverlay"),
   closeExpenseArchiveBtn: document.querySelector("#closeExpenseArchiveBtn"),
+  expenseArchiveSearch: document.querySelector("#expenseArchiveSearch"),
+  expenseArchiveSearchClear: document.querySelector("#expenseArchiveSearchClear"),
   expenseArchiveList: document.querySelector("#expenseArchiveList"),
   incomeArchiveOverlay: document.querySelector("#incomeArchiveOverlay"),
   closeIncomeArchiveBtn: document.querySelector("#closeIncomeArchiveBtn"),
+  incomeArchiveSearch: document.querySelector("#incomeArchiveSearch"),
+  incomeArchiveSearchClear: document.querySelector("#incomeArchiveSearchClear"),
   incomeArchiveList: document.querySelector("#incomeArchiveList"),
   incomeDetailOverlay: document.querySelector("#incomeDetailOverlay"),
   closeIncomeDetailBtn: document.querySelector("#closeIncomeDetailBtn"),
@@ -246,6 +258,10 @@ const els = {
   savingsGoalBudgetValue: document.querySelector("#savingsGoalBudgetValue"),
   importInput: document.querySelector("#importInput"),
   restoreBackupBtn: document.querySelector("#restoreBackupBtn"),
+  undoToast: document.querySelector("#undoToast"),
+  undoToastMessage: document.querySelector("#undoToastMessage"),
+  undoToastBtn: document.querySelector("#undoToastBtn"),
+  undoToastClose: document.querySelector("#undoToastClose"),
   emptyTemplate: document.querySelector("#emptyTemplate"),
 };
 
@@ -427,6 +443,10 @@ els.expensePreviewList.addEventListener("click", handleExpensePreviewClick);
 els.incomePreviewList.addEventListener("click", handleIncomePreviewClick);
 els.expenseArchiveList.addEventListener("click", handleEntryListClick);
 els.incomeArchiveList.addEventListener("click", handleEntryListClick);
+els.expenseArchiveSearch?.addEventListener("input", (event) => updateArchiveSearch("expense", event.target.value));
+els.incomeArchiveSearch?.addEventListener("input", (event) => updateArchiveSearch("income", event.target.value));
+els.expenseArchiveSearchClear?.addEventListener("click", () => clearArchiveSearch("expense"));
+els.incomeArchiveSearchClear?.addEventListener("click", () => clearArchiveSearch("income"));
 els.closeExpenseArchiveBtn.addEventListener("click", closeExpenseArchive);
 els.closeIncomeArchiveBtn.addEventListener("click", closeIncomeArchive);
 els.expenseArchiveOverlay.addEventListener("click", (event) => {
@@ -461,6 +481,7 @@ els.clearBtn.addEventListener("click", () => {
   const confirmed = confirm("A dëshiron t'i fshish të gjithë zërat dhe t'i kthesh efektet në llogari?");
   if (!confirmed) return;
 
+  const snapshot = snapshotFinanceState();
   createAutoBackup();
   state.entries.forEach((entry) => {
     if (entry.bankId) applyBankDelta(entry.bankId, entry.type === "income" ? -entry.amount : entry.amount);
@@ -469,6 +490,7 @@ els.clearBtn.addEventListener("click", () => {
   saveBanks();
   saveEntries();
   render();
+  showUndoToast("Të gjithë zërat u pastruan.", () => restoreFinanceSnapshot(snapshot));
 });
 
 els.monthFilter.addEventListener("change", render);
@@ -497,6 +519,8 @@ document.querySelectorAll("[data-daily-currency]").forEach((button) => {
   });
 });
 els.exportBtn.addEventListener("click", exportData);
+els.undoToastBtn?.addEventListener("click", undoLastAction);
+els.undoToastClose?.addEventListener("click", hideUndoToast);
 els.backupToggle.addEventListener("click", () => {
   const isOpen = els.backupToggle.getAttribute("aria-expanded") === "true";
   els.backupToggle.setAttribute("aria-expanded", String(!isOpen));
@@ -850,6 +874,64 @@ function subtractMoneyTotals(left, right) {
 
 function setText(element, text) {
   if (element) element.textContent = text;
+}
+
+function snapshotFinanceState() {
+  return {
+    entries: state.entries.map((entry) => ({ ...entry })),
+    banks: state.banks.map((bank) => ({ ...bank })),
+    limits: { ...state.limits },
+    savingsGoal: { ...state.savingsGoal },
+    exchangeRate: state.exchangeRate,
+  };
+}
+
+function restoreFinanceSnapshot(snapshot) {
+  if (!snapshot) return;
+
+  state.entries = snapshot.entries.map((entry) => ({ ...entry }));
+  state.banks = snapshot.banks.map((bank) => ({ ...bank }));
+  state.limits = { ...snapshot.limits };
+  state.savingsGoal = { ...snapshot.savingsGoal };
+  state.exchangeRate = Number(snapshot.exchangeRate) > 0 ? Number(snapshot.exchangeRate) : state.exchangeRate;
+
+  ensureDefaultBanks();
+  saveEntries();
+  saveBanks();
+  saveLimits();
+  saveSavingsGoal();
+  saveExchangeRate(state.exchangeRate);
+  if (els.eurToLekRateInput) els.eurToLekRateInput.value = formatRateInput(state.exchangeRate);
+  render();
+}
+
+function showUndoToast(message, undoHandler) {
+  if (!els.undoToast || !els.undoToastMessage) return;
+
+  clearTimeout(state.undo.timer);
+  state.undo.action = undoHandler;
+  els.undoToastMessage.textContent = message;
+  els.undoToast.hidden = false;
+  requestAnimationFrame(() => els.undoToast.classList.add("is-visible"));
+  state.undo.timer = window.setTimeout(hideUndoToast, 7000);
+}
+
+function hideUndoToast() {
+  clearTimeout(state.undo.timer);
+  state.undo.timer = 0;
+  state.undo.action = null;
+  if (!els.undoToast) return;
+
+  els.undoToast.classList.remove("is-visible");
+  window.setTimeout(() => {
+    if (!els.undoToast.classList.contains("is-visible")) els.undoToast.hidden = true;
+  }, 180);
+}
+
+function undoLastAction() {
+  const action = state.undo.action;
+  hideUndoToast();
+  if (typeof action === "function") action();
 }
 
 function clamp01(value) {
@@ -1566,6 +1648,7 @@ function deleteBank(bankId) {
     : "A dëshiron ta fshish këtë llogari?";
   if (!confirm(message)) return;
 
+  const snapshot = snapshotFinanceState();
   createAutoBackup();
   state.banks = state.banks.filter((item) => item.id !== bank.id);
   state.entries = state.entries.map((entry) => (entry.bankId === bank.id ? { ...entry, bankId: "" } : entry));
@@ -1574,6 +1657,7 @@ function deleteBank(bankId) {
   saveEntries();
   closeAccountEditor();
   render();
+  showUndoToast("Llogaria u fshi.", () => restoreFinanceSnapshot(snapshot));
 }
 
 function handleEntryListClick(event) {
@@ -1594,6 +1678,7 @@ function deleteEntry(entryId, options = {}) {
   if (!entry) return;
   if (!confirm("A dëshiron ta fshish këtë zë?")) return;
 
+  const snapshot = snapshotFinanceState();
   createAutoBackup();
   if (entry.bankId) applyBankDelta(entry.bankId, entry.type === "income" ? -entry.amount : entry.amount);
   state.entries = state.entries.filter((item) => item.id !== entry.id);
@@ -1601,6 +1686,7 @@ function deleteEntry(entryId, options = {}) {
   saveEntries();
   if (options.closeEditor) closeEntryEditor();
   render();
+  showUndoToast(entry.type === "income" ? "E ardhura u fshi." : "Shpenzimi u fshi.", () => restoreFinanceSnapshot(snapshot));
 }
 
 function renderBankOptions() {
@@ -1679,6 +1765,7 @@ function handleIncomePreviewClick(event) {
 }
 
 function openExpenseArchive() {
+  state.archiveSearch.expense = "";
   renderEntryArchive("expense");
   els.expenseArchiveOverlay.hidden = false;
 }
@@ -1692,6 +1779,7 @@ function renderExpenseArchive() {
 }
 
 function openIncomeArchive() {
+  state.archiveSearch.income = "";
   renderEntryArchive("income");
   els.incomeArchiveOverlay.hidden = false;
 }
@@ -1705,12 +1793,18 @@ function renderIncomeArchive() {
 }
 
 function renderEntryArchive(type) {
-  const months = entryMonths(type);
+  const query = archiveSearchQuery(type);
+  const months = entryMonths(type, query);
   const currentMonth = monthKey(new Date());
   const hasCurrentMonth = months.some((month) => month.key === currentMonth);
   const list = type === "income" ? els.incomeArchiveList : els.expenseArchiveList;
-  const emptyText = type === "income" ? "Nuk ka të ardhura për t'u shfaqur." : "Nuk ka shpenzime për t'u shfaqur.";
+  const emptyText = query
+    ? `Nuk u gjet asnjë zë për “${escapeHtml(state.archiveSearch[type])}”.`
+    : type === "income"
+      ? "Nuk ka të ardhura për t'u shfaqur."
+      : "Nuk ka shpenzime për t'u shfaqur.";
 
+  syncArchiveSearchControls(type);
   list.innerHTML = "";
   if (!months.length) {
     list.innerHTML = `<div class="empty-line">${emptyText}</div>`;
@@ -1737,10 +1831,10 @@ function renderEntryArchive(type) {
   });
 }
 
-function entryMonths(type) {
+function entryMonths(type, query = "") {
   const groups = new Map();
   const sortedEntries = state.entries
-    .filter((entry) => entry.type === type)
+    .filter((entry) => entry.type === type && entryMatchesSearch(entry, query))
     .slice()
     .sort((a, b) => b.date.localeCompare(a.date) || new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date));
 
@@ -1762,6 +1856,57 @@ function entryMonths(type) {
       entries,
       totals: entries.reduce(sumMoneyTotals, emptyMoneyTotals()),
     }));
+}
+
+function archiveSearchQuery(type) {
+  return normalizeSearchText(state.archiveSearch[type]);
+}
+
+function syncArchiveSearchControls(type) {
+  const input = type === "income" ? els.incomeArchiveSearch : els.expenseArchiveSearch;
+  const clearButton = type === "income" ? els.incomeArchiveSearchClear : els.expenseArchiveSearchClear;
+  if (input && input.value !== state.archiveSearch[type]) input.value = state.archiveSearch[type];
+  if (clearButton) clearButton.hidden = !archiveSearchQuery(type);
+}
+
+function updateArchiveSearch(type, value) {
+  state.archiveSearch[type] = value;
+  renderEntryArchive(type);
+}
+
+function clearArchiveSearch(type) {
+  state.archiveSearch[type] = "";
+  renderEntryArchive(type);
+  const input = type === "income" ? els.incomeArchiveSearch : els.expenseArchiveSearch;
+  input?.focus({ preventScroll: true });
+}
+
+function entryMatchesSearch(entry, query) {
+  if (!query) return true;
+  return entrySearchText(entry).includes(query);
+}
+
+function entrySearchText(entry) {
+  const bank = findBank(entry.bankId);
+  const values = [
+    entry.note,
+    entry.category,
+    entry.currency,
+    entry.type === "income" ? "te ardhura income hyrje" : "shpenzim expense dalje",
+    bank?.name,
+    formatDate(entry.date),
+    monthLabel(entry.date.slice(0, 7)),
+    entry.amount,
+  ];
+  return normalizeSearchText(values.filter(Boolean).join(" "));
+}
+
+function normalizeSearchText(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
 }
 
 function renderDailySpending() {
