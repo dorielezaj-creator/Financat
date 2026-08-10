@@ -108,7 +108,7 @@ p {
   color: var(--text);
   font-size: 34px;
   font-weight: 600;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
   line-height: 1;
 }
 
@@ -116,7 +116,7 @@ p {
   color: var(--muted);
   font-size: 18px;
   font-weight: 700;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
 }
 
 .top-actions {
@@ -194,7 +194,7 @@ p {
   color: var(--text);
   font-size: 29px;
   font-weight: 500;
-  letter-spacing: -0.015em;
+  letter-spacing: 0;
   line-height: 1;
   text-align: left;
 }
@@ -269,7 +269,7 @@ p {
   display: block;
   font-size: clamp(21px, 4.8vw, 28px);
   font-weight: 700;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
   line-height: 1.03;
   white-space: nowrap;
 }
@@ -284,6 +284,86 @@ p {
 
 .activity-breakdown-row.fun strong {
   color: var(--green);
+}
+
+.quick-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  width: 100%;
+}
+
+.quick-metric-card {
+  position: relative;
+  min-height: 154px;
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  padding: 22px 24px 24px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 30px;
+  background: var(--card);
+}
+
+.quick-metric-card .overview-arrow {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+}
+
+.quick-metric-card h2,
+.quick-metric-card span,
+.quick-metric-card strong {
+  margin: 0;
+  line-height: 1.04;
+}
+
+.quick-metric-card h2 {
+  padding-right: 34px;
+  color: var(--text);
+  font-size: clamp(24px, 5.7vw, 30px);
+  font-weight: 500;
+}
+
+.quick-metric-card span {
+  color: var(--text);
+  font-size: clamp(16px, 3.8vw, 20px);
+  font-weight: 500;
+}
+
+.quick-metric-card strong {
+  display: block;
+  color: var(--text);
+  font-size: clamp(22px, 5.4vw, 29px);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.quick-metric-card .expense-value {
+  color: var(--expense);
+}
+
+.quick-metric-card.account-total-card {
+  min-height: 112px;
+  gap: 22px;
+}
+
+.quick-metric-card.account-total-card h2 {
+  font-size: clamp(22px, 5.1vw, 28px);
+}
+
+.quick-metric-card h2 .metric-title-sub {
+  display: block;
+  margin-top: 2px;
+  color: var(--text);
+  font-size: clamp(16px, 3.8vw, 20px);
+  font-weight: 500;
+  line-height: 1.04;
+}
+
+.quick-metric-card.account-total-card strong {
+  font-size: clamp(27px, 6.6vw, 36px);
 }
 
 .overview-card-grid {
@@ -336,7 +416,7 @@ p {
   color: var(--text);
   font-size: clamp(22px, 5.2vw, 30px);
   font-weight: 600;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
   line-height: 1.02;
   overflow-wrap: anywhere;
 }
@@ -403,6 +483,7 @@ p {
   --month-width: 0%;
   --today-width: 0%;
   --today-left: 0%;
+  --today-min-width: 0px;
   position: relative;
   height: 33px;
   overflow: hidden;
@@ -428,6 +509,12 @@ p {
   left: 0;
   width: var(--month-width);
   background: #000000;
+  z-index: 1;
+}
+
+.home-progress.is-joined .month-fill {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
 }
 
 :root[data-theme="dark"] .home-progress .month-fill {
@@ -437,7 +524,15 @@ p {
 .home-progress .today-fill {
   left: var(--today-left);
   width: var(--today-width);
+  min-width: var(--today-min-width);
   background: var(--green);
+  transform: translateX(-1px);
+  z-index: 2;
+}
+
+.home-progress.is-joined .today-fill {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
 }
 
 .year-card-values {
@@ -485,6 +580,60 @@ p {
   border-radius: 999px;
   background: var(--card);
   transform: translate(-50%, -50%);
+}
+
+.savings-balance-chart {
+  overflow: hidden;
+}
+
+.savings-balance-chart::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 20px;
+  top: 52%;
+  z-index: 1;
+  height: 2px;
+  background: color-mix(in srgb, var(--purple) 50%, transparent);
+}
+
+.savings-balance-chart::after {
+  content: "0";
+  position: absolute;
+  right: 0;
+  top: 52%;
+  z-index: 2;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  transform: translateY(-50%);
+}
+
+.savings-month-bar {
+  position: absolute;
+  z-index: 3;
+  width: 11px;
+  min-height: 7px;
+  border-radius: 999px;
+  background: var(--purple);
+  transform: translateX(-50%);
+}
+
+.savings-month-bar.high {
+  opacity: 1;
+}
+
+.savings-month-bar.mid {
+  opacity: 0.68;
+}
+
+.savings-month-bar.low {
+  opacity: 0.34;
+}
+
+.savings-month-bar.is-zero {
+  opacity: 0.55;
 }
 
 .green-chart .month-dot.high {
@@ -762,6 +911,10 @@ p {
   gap: 10px;
 }
 
+.account-actions button[data-delete-bank] {
+  color: var(--expense);
+}
+
 .total-pills {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1013,6 +1166,165 @@ p {
   backdrop-filter: blur(18px);
 }
 
+.profile-menu-overlay,
+.profile-page-overlay {
+  align-items: start;
+  padding-top: max(34px, calc(env(safe-area-inset-top) + 24px));
+}
+
+.profile-menu-window,
+.profile-page-window {
+  width: min(100%, 390px);
+  display: grid;
+  gap: 28px;
+  margin: 0 auto;
+  color: var(--text);
+}
+
+.profile-page-window {
+  position: relative;
+  max-height: 92vh;
+  overflow: auto;
+  padding: 30px 28px 36px;
+  border: 1px solid var(--input-line);
+  border-radius: 44px;
+  background: var(--card);
+}
+
+.profile-pill {
+  min-height: 96px;
+  display: grid;
+  grid-template-columns: 66px minmax(0, 1fr);
+  gap: 18px;
+  align-items: center;
+  padding: 14px 24px;
+  border-radius: 999px;
+  background: var(--sheet);
+}
+
+.profile-pill.compact {
+  width: calc(100% - 34px);
+  min-height: 78px;
+  grid-template-columns: 54px minmax(0, 1fr);
+  gap: 14px;
+  padding: 12px 20px;
+}
+
+.profile-avatar {
+  width: 58px;
+  height: 58px;
+  display: block;
+  border: 2px solid #ffffff;
+  border-radius: 999px;
+  background: #f5f5f5 url("profile-photo.png") center / cover no-repeat;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.14);
+}
+
+.profile-pill.compact .profile-avatar {
+  width: 48px;
+  height: 48px;
+}
+
+.profile-pill h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: 25px;
+  font-weight: 600;
+  line-height: 1.05;
+}
+
+.profile-pill small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.profile-menu-card {
+  display: grid;
+  padding: 14px 28px;
+  border-radius: 26px;
+  background: var(--sheet);
+}
+
+.profile-menu-card button {
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  font-size: 20px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.profile-menu-card button:last-child {
+  border-bottom: 0;
+}
+
+.profile-menu-card strong {
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.profile-close-button {
+  position: absolute;
+  top: 28px;
+  right: 26px;
+  z-index: 2;
+}
+
+.profile-page-title {
+  margin: 0;
+  color: var(--text);
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.savings-goal-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px 22px;
+}
+
+.savings-goal-grid label:last-child {
+  grid-column: 1 / -1;
+}
+
+.savings-goal-summary {
+  display: grid;
+  gap: 8px;
+  padding: 20px;
+  border-radius: 26px;
+  background: var(--sheet);
+}
+
+.savings-goal-summary span,
+.savings-goal-summary small {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.savings-goal-summary strong {
+  color: var(--green);
+  font-size: 20px;
+  font-weight: 850;
+  line-height: 1.15;
+}
+
+:root[data-theme="dark"] .profile-avatar {
+  border-color: #242428;
+  box-shadow: 0 0 0 1px var(--line), 0 12px 28px rgba(0, 0, 0, 0.42);
+}
+
 .entry-page-overlay {
   align-items: stretch;
   padding: 0;
@@ -1096,6 +1408,240 @@ p {
 
 .income-year-card .monthly-dot-chart {
   cursor: pointer;
+}
+
+.savings-year-card .monthly-dot-chart {
+  cursor: pointer;
+}
+
+.savings-detail-window {
+  gap: 18px;
+}
+
+.savings-detail-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.savings-detail-summary article {
+  min-height: 106px;
+  display: grid;
+  align-content: center;
+  gap: 8px;
+  padding: 18px;
+  border-radius: 26px;
+  background: var(--card);
+}
+
+.savings-detail-summary span,
+.savings-detail-note {
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.savings-detail-summary strong {
+  color: var(--text);
+  font-size: clamp(22px, 5.8vw, 30px);
+  font-weight: 850;
+  line-height: 1;
+}
+
+.savings-detail-summary small {
+  color: var(--text);
+  font-size: 20px;
+  font-weight: 850;
+  line-height: 1;
+}
+
+.savings-detail-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+
+.savings-detail-tabs button {
+  min-height: 42px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 850;
+}
+
+.savings-detail-tabs button.active {
+  background: var(--purple);
+  color: #ffffff;
+}
+
+.income-detail-tabs button.active {
+  background: var(--green);
+  color: #000000;
+}
+
+.savings-detail-chart {
+  position: relative;
+  min-height: 260px;
+  display: grid;
+  grid-template-columns: repeat(var(--point-count, 12), minmax(0, 1fr));
+  gap: 7px;
+  align-items: stretch;
+  padding: 20px 8px 18px;
+  overflow: hidden;
+  background:
+    linear-gradient(to bottom, transparent 20%, var(--line) calc(20% + 1px), transparent calc(20% + 2px)),
+    linear-gradient(to bottom, transparent 50%, color-mix(in srgb, var(--purple) 68%, transparent) 50% calc(50% + 2px), transparent calc(50% + 3px)),
+    linear-gradient(to bottom, transparent 80%, var(--line) calc(80% + 1px), transparent calc(80% + 2px)),
+    repeating-linear-gradient(to right, transparent 0 calc(var(--point-step, 8.333%) - 1px), color-mix(in srgb, var(--line) 76%, transparent) calc(var(--point-step, 8.333%) - 1px) var(--point-step, 8.333%));
+}
+
+.savings-detail-chart::after {
+  content: "0";
+  position: absolute;
+  right: 0;
+  top: 50%;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 850;
+  line-height: 1;
+  transform: translateY(-50%);
+}
+
+.savings-detail-bar {
+  position: relative;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+
+.savings-detail-bar::before {
+  content: "";
+  position: absolute;
+  top: var(--bar-top, 49%);
+  left: 50%;
+  width: clamp(8px, 2.8vw, 12px);
+  height: var(--bar-height, 3%);
+  min-height: 6px;
+  border-radius: 999px;
+  background: var(--purple);
+  transform: translateX(-50%);
+}
+
+.savings-detail-bar.is-positive::before {
+  background: var(--purple);
+}
+
+.savings-detail-bar.is-negative::before {
+  background: color-mix(in srgb, var(--purple) 78%, var(--text) 8%);
+}
+
+.savings-detail-bar.is-zero::before {
+  opacity: 0.42;
+}
+
+.savings-detail-bar.is-muted::before {
+  opacity: 0.18;
+}
+
+.savings-detail-bar.is-selected::before {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--purple) 18%, transparent);
+}
+
+.savings-detail-axis {
+  display: grid;
+  grid-template-columns: repeat(var(--point-count, 12), minmax(0, 1fr));
+  gap: 7px;
+  padding: 0 8px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 850;
+  line-height: 1;
+  text-align: center;
+}
+
+.savings-detail-axis span {
+  min-width: 0;
+}
+
+.income-detail-chart {
+  position: relative;
+  min-height: 300px;
+  display: grid;
+  grid-template-columns: repeat(var(--point-count, 12), minmax(0, 1fr));
+  gap: 7px;
+  align-items: stretch;
+  padding: 20px 8px 18px;
+  overflow: hidden;
+  background:
+    linear-gradient(to bottom, transparent 20%, var(--line) calc(20% + 1px), transparent calc(20% + 2px)),
+    linear-gradient(to bottom, transparent 52%, var(--line) calc(52% + 1px), transparent calc(52% + 2px)),
+    linear-gradient(to bottom, transparent 84%, var(--line) calc(84% + 1px), transparent calc(84% + 2px)),
+    repeating-linear-gradient(to right, transparent 0 calc(var(--point-step, 8.333%) - 1px), color-mix(in srgb, var(--line) 76%, transparent) calc(var(--point-step, 8.333%) - 1px) var(--point-step, 8.333%));
+}
+
+.income-detail-dot {
+  position: relative;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+
+.income-detail-dot::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: var(--dot-top, 86%);
+  width: clamp(18px, 4.4vw, 24px);
+  height: clamp(18px, 4.4vw, 24px);
+  border: 5px solid var(--green);
+  border-radius: 999px;
+  background: var(--sheet);
+  transform: translate(-50%, -50%);
+}
+
+.income-detail-dot.high::before {
+  border-color: var(--green);
+}
+
+.income-detail-dot.mid::before {
+  border-color: rgba(5, 217, 119, 0.58);
+}
+
+.income-detail-dot.low::before {
+  border-color: rgba(5, 217, 119, 0.28);
+}
+
+.income-detail-dot.is-zero::before {
+  opacity: 0;
+}
+
+.income-detail-dot.is-muted::before {
+  opacity: 0.14;
+}
+
+.income-detail-dot.is-zero.is-muted::before {
+  opacity: 0;
+}
+
+.income-detail-dot.is-zero.is-selected::before {
+  opacity: 0.45;
+}
+
+.income-detail-dot.is-selected::before {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--green) 20%, transparent);
+}
+
+.savings-detail-note {
+  min-height: 18px;
+  text-align: center;
 }
 
 .section-heading,
@@ -1392,6 +1938,34 @@ select:focus {
     padding-bottom: max(140px, calc(env(safe-area-inset-bottom) + 124px));
   }
 
+  .quick-metric-grid {
+    gap: 12px;
+  }
+
+  .quick-metric-card {
+    min-height: 138px;
+    padding: 20px 18px 20px;
+    border-radius: 26px;
+  }
+
+  .quick-metric-card.account-total-card {
+    min-height: 104px;
+    gap: 18px;
+  }
+
+  .quick-metric-card .overview-arrow {
+    top: 17px;
+    right: 17px;
+  }
+
+  .quick-metric-card h2 {
+    font-size: clamp(20px, 5.9vw, 24px);
+  }
+
+  .quick-metric-card strong {
+    font-size: clamp(20px, 5.8vw, 24px);
+  }
+
   .activity-card,
   .overview-card {
     border-radius: 30px;
@@ -1498,9 +2072,27 @@ select:focus {
   .form-grid {
     grid-template-columns: 1fr;
   }
+
+  .profile-page-window {
+    border-radius: 36px;
+    padding: 28px 22px 34px;
+  }
+
+  .profile-menu-window,
+  .profile-page-window {
+    width: min(100%, 364px);
+  }
+
+  .savings-goal-grid {
+    gap: 20px 14px;
+  }
 }
 
 @media (max-width: 360px) {
+  .quick-metric-grid {
+    grid-template-columns: 1fr;
+  }
+
   .activity-card,
   .overview-card {
     padding-inline: 14px;
