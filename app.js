@@ -150,7 +150,6 @@ const els = {
   quickExpenseOpen: document.querySelector("#quickExpenseOpen"),
   quickAverageOpen: document.querySelector("#quickAverageOpen"),
   quickSavingsOpen: document.querySelector("#quickSavingsOpen"),
-  quickBalanceOpen: document.querySelector("#quickBalanceOpen"),
   quickExpenseDays: document.querySelector("#quickExpenseDays"),
   quickExpenseLek: document.querySelector("#quickExpenseLek"),
   quickExpenseEuro: document.querySelector("#quickExpenseEuro"),
@@ -159,8 +158,6 @@ const els = {
   quickAverageEuro: document.querySelector("#quickAverageEuro"),
   quickSavingsLek: document.querySelector("#quickSavingsLek"),
   quickSavingsEuro: document.querySelector("#quickSavingsEuro"),
-  quickBalanceLek: document.querySelector("#quickBalanceLek"),
-  quickBalanceEuro: document.querySelector("#quickBalanceEuro"),
   openLimitsBtn: document.querySelector("#openLimitsBtn"),
   limitsOverlay: document.querySelector("#limitsOverlay"),
   limitsForm: document.querySelector("#limitsForm"),
@@ -301,7 +298,6 @@ els.quickAccountsOpen?.addEventListener("click", openAccountsWindow);
 els.quickExpenseOpen?.addEventListener("click", openExpenseArchive);
 els.quickAverageOpen?.addEventListener("click", () => openLimitsEditor("expense"));
 els.quickSavingsOpen?.addEventListener("click", openSavingsGoalEditor);
-els.quickBalanceOpen?.addEventListener("click", openSavingsGoalEditor);
 els.openLimitsBtn.addEventListener("click", () => openLimitsEditor("expense"));
 els.cancelLimitsBtn.addEventListener("click", closeLimitsEditor);
 els.limitsOverlay.addEventListener("click", (event) => {
@@ -670,16 +666,14 @@ function renderQuickMetrics(now, spentToday, spentMonthToDate, accountTotals, in
   renderSafeSpendCard(budget);
   setText(els.quickAccountLek, moneyLekShort(accountTotals.ALL));
   setText(els.quickAccountEuro, moneyEuroCompact(accountTotals.EUR));
-  setText(els.quickExpenseDays, monthToDateLabel(now));
+  setText(els.quickExpenseDays, "këtë muaj");
   setText(els.quickExpenseLek, moneyLekShort(spentMonthToDate.ALL));
   setText(els.quickExpenseEuro, moneyEuroCompact(spentMonthToDate.EUR));
-  setText(els.quickAverageNote, "parashikim fund-muaji");
+  setText(els.quickAverageNote, "fund-muaji");
   setText(els.quickAverageLek, moneyLekShort(budget.projectedSpendLek));
   setText(els.quickAverageEuro, `≈ ${moneyEuroCompact(budget.projectedSpendLek / state.exchangeRate)}`);
-  setText(els.quickSavingsLek, moneyLekShort(budget.todaySavingsLek));
-  setText(els.quickSavingsEuro, moneyEuroCompact(budget.todaySavingsLek / state.exchangeRate));
-  setText(els.quickBalanceLek, moneyLekShort(budget.remainingLek));
-  setText(els.quickBalanceEuro, `≈ ${moneyEuroCompact(budget.remainingLek / state.exchangeRate)}`);
+  setText(els.quickSavingsLek, moneyLekShort(budget.savedToDateLek));
+  setText(els.quickSavingsEuro, moneyEuroCompact(budget.savedToDateLek / state.exchangeRate));
 }
 
 function monthlyBudgetInsight(now, spentToday, spentMonthToDate, incomeMonth) {
@@ -690,30 +684,40 @@ function monthlyBudgetInsight(now, spentToday, spentMonthToDate, incomeMonth) {
   const spentMonthLek = totalsToLek(spentMonthToDate);
   const spentTodayLek = totalsToLek(spentToday);
   const monthlyBudgetLek = savingsPlan.monthlySpendBudgetLek;
-  const remainingLek = monthlyBudgetLek - spentMonthLek;
+  const fixedRemainingLek = fixedExpensesRemainingLek(now);
+  const remainingLek = monthlyBudgetLek - fixedRemainingLek - spentMonthLek;
   const dailySafeLek = Math.max(remainingLek, 0) / daysRemaining;
+  const spendBudgetToDateLek = savingsPlan.dailySpendBudgetLek * daysElapsed;
+  const savedToDateLek = spendBudgetToDateLek - spentMonthLek;
   const todaySavingsLek = savingsPlan.dailySpendBudgetLek - spentTodayLek;
   const dailyAverageLek = spentMonthLek / daysElapsed;
   const projectedSpendLek = dailyAverageLek * monthDays;
-  const forecastDeltaLek = monthlyBudgetLek - projectedSpendLek;
+  const forecastDeltaLek = monthlyBudgetLek - fixedRemainingLek - projectedSpendLek;
   const remainingRatio = monthlyBudgetLek > 0 ? clamp01(Math.max(remainingLek, 0) / monthlyBudgetLek) : 0;
 
   return {
     daysRemaining,
     dailySafeLek,
+    fixedRemainingLek,
     forecastDeltaLek,
     monthlyBudgetLek,
     projectedSpendLek,
     remainingLek,
     remainingRatio,
+    savedToDateLek,
     spentMonthLek,
     todaySavingsLek,
   };
 }
 
+function fixedExpensesRemainingLek() {
+  return 0;
+}
+
 function renderSafeSpendCard(budget) {
-  setText(els.safeSpendLek, moneyLekShort(budget.remainingLek));
-  setText(els.safeSpendEuro, `≈ ${moneyEuroCompact(budget.remainingLek / state.exchangeRate)}`);
+  const spendableLek = Math.max(budget.remainingLek, 0);
+  setText(els.safeSpendLek, moneyLekShort(spendableLek));
+  setText(els.safeSpendEuro, `≈ ${moneyEuroCompact(spendableLek / state.exchangeRate)}`);
   setText(els.safeSpendDate, endOfMonthLabel(new Date()));
   setText(els.safeSpendDaily, `≈ ${moneyLekShort(budget.dailySafeLek)} / ditë`);
   setText(els.safeSpendProgressText, `${Math.round(budget.remainingRatio * 100)}% buxhet i mbetur`);
