@@ -136,6 +136,14 @@ const els = {
   homeExpenseOpen: document.querySelector("#homeExpenseOpen"),
   homeIncomeLimitOpen: document.querySelector("#homeIncomeLimitOpen"),
   homeSavingsLimitOpen: document.querySelector("#homeSavingsLimitOpen"),
+  safeSpendOpen: document.querySelector("#safeSpendOpen"),
+  safeSpendLek: document.querySelector("#safeSpendLek"),
+  safeSpendEuro: document.querySelector("#safeSpendEuro"),
+  safeSpendDate: document.querySelector("#safeSpendDate"),
+  safeSpendDaily: document.querySelector("#safeSpendDaily"),
+  safeSpendProgress: document.querySelector("#safeSpendProgress"),
+  safeSpendProgressText: document.querySelector("#safeSpendProgressText"),
+  safeSpendForecast: document.querySelector("#safeSpendForecast"),
   quickAccountsOpen: document.querySelector("#quickAccountsOpen"),
   quickAccountLek: document.querySelector("#quickAccountLek"),
   quickAccountEuro: document.querySelector("#quickAccountEuro"),
@@ -288,6 +296,7 @@ els.homeIncomeLimitOpen?.addEventListener("click", openIncomeDetail);
 els.incomeYearDots?.addEventListener("click", openIncomeDetail);
 els.homeSavingsLimitOpen?.addEventListener("click", openSavingsDetail);
 els.savingsYearDots?.addEventListener("click", openSavingsDetail);
+els.safeSpendOpen?.addEventListener("click", openSavingsGoalEditor);
 els.quickAccountsOpen?.addEventListener("click", openAccountsWindow);
 els.quickExpenseOpen?.addEventListener("click", openExpenseArchive);
 els.quickAverageOpen?.addEventListener("click", () => openLimitsEditor("expense"));
@@ -656,26 +665,81 @@ function renderOverview(now, monthEntries, yearEntries, spentToday, spentMonth, 
 }
 
 function renderQuickMetrics(now, spentToday, spentMonthToDate, accountTotals, incomeMonth) {
-  const daysElapsed = Math.max(now.getDate(), 1);
-  const monthDays = daysInMonth(now);
-  const dailyAverage = divideMoneyTotals(spentMonthToDate, daysElapsed);
-  const projectedMonth = multiplyMoneyTotals(dailyAverage, monthDays);
-  const savingsPlan = savingsGoalPlan(now, incomeMonth);
-  const todaySavingsLek = savingsPlan.dailySpendBudgetLek - totalsToLek(spentToday);
-  const remainingSpendBudgetLek = savingsPlan.monthlySpendBudgetLek - totalsToLek(spentMonthToDate);
+  const budget = monthlyBudgetInsight(now, spentToday, spentMonthToDate, incomeMonth);
 
+  renderSafeSpendCard(budget);
   setText(els.quickAccountLek, moneyLekShort(accountTotals.ALL));
   setText(els.quickAccountEuro, moneyEuroCompact(accountTotals.EUR));
   setText(els.quickExpenseDays, monthToDateLabel(now));
   setText(els.quickExpenseLek, moneyLekShort(spentMonthToDate.ALL));
   setText(els.quickExpenseEuro, moneyEuroCompact(spentMonthToDate.EUR));
-  setText(els.quickAverageNote, `mes. ${moneyLekShort(dailyAverage.ALL)} / ${moneyEuroCompact(dailyAverage.EUR)}/ditë`);
-  setText(els.quickAverageLek, moneyLekShort(projectedMonth.ALL));
-  setText(els.quickAverageEuro, moneyEuroCompact(projectedMonth.EUR));
-  setText(els.quickSavingsLek, moneyLekShort(todaySavingsLek));
-  setText(els.quickSavingsEuro, moneyEuroCompact(todaySavingsLek / state.exchangeRate));
-  setText(els.quickBalanceLek, moneyLekShort(remainingSpendBudgetLek));
-  setText(els.quickBalanceEuro, `≈ ${moneyEuroCompact(remainingSpendBudgetLek / state.exchangeRate)}`);
+  setText(els.quickAverageNote, "parashikim fund-muaji");
+  setText(els.quickAverageLek, moneyLekShort(budget.projectedSpendLek));
+  setText(els.quickAverageEuro, `≈ ${moneyEuroCompact(budget.projectedSpendLek / state.exchangeRate)}`);
+  setText(els.quickSavingsLek, moneyLekShort(budget.todaySavingsLek));
+  setText(els.quickSavingsEuro, moneyEuroCompact(budget.todaySavingsLek / state.exchangeRate));
+  setText(els.quickBalanceLek, moneyLekShort(budget.remainingLek));
+  setText(els.quickBalanceEuro, `≈ ${moneyEuroCompact(budget.remainingLek / state.exchangeRate)}`);
+}
+
+function monthlyBudgetInsight(now, spentToday, spentMonthToDate, incomeMonth) {
+  const monthDays = daysInMonth(now);
+  const daysElapsed = Math.max(now.getDate(), 1);
+  const daysRemaining = Math.max(monthDays - now.getDate() + 1, 1);
+  const savingsPlan = savingsGoalPlan(now, incomeMonth);
+  const spentMonthLek = totalsToLek(spentMonthToDate);
+  const spentTodayLek = totalsToLek(spentToday);
+  const monthlyBudgetLek = savingsPlan.monthlySpendBudgetLek;
+  const remainingLek = monthlyBudgetLek - spentMonthLek;
+  const dailySafeLek = Math.max(remainingLek, 0) / daysRemaining;
+  const todaySavingsLek = savingsPlan.dailySpendBudgetLek - spentTodayLek;
+  const dailyAverageLek = spentMonthLek / daysElapsed;
+  const projectedSpendLek = dailyAverageLek * monthDays;
+  const forecastDeltaLek = monthlyBudgetLek - projectedSpendLek;
+  const remainingRatio = monthlyBudgetLek > 0 ? clamp01(Math.max(remainingLek, 0) / monthlyBudgetLek) : 0;
+
+  return {
+    daysRemaining,
+    dailySafeLek,
+    forecastDeltaLek,
+    monthlyBudgetLek,
+    projectedSpendLek,
+    remainingLek,
+    remainingRatio,
+    spentMonthLek,
+    todaySavingsLek,
+  };
+}
+
+function renderSafeSpendCard(budget) {
+  setText(els.safeSpendLek, moneyLekShort(budget.remainingLek));
+  setText(els.safeSpendEuro, `≈ ${moneyEuroCompact(budget.remainingLek / state.exchangeRate)}`);
+  setText(els.safeSpendDate, endOfMonthLabel(new Date()));
+  setText(els.safeSpendDaily, `≈ ${moneyLekShort(budget.dailySafeLek)} / ditë`);
+  setText(els.safeSpendProgressText, `${Math.round(budget.remainingRatio * 100)}% buxhet i mbetur`);
+  setText(els.safeSpendForecast, budgetForecastText(budget));
+  if (els.safeSpendProgress) {
+    els.safeSpendProgress.style.width = `${Math.round(budget.remainingRatio * 100)}%`;
+  }
+}
+
+function budgetForecastText(budget) {
+  if (budget.monthlyBudgetLek <= 0) {
+    return "Vendos të ardhura dhe objektiv kursimi që app-i të llogarisë buxhetin.";
+  }
+
+  const projected = moneyLekShort(budget.projectedSpendLek);
+  const delta = moneyLekShort(Math.abs(budget.forecastDeltaLek));
+  if (budget.forecastDeltaLek >= 0) {
+    return `Me ritmin aktual, fundi i muajit del ${projected}, rreth ${delta} nën buxhet.`;
+  }
+
+  return `Me ritmin aktual, fundi i muajit del ${projected}, rreth ${delta} mbi buxhet.`;
+}
+
+function endOfMonthLabel(date) {
+  const end = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+  return `${String(end.getDate()).padStart(2, "0")} ${capitalizeFirst(monthNames[end.getMonth()])}`;
 }
 
 function renderHomeExpenseCard(spentToday, spentMonth) {

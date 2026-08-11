@@ -10,10 +10,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
-    <link rel="manifest" href="manifest.webmanifest?v=20260811-4" />
-    <link rel="icon" href="icon.svg?v=20260811-4" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="icon.svg?v=20260811-4" />
-    <link rel="stylesheet" href="styles.css?v=20260811-4" />
+    <link rel="manifest" href="manifest.webmanifest?v=20260811-5" />
+    <link rel="icon" href="icon.svg?v=20260811-5" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="icon.svg?v=20260811-5" />
+    <link rel="stylesheet" href="styles.css?v=20260811-5" />
   </head>
   <body>
     <main class="app-shell">
@@ -31,19 +31,28 @@
       </header>
 
       <section class="overview-home pdf-home-v2" aria-labelledby="overviewTitle">
-        <article class="total-balance-card" aria-label="Gjendja totale e llogarive">
-          <button id="quickAccountsOpen" class="overview-arrow" type="button" aria-label="Hap llogaritë bankare">›</button>
-          <h2>Gjendja totale</h2>
-          <div class="total-balance-values">
+        <article class="safe-spend-card" aria-label="Buxheti i sigurt për shpenzime">
+          <button id="safeSpendOpen" class="overview-arrow" type="button" aria-label="Ndrysho objektivin e kursimeve">›</button>
+          <div class="safe-spend-copy">
+            <span>Mund të shpenzosh</span>
+            <strong id="safeSpendLek">0 L</strong>
+            <small id="safeSpendEuro">≈ 0€</small>
+          </div>
+          <div class="safe-spend-meta">
             <div>
-              <span>Lekë</span>
-              <strong id="quickAccountLek" class="green-value">0 L</strong>
+              <span>Deri më</span>
+              <strong id="safeSpendDate">fund muaji</strong>
             </div>
             <div>
-              <span>Euro</span>
-              <strong id="quickAccountEuro" class="green-value">0€</strong>
+              <span>Në ditë</span>
+              <strong id="safeSpendDaily">≈ 0 L / ditë</strong>
             </div>
           </div>
+          <div class="safe-spend-progress" aria-hidden="true">
+            <span id="safeSpendProgress"></span>
+          </div>
+          <p id="safeSpendProgressText" class="safe-spend-progress-text">0% buxhet i mbetur</p>
+          <p id="safeSpendForecast" class="safe-spend-forecast">Vendos të ardhura dhe objektiv kursimi për parashikim.</p>
         </article>
 
         <article class="activity-card">
@@ -99,11 +108,11 @@
           </article>
 
           <article class="quick-metric-card">
-            <button id="quickBalanceOpen" class="overview-arrow" type="button" aria-label="Ndrysho objektivin e kursimeve">›</button>
-            <h2>Mund të shpenzosh</h2>
-            <span>deri fund muaji</span>
-            <strong id="quickBalanceLek" class="purple-value">0 L</strong>
-            <strong id="quickBalanceEuro" class="purple-value euro-line">0€</strong>
+            <button id="quickAccountsOpen" class="overview-arrow" type="button" aria-label="Hap llogaritë bankare">›</button>
+            <h2>Gjendja</h2>
+            <span>në llogari</span>
+            <strong id="quickAccountLek" class="green-value">0 L</strong>
+            <strong id="quickAccountEuro" class="green-value euro-line">0€</strong>
           </article>
         </div>
 
@@ -688,6 +697,6 @@
       </div>
     </template>
 
-    <script src="app.js?v=20260811-4"></script>
+    <script src="app.js?v=20260811-5"></script>
   </body>
 </html>

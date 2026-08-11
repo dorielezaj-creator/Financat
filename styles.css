@@ -173,6 +173,7 @@ p {
   padding: 0;
 }
 
+.safe-spend-card,
 .total-balance-card,
 .activity-card,
 .overview-card {
@@ -180,6 +181,113 @@ p {
   border-radius: 34px;
   background: var(--card);
   box-shadow: none;
+}
+
+.safe-spend-card {
+  position: relative;
+  display: grid;
+  gap: 16px;
+  padding: 28px 32px 30px;
+  overflow: hidden;
+}
+
+.safe-spend-card .overview-arrow {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+}
+
+.safe-spend-copy {
+  display: grid;
+  gap: 8px;
+  padding-right: 54px;
+}
+
+.safe-spend-copy span,
+.safe-spend-meta span {
+  color: var(--muted);
+  font-size: clamp(16px, 3.7vw, 20px);
+  font-weight: 800;
+  line-height: 1;
+}
+
+.safe-spend-copy strong {
+  display: block;
+  color: var(--purple);
+  font-size: clamp(50px, 12vw, 72px);
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 0.94;
+  overflow-wrap: anywhere;
+}
+
+.safe-spend-copy small {
+  color: var(--purple);
+  font-size: clamp(28px, 7vw, 40px);
+  font-weight: 900;
+  line-height: 1;
+}
+
+.safe-spend-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.safe-spend-meta div {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+  padding: 16px 18px;
+  border-radius: 24px;
+  background: color-mix(in srgb, var(--bg) 62%, transparent);
+}
+
+:root[data-theme="dark"] .safe-spend-meta div {
+  background: #0c0c0e;
+}
+
+.safe-spend-meta strong {
+  color: var(--text);
+  font-size: clamp(18px, 4.3vw, 24px);
+  font-weight: 800;
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+}
+
+.safe-spend-progress {
+  width: 100%;
+  height: 18px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--purple-track);
+}
+
+:root[data-theme="dark"] .safe-spend-progress {
+  background: #303035;
+}
+
+.safe-spend-progress span {
+  display: block;
+  width: 0%;
+  min-width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--purple);
+  transition: width 180ms ease;
+}
+
+.safe-spend-progress-text,
+.safe-spend-forecast {
+  margin: 0;
+  color: var(--muted);
+  font-size: clamp(15px, 3.6vw, 18px);
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.safe-spend-forecast {
+  color: var(--text);
 }
 
 .total-balance-card {
@@ -2133,14 +2241,25 @@ select:focus {
     font-size: clamp(20px, 5.8vw, 24px);
   }
 
+  .safe-spend-card,
   .total-balance-card {
     border-radius: 30px;
     padding: 22px 24px 24px;
   }
 
+  .safe-spend-card .overview-arrow,
   .total-balance-card .overview-arrow {
     top: 20px;
     right: 20px;
+  }
+
+  .safe-spend-copy {
+    padding-right: 42px;
+  }
+
+  .safe-spend-meta {
+    grid-template-columns: 1fr;
+    gap: 10px;
   }
 
   .total-balance-card h2 {
