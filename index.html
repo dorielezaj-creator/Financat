@@ -10,10 +10,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
-    <link rel="manifest" href="manifest.webmanifest?v=20260811-6" />
-    <link rel="icon" href="icon.svg?v=20260811-6" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="icon.svg?v=20260811-6" />
-    <link rel="stylesheet" href="styles.css?v=20260811-6" />
+    <link rel="manifest" href="manifest.webmanifest?v=20260820-1" />
+    <link rel="icon" href="icon.svg?v=20260820-1" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="icon.svg?v=20260820-1" />
+    <link rel="stylesheet" href="styles.css?v=20260820-1" />
   </head>
   <body>
     <main class="app-shell">
@@ -30,22 +30,29 @@
         </div>
       </header>
 
+      <nav class="app-nav" aria-label="Seksionet kryesore">
+        <button id="zoneHomeBtn" class="active" type="button" data-zone="home">Home</button>
+        <button id="zoneTransactionsBtn" type="button" data-zone="transactions">Zërat</button>
+        <button id="zoneAccountsBtn" type="button" data-zone="accounts">Llogaritë</button>
+        <button id="zoneInsightsBtn" type="button" data-zone="insights">Insights</button>
+      </nav>
+
       <section class="overview-home pdf-home-v2" aria-labelledby="overviewTitle">
-        <article class="safe-spend-card" aria-label="Buxheti i sigurt për shpenzime">
+        <article class="safe-spend-card" aria-label="Sa mund të shpenzosh sot">
           <button id="safeSpendOpen" class="overview-arrow" type="button" aria-label="Ndrysho objektivin e kursimeve">›</button>
           <div class="safe-spend-copy">
-            <span>Mund të shpenzosh</span>
+            <span>Mund të shpenzosh sot</span>
             <strong id="safeSpendLek">0 L</strong>
-            <small id="safeSpendEuro">≈ 0€</small>
+            <small id="safeSpendEuro">≈ 0€ / ditë</small>
           </div>
           <div class="safe-spend-meta">
             <div>
-              <span>Deri më</span>
-              <strong id="safeSpendDate">fund muaji</strong>
+              <span>Buxheti i mbetur</span>
+              <strong id="safeSpendRemaining">0 L</strong>
             </div>
             <div>
-              <span>Në ditë</span>
-              <strong id="safeSpendDaily">≈ 0 L / ditë</strong>
+              <span>Ditë të mbetura</span>
+              <strong id="safeSpendDays">0 ditë</strong>
             </div>
           </div>
           <div class="safe-spend-progress" aria-hidden="true">
@@ -343,6 +350,41 @@
         </div>
       </section>
 
+      <section id="recurringOverlay" class="editor-overlay profile-page-overlay" hidden>
+        <div class="profile-page-window recurring-window" role="dialog" aria-modal="true" aria-labelledby="recurringTitle">
+          <button id="closeRecurringBtn" class="icon-button small profile-close-button" type="button" aria-label="Mbyll">×</button>
+          <div class="profile-pill compact">
+            <span class="profile-avatar" aria-hidden="true"></span>
+            <div>
+              <h2>Dorian Elezaj</h2>
+              <small>Shpenzime fikse mujore</small>
+            </div>
+          </div>
+
+          <h2 id="recurringTitle" class="profile-page-title">Shpenzime fikse</h2>
+          <div class="recurring-summary-grid" aria-label="Përmbledhja e detyrimeve fikse">
+            <article class="recurring-summary-card">
+              <span>Gjendja reale</span>
+              <strong id="recurringRealLek">0 L</strong>
+              <small id="recurringRealEuro">0€</small>
+            </article>
+            <article class="recurring-summary-card is-danger">
+              <span>Detyrime të ardhshme</span>
+              <strong id="recurringObligationsLek">0 L</strong>
+              <small id="recurringObligationsEuro">0€</small>
+            </article>
+            <article class="recurring-summary-card is-green">
+              <span>E disponueshme</span>
+              <strong id="recurringAvailableLek">0 L</strong>
+              <small id="recurringAvailableEuro">0€</small>
+            </article>
+          </div>
+
+          <button id="newRecurringBtn" class="secondary-button compact-button recurring-add-inline" type="button">+ Shto shpenzim fiks</button>
+          <div id="recurringList" class="recurring-list"></div>
+        </div>
+      </section>
+
       <section id="expenseArchiveOverlay" class="editor-overlay entry-page-overlay" hidden>
         <div class="archive-window" aria-labelledby="expenseArchiveTitle">
           <div class="archive-header">
@@ -448,15 +490,93 @@
           </div>
 
           <div class="profile-menu-card" aria-label="Menuja e profilit">
+            <button id="profileTransactionsBtn" type="button">Zërat</button>
+            <button id="profileNetWorthBtn" type="button">Pasuria ime</button>
+            <button id="profileInsightsBtn" type="button">Insights</button>
             <button id="profilePersonalBtn" type="button">Të dhënat personale</button>
             <button id="profileSavingsBtn" type="button">Kursimet</button>
             <button id="profileExpensesBtn" type="button">Shpenzime</button>
+            <button id="profileRecurringBtn" type="button">Shpenzime fikse</button>
             <button id="profileIncomeBtn" type="button">Të ardhurat</button>
             <button id="profileThemeBtn" type="button">
               <span>Dark mode</span>
               <strong id="profileThemeState">Off</strong>
             </button>
           </div>
+        </div>
+      </section>
+
+      <section id="transactionsOverlay" class="editor-overlay entry-page-overlay transactions-overlay" hidden>
+        <div class="archive-window transactions-window" aria-labelledby="transactionsTitle">
+          <div class="archive-header">
+            <h2 id="transactionsTitle">Zërat</h2>
+            <button id="closeTransactionsBtn" class="icon-button small" type="button" aria-label="Mbyll">×</button>
+          </div>
+
+          <div class="transactions-summary-grid">
+            <article>
+              <span>Bilanci</span>
+              <strong id="transactionsTotalLek">0 L</strong>
+              <small id="transactionsTotalEuro">0€</small>
+            </article>
+            <article>
+              <span>Zëra</span>
+              <strong id="transactionsCount">0</strong>
+              <small id="transactionsRange">këtë vit</small>
+            </article>
+          </div>
+
+          <div class="transactions-toolbar">
+            <input id="transactionsSearch" type="search" placeholder="Kërko zëra..." aria-label="Kërko zëra" />
+            <select id="transactionsTypeFilter" aria-label="Filtro zërat">
+              <option value="all">Të gjitha</option>
+              <option value="expense">Shpenzime</option>
+              <option value="income">Të ardhura</option>
+            </select>
+          </div>
+
+          <div id="transactionsList" class="archive-list transactions-list"></div>
+        </div>
+      </section>
+
+      <section id="netWorthOverlay" class="editor-overlay entry-page-overlay net-worth-overlay" hidden>
+        <div class="archive-window net-worth-window" aria-labelledby="netWorthTitle">
+          <div class="archive-header">
+            <h2 id="netWorthTitle">Pasuria ime</h2>
+            <button id="closeNetWorthBtn" class="icon-button small" type="button" aria-label="Mbyll">×</button>
+          </div>
+
+          <article class="net-worth-hero">
+            <span>Net Worth</span>
+            <strong id="netWorthTotalEuro">0€</strong>
+            <small id="netWorthTotalLek">0 L</small>
+          </article>
+
+          <div class="net-worth-actions">
+            <button id="netWorthSnapshotBtn" class="secondary-button" type="button">Ruaj pikën e sotme</button>
+            <button id="netWorthAddAccountBtn" class="secondary-button" type="button">+ Shto llogari</button>
+          </div>
+          <p id="netWorthStatus" class="net-worth-status">Grafiku përditësohet automatikisht me gjendjen e sotme.</p>
+
+          <div id="netWorthTrend" class="net-worth-trend" aria-label="Grafiku i pasurisë sipas muajve"></div>
+          <div id="netWorthList" class="account-list net-worth-list"></div>
+        </div>
+      </section>
+
+      <section id="insightsOverlay" class="editor-overlay entry-page-overlay insights-overlay" hidden>
+        <div class="archive-window insights-window" aria-labelledby="insightsWindowTitle">
+          <div class="archive-header">
+            <h2 id="insightsWindowTitle">Insights</h2>
+            <button id="closeInsightsBtn" class="icon-button small" type="button" aria-label="Mbyll">×</button>
+          </div>
+
+          <article class="insight-safe-card">
+            <span>Safe to spend today</span>
+            <strong id="insightsSafeLek">0 L</strong>
+            <small id="insightsSafeEuro">≈ 0€ / ditë</small>
+          </article>
+
+          <div id="insightsList" class="insights-list"></div>
         </div>
       </section>
 
@@ -537,6 +657,48 @@
           <div class="editor-actions">
             <button id="deleteAccountBtn" class="danger-button" type="button">Fshi</button>
             <button id="saveAccountBtn" class="secondary-button" type="submit">Ruaj</button>
+          </div>
+        </form>
+      </section>
+
+      <section id="recurringEditorOverlay" class="editor-overlay" hidden>
+        <form id="recurringForm" class="editor-sheet recurring-editor-sheet" autocomplete="off">
+          <input id="recurringIdInput" name="recurringId" type="hidden" />
+          <div class="editor-header">
+            <h2 id="recurringEditorTitle">Shto shpenzim fiks</h2>
+            <button id="cancelRecurringEditorBtn" class="icon-button small" type="button" aria-label="Mbyll">×</button>
+          </div>
+          <label>
+            Emri
+            <input id="recurringNameInput" name="recurringName" type="text" maxlength="70" placeholder="p.sh. Qira" required />
+          </label>
+          <label>
+            Vlera
+            <input id="recurringAmountInput" name="recurringAmount" type="number" inputmode="decimal" min="0" step="0.01" placeholder="p.sh. 45000" required />
+          </label>
+          <label>
+            Monedha
+            <select id="recurringCurrencyInput" name="recurringCurrency">
+              <option value="ALL">Lekë</option>
+              <option value="EUR">Euro</option>
+            </select>
+          </label>
+          <label>
+            Kategoria
+            <select id="recurringCategoryInput" name="recurringCategory"></select>
+          </label>
+          <label>
+            Dita e muajit
+            <input id="recurringDayInput" name="recurringDay" type="number" inputmode="numeric" min="1" max="31" step="1" placeholder="p.sh. 1" required />
+          </label>
+          <label class="checkbox-label">
+            <input id="recurringActiveInput" name="recurringActive" type="checkbox" checked />
+            Aktive
+          </label>
+          <small class="field-note">Rezervohet në buxhet. Gjendja e bankës ndryshon vetëm kur e regjistron si zë real.</small>
+          <div class="editor-actions">
+            <button id="deleteRecurringBtn" class="danger-button" type="button">Fshi</button>
+            <button id="saveRecurringBtn" class="secondary-button" type="submit">Ruaj</button>
           </div>
         </form>
       </section>
@@ -697,6 +859,6 @@
       </div>
     </template>
 
-    <script src="app.js?v=20260811-6"></script>
+    <script src="app.js?v=20260820-1"></script>
   </body>
 </html>

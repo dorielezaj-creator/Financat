@@ -90,6 +90,33 @@ button {
   margin: 0 0 20px;
 }
 
+.app-nav {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0 0 22px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--card) 92%, transparent);
+}
+
+.app-nav button {
+  min-height: 38px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.app-nav button.active {
+  background: var(--text);
+  color: var(--bg);
+}
+
 .hero-copy {
   display: grid;
   gap: 6px;
@@ -1002,6 +1029,7 @@ p {
 
 .pill-list,
 .account-list,
+.recurring-list,
 .entry-list,
 .category-list,
 .archive-list,
@@ -1012,6 +1040,7 @@ p {
 
 .entry-row,
 .account-row,
+.recurring-row,
 .archive-month summary {
   min-height: 64px;
   display: grid;
@@ -1025,7 +1054,8 @@ p {
 }
 
 .entry-title,
-.account-main strong {
+.account-main strong,
+.recurring-main strong {
   color: var(--text);
   font-size: 18px;
   font-weight: 750;
@@ -1033,6 +1063,7 @@ p {
 
 .entry-meta,
 .account-main span,
+.recurring-main span,
 .archive-month summary small,
 .empty-line,
 .receipt-ai-tools small {
@@ -1042,7 +1073,8 @@ p {
 }
 
 .entry-amount,
-.account-balance {
+.account-balance,
+.recurring-amount {
   color: var(--text);
   font-size: 18px;
   font-weight: 850;
@@ -1050,13 +1082,25 @@ p {
 }
 
 .edit-entry-button,
+.delete-entry-button,
 .account-actions button,
+.recurring-actions button,
 .more-row,
 .text-button {
   border: 0;
   background: transparent;
   color: var(--green);
   font-weight: 800;
+}
+
+.entry-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.delete-entry-button {
+  color: var(--expense);
 }
 
 .account-actions {
@@ -1066,6 +1110,76 @@ p {
 
 .account-actions button[data-delete-bank] {
   color: var(--expense);
+}
+
+.recurring-window {
+  gap: 18px;
+}
+
+.recurring-summary-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.recurring-summary-card {
+  display: grid;
+  gap: 6px;
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  background: var(--card);
+}
+
+.recurring-summary-card span {
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.recurring-summary-card strong {
+  color: var(--text);
+  font-size: 24px;
+  line-height: 1;
+  font-weight: 900;
+}
+
+.recurring-summary-card small {
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1.1;
+  font-weight: 850;
+}
+
+.recurring-summary-card.is-danger strong,
+.recurring-summary-card.is-danger small {
+  color: var(--expense);
+}
+
+.recurring-summary-card.is-green strong,
+.recurring-summary-card.is-green small {
+  color: var(--green);
+}
+
+.recurring-add-inline {
+  margin-top: 4px;
+}
+
+.recurring-empty {
+  margin: 0;
+  padding: 18px;
+  color: var(--muted);
+  text-align: center;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.recurring-row.is-muted {
+  opacity: 0.48;
+}
+
+.recurring-actions {
+  display: flex;
+  gap: 8px;
 }
 
 .total-pills {
@@ -1614,6 +1728,132 @@ p {
 
 .entry-page-overlay .archive-list {
   padding-top: 8px;
+}
+
+.transactions-summary-grid,
+.insights-list {
+  display: grid;
+  gap: 12px;
+}
+
+.transactions-summary-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0 0 14px;
+}
+
+.transactions-summary-grid article,
+.insight-safe-card,
+.insight-card,
+.net-worth-hero {
+  display: grid;
+  gap: 4px;
+  padding: 18px;
+  border-radius: 24px;
+  background: var(--card);
+}
+
+.transactions-summary-grid span,
+.insight-safe-card span,
+.insight-card span,
+.net-worth-hero span,
+.net-worth-status {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.transactions-summary-grid strong,
+.insight-safe-card strong,
+.net-worth-hero strong {
+  color: var(--green);
+  font-size: clamp(22px, 6vw, 34px);
+  font-weight: 900;
+  line-height: 1;
+}
+
+.transactions-summary-grid small,
+.insight-safe-card small,
+.net-worth-hero small,
+.insight-card small {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.transactions-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  margin: 0 0 16px;
+}
+
+.transactions-toolbar input,
+.transactions-toolbar select {
+  min-height: 48px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 850;
+}
+
+.transactions-toolbar input {
+  min-width: 0;
+  padding: 0 18px;
+}
+
+.transactions-toolbar select {
+  padding: 0 14px;
+}
+
+.net-worth-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.net-worth-trend {
+  display: grid;
+  gap: 8px;
+  min-height: 146px;
+  padding: 18px 16px 14px;
+  border-radius: 28px;
+  background: var(--card);
+}
+
+.net-worth-plot {
+  height: 92px;
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 6px;
+  align-items: end;
+}
+
+.net-worth-bar {
+  width: 100%;
+  min-height: 3px;
+  border-radius: 999px 999px 4px 4px;
+  background: color-mix(in srgb, var(--muted) 24%, transparent);
+}
+
+.net-worth-bar.has-value {
+  background: var(--green);
+}
+
+.net-worth-axis {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+  text-align: center;
+}
+
+.insight-card strong {
+  color: var(--text);
+  font-size: 18px;
+  font-weight: 900;
 }
 
 .undo-toast {
