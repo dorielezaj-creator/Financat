@@ -227,7 +227,7 @@ p {
 .safe-spend-copy {
   display: grid;
   gap: 8px;
-  padding-right: 54px;
+  padding-right: 88px;
 }
 
 .safe-spend-copy span,
@@ -506,7 +506,7 @@ p {
 }
 
 .quick-metric-card h2 {
-  padding-right: 34px;
+  padding-right: 72px;
   color: var(--text);
   font-size: clamp(24px, 5.7vw, 30px);
   font-weight: 500;
@@ -615,6 +615,42 @@ p {
   font-weight: 700;
   line-height: 0.75;
   padding: 0 0 4px;
+}
+
+.info-chip {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--muted);
+  font-size: 17px;
+  font-weight: 900;
+  line-height: 1;
+  padding: 0;
+}
+
+.safe-info-chip,
+.quick-metric-card .info-chip {
+  position: absolute;
+  z-index: 2;
+}
+
+.safe-info-chip {
+  top: 24px;
+  right: 62px;
+}
+
+.quick-metric-card .info-chip {
+  top: 20px;
+  right: 56px;
+}
+
+.info-chip:focus-visible {
+  outline: 3px solid rgba(52, 209, 132, 0.28);
+  outline-offset: 3px;
 }
 
 .home-metric-row {
@@ -1596,6 +1632,142 @@ p {
   line-height: 1.15;
 }
 
+.formula-window,
+.setup-window {
+  position: relative;
+  width: min(100%, 430px);
+  max-height: calc(100vh - 44px);
+  overflow: auto;
+  margin: 0 auto;
+  padding: 38px 34px 34px;
+  border: 1px solid var(--input-line);
+  border-radius: 40px;
+  background: var(--sheet);
+  color: var(--text);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.22);
+}
+
+.formula-window h2,
+.setup-window h2 {
+  margin: 8px 0 0;
+  font-size: clamp(34px, 8vw, 48px);
+  line-height: 0.98;
+  font-weight: 900;
+}
+
+.formula-window p,
+.setup-window p {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 16px;
+  font-weight: 750;
+  line-height: 1.35;
+}
+
+.formula-eyebrow,
+.setup-eyebrow {
+  color: var(--green);
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.formula-steps {
+  display: grid;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.formula-step {
+  display: grid;
+  gap: 5px;
+  padding: 15px 16px;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: var(--card);
+}
+
+.formula-step span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.formula-step strong {
+  color: var(--text);
+  font-size: 20px;
+  font-weight: 900;
+  line-height: 1.05;
+}
+
+.formula-step small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.25;
+}
+
+.formula-step.is-positive strong {
+  color: var(--green);
+}
+
+.formula-step.is-warning strong {
+  color: var(--expense);
+}
+
+.formula-step.is-balance strong {
+  color: var(--purple);
+}
+
+.setup-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 24px;
+}
+
+.setup-grid label:nth-child(5) {
+  grid-column: 1 / -1;
+}
+
+.setup-grid label {
+  font-size: 16px;
+  gap: 8px;
+}
+
+.setup-grid input,
+.setup-grid select {
+  min-height: 54px;
+  padding: 0 18px;
+  font-size: 18px;
+  font-weight: 850;
+}
+
+.setup-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 22px;
+}
+
+.setup-actions .secondary-button,
+.setup-save-button {
+  min-height: 52px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.setup-save-button {
+  background: var(--green);
+  border-color: var(--green);
+  color: #000;
+}
+
 :root[data-theme="dark"] .profile-avatar {
   border-color: #242428;
   box-shadow: 0 0 0 1px var(--line), 0 12px 28px rgba(0, 0, 0, 0.42);
@@ -2474,6 +2646,7 @@ select:focus {
   }
 
   .quick-metric-card h2 {
+    padding-right: 62px;
     font-size: clamp(20px, 5.9vw, 24px);
   }
 
@@ -2494,7 +2667,35 @@ select:focus {
   }
 
   .safe-spend-copy {
-    padding-right: 42px;
+    padding-right: 70px;
+  }
+
+  .safe-info-chip {
+    top: 22px;
+    right: 58px;
+  }
+
+  .quick-metric-card .info-chip {
+    top: 18px;
+    right: 52px;
+  }
+
+  .formula-window,
+  .setup-window {
+    border-radius: 34px;
+    padding: 34px 26px 30px;
+  }
+
+  .setup-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .setup-grid label:nth-child(5) {
+    grid-column: auto;
+  }
+
+  .setup-actions {
+    grid-template-columns: 1fr;
   }
 
   .safe-spend-meta {

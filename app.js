@@ -10,6 +10,7 @@ const THEME_KEY = "financat-e-mia:theme:v1";
 const RECEIPT_AI_ENDPOINT_KEY = "financat-e-mia:receipt-ai-endpoint:v1";
 const RECEIPT_AI_TOKEN_KEY = "financat-e-mia:receipt-ai-token:v1";
 const NET_WORTH_HISTORY_KEY = "financat-e-mia:net-worth-history:v1";
+const SETUP_KEY = "financat-e-mia:setup-complete:v1";
 const LEGACY_STORAGE_KEYS = ["financat-e-mia:v1"];
 const DEFAULT_LIMITS = {
   expenseALL: 150000,
@@ -66,6 +67,7 @@ const state = {
     action: null,
   },
   theme: loadTheme(),
+  setupComplete: loadSetupComplete(),
   exchangeRate: loadExchangeRate(),
   limits: loadLimits(),
   savingsGoal: loadSavingsGoal(),
@@ -168,6 +170,7 @@ const els = {
   homeIncomeLimitOpen: document.querySelector("#homeIncomeLimitOpen"),
   homeSavingsLimitOpen: document.querySelector("#homeSavingsLimitOpen"),
   safeSpendOpen: document.querySelector("#safeSpendOpen"),
+  safeSpendInfo: document.querySelector("#safeSpendInfo"),
   safeSpendLek: document.querySelector("#safeSpendLek"),
   safeSpendEuro: document.querySelector("#safeSpendEuro"),
   safeSpendRemaining: document.querySelector("#safeSpendRemaining"),
@@ -176,11 +179,15 @@ const els = {
   safeSpendProgressText: document.querySelector("#safeSpendProgressText"),
   safeSpendForecast: document.querySelector("#safeSpendForecast"),
   quickAccountsOpen: document.querySelector("#quickAccountsOpen"),
+  quickAccountsInfo: document.querySelector("#quickAccountsInfo"),
   quickAccountLek: document.querySelector("#quickAccountLek"),
   quickAccountEuro: document.querySelector("#quickAccountEuro"),
   quickExpenseOpen: document.querySelector("#quickExpenseOpen"),
+  quickExpenseInfo: document.querySelector("#quickExpenseInfo"),
   quickAverageOpen: document.querySelector("#quickAverageOpen"),
+  quickAverageInfo: document.querySelector("#quickAverageInfo"),
   quickSavingsOpen: document.querySelector("#quickSavingsOpen"),
+  quickSavingsInfo: document.querySelector("#quickSavingsInfo"),
   quickExpenseDays: document.querySelector("#quickExpenseDays"),
   quickExpenseLek: document.querySelector("#quickExpenseLek"),
   quickExpenseEuro: document.querySelector("#quickExpenseEuro"),
@@ -284,6 +291,7 @@ const els = {
   profileIncomeBtn: document.querySelector("#profileIncomeBtn"),
   profileThemeBtn: document.querySelector("#profileThemeBtn"),
   profileThemeState: document.querySelector("#profileThemeState"),
+  profileSetupBtn: document.querySelector("#profileSetupBtn"),
   savingsGoalOverlay: document.querySelector("#savingsGoalOverlay"),
   savingsGoalForm: document.querySelector("#savingsGoalForm"),
   closeSavingsGoalBtn: document.querySelector("#closeSavingsGoalBtn"),
@@ -320,6 +328,21 @@ const els = {
   insightsSafeLek: document.querySelector("#insightsSafeLek"),
   insightsSafeEuro: document.querySelector("#insightsSafeEuro"),
   insightsList: document.querySelector("#insightsList"),
+  formulaOverlay: document.querySelector("#formulaOverlay"),
+  formulaTitle: document.querySelector("#formulaTitle"),
+  formulaEyebrow: document.querySelector("#formulaEyebrow"),
+  formulaSummary: document.querySelector("#formulaSummary"),
+  formulaSteps: document.querySelector("#formulaSteps"),
+  closeFormulaBtn: document.querySelector("#closeFormulaBtn"),
+  setupOverlay: document.querySelector("#setupOverlay"),
+  setupForm: document.querySelector("#setupForm"),
+  closeSetupBtn: document.querySelector("#closeSetupBtn"),
+  setupLaterBtn: document.querySelector("#setupLaterBtn"),
+  setupLekBalanceInput: document.querySelector("#setupLekBalanceInput"),
+  setupEuroBalanceInput: document.querySelector("#setupEuroBalanceInput"),
+  setupGoalAmountInput: document.querySelector("#setupGoalAmountInput"),
+  setupGoalCurrencyInput: document.querySelector("#setupGoalCurrencyInput"),
+  setupGoalMonthsInput: document.querySelector("#setupGoalMonthsInput"),
   profileTransactionsBtn: document.querySelector("#profileTransactionsBtn"),
   profileNetWorthBtn: document.querySelector("#profileNetWorthBtn"),
   profileInsightsBtn: document.querySelector("#profileInsightsBtn"),
@@ -337,6 +360,7 @@ els.eurToLekRateInput.value = formatRateInput(state.exchangeRate);
 applyTheme();
 syncTypeControls();
 render();
+maybeOpenSetup();
 
 document.querySelectorAll("[data-type]").forEach((button) => {
   button.addEventListener("click", () => {
@@ -360,10 +384,15 @@ els.incomeYearDots?.addEventListener("click", openIncomeDetail);
 els.homeSavingsLimitOpen?.addEventListener("click", openSavingsDetail);
 els.savingsYearDots?.addEventListener("click", openSavingsDetail);
 els.safeSpendOpen?.addEventListener("click", openSavingsGoalEditor);
+els.safeSpendInfo?.addEventListener("click", () => openFormulaOverlay("safe"));
 els.quickAccountsOpen?.addEventListener("click", openNetWorthWindow);
+els.quickAccountsInfo?.addEventListener("click", () => openFormulaOverlay("accounts"));
 els.quickExpenseOpen?.addEventListener("click", openExpenseArchive);
+els.quickExpenseInfo?.addEventListener("click", () => openFormulaOverlay("expense"));
 els.quickAverageOpen?.addEventListener("click", openInsightsWindow);
+els.quickAverageInfo?.addEventListener("click", () => openFormulaOverlay("forecast"));
 els.quickSavingsOpen?.addEventListener("click", openSavingsGoalEditor);
+els.quickSavingsInfo?.addEventListener("click", () => openFormulaOverlay("savings"));
 els.openLimitsBtn.addEventListener("click", () => openLimitsEditor("expense"));
 els.cancelLimitsBtn.addEventListener("click", closeLimitsEditor);
 els.limitsOverlay.addEventListener("click", (event) => {
@@ -672,6 +701,10 @@ els.profileInsightsBtn?.addEventListener("click", () => {
   closeProfileMenu();
   openInsightsWindow();
 });
+els.profileSetupBtn?.addEventListener("click", () => {
+  closeProfileMenu();
+  openSetupOverlay(false);
+});
 els.profileThemeBtn?.addEventListener("click", () => {
   state.theme = state.theme === "dark" ? "light" : "dark";
   saveTheme();
@@ -695,6 +728,16 @@ els.savingsGoalForm?.addEventListener("submit", (event) => {
   closeSavingsGoalEditor();
   render();
 });
+els.closeFormulaBtn?.addEventListener("click", closeFormulaOverlay);
+els.formulaOverlay?.addEventListener("click", (event) => {
+  if (event.target === els.formulaOverlay) closeFormulaOverlay();
+});
+els.closeSetupBtn?.addEventListener("click", () => closeSetupOverlay(true));
+els.setupLaterBtn?.addEventListener("click", () => closeSetupOverlay(true));
+els.setupOverlay?.addEventListener("click", (event) => {
+  if (event.target === els.setupOverlay) closeSetupOverlay(true);
+});
+els.setupForm?.addEventListener("submit", handleSetupSubmit);
 els.importInput.addEventListener("change", importData);
 els.restoreBackupBtn.addEventListener("click", restoreAutoBackup);
 
@@ -820,15 +863,22 @@ function monthlyBudgetInsight(now, spentToday, spentMonthToDate, incomeMonth) {
   const remainingRatio = monthlyBudgetLek > 0 ? clamp01(Math.max(remainingLek, 0) / monthlyBudgetLek) : 0;
 
   return {
-    daysRemaining,
+    dailyAverageLek,
     dailySafeLek,
+    dailySpendBudgetLek: savingsPlan.dailySpendBudgetLek,
+    daysElapsed,
+    daysRemaining,
     fixedRemainingLek,
     forecastDeltaLek,
+    monthDays,
     monthlyBudgetLek,
+    monthlyIncomeLek: totalsToLek(incomeMonth),
+    monthlyTargetLek: savingsPlan.monthlyTargetLek,
     projectedSpendLek,
     remainingLek,
     remainingRatio,
     savedToDateLek,
+    spendBudgetToDateLek,
     spentMonthLek,
     todaySavingsLek,
   };
@@ -866,6 +916,154 @@ function budgetForecastText(budget) {
   }
 
   return `Me ritmin aktual, fundi i muajit del ${projected}, rreth ${delta} mbi buxhet.${fixedText}`;
+}
+
+function openFormulaOverlay(topic = "safe") {
+  const content = formulaContent(topic);
+  if (!content || !els.formulaOverlay) return;
+
+  setText(els.formulaEyebrow, content.eyebrow);
+  setText(els.formulaTitle, content.title);
+  setText(els.formulaSummary, content.summary);
+
+  if (els.formulaSteps) {
+    els.formulaSteps.innerHTML = content.steps
+      .map(
+        (step) => `
+          <article class="formula-step ${step.tone ? `is-${step.tone}` : ""}">
+            <span>${escapeHtml(step.label)}</span>
+            <strong>${escapeHtml(step.value)}</strong>
+            ${step.detail ? `<small>${escapeHtml(step.detail)}</small>` : ""}
+          </article>
+        `
+      )
+      .join("");
+  }
+
+  els.formulaOverlay.hidden = false;
+}
+
+function closeFormulaOverlay() {
+  if (els.formulaOverlay) els.formulaOverlay.hidden = true;
+}
+
+function currentBudgetContext() {
+  const now = new Date();
+  const currentMonth = monthKey(now);
+  const today = todayIso();
+  const monthEntries = state.entries.filter((entry) => entry.date.startsWith(currentMonth) && entry.date <= today);
+  const spentToday = state.entries.filter((entry) => entry.type === "expense" && entry.date === today).reduce(sumMoneyTotals, emptyMoneyTotals());
+  const spentMonth = monthEntries.filter((entry) => entry.type === "expense").reduce(sumMoneyTotals, emptyMoneyTotals());
+  const incomeMonth = monthEntries.filter((entry) => entry.type === "income").reduce(sumMoneyTotals, emptyMoneyTotals());
+  const budget = monthlyBudgetInsight(now, spentToday, spentMonth, incomeMonth);
+  const accountTotals = bankTotals();
+
+  return { spentToday, spentMonth, incomeMonth, budget, accountTotals };
+}
+
+function formulaContent(topic) {
+  const { spentToday, spentMonth, budget, accountTotals } = currentBudgetContext();
+
+  if (topic === "expense") {
+    return {
+      eyebrow: "Shpenzime",
+      title: "Si lexohet karta",
+      summary: "Shfaq shpenzimet e regjistruara deri sot dhe krahasimin me limitin mujor.",
+      steps: [
+        formulaStep("Shpenzuar sot", `${moneyLekShort(spentToday.ALL)} / ${moneyEuroCompact(spentToday.EUR)}`),
+        formulaStep("Shpenzuar këtë muaj", `${moneyLekShort(spentMonth.ALL)} / ${moneyEuroCompact(spentMonth.EUR)}`),
+        formulaStep("Limiti mujor", `${moneyLekShort(state.limits.expenseALL)} / ${moneyEuroCompact(state.limits.expenseEUR)}`),
+        formulaStep("Përdorur", `${ratioText(spentMonth.ALL, state.limits.expenseALL)} në lekë`, "Grafiku tregon progresin ndaj limitit."),
+      ],
+    };
+  }
+
+  if (topic === "accounts") {
+    const totalLek = totalsToLek(accountTotals);
+    return {
+      eyebrow: "Gjendja",
+      title: "Nga vijnë vlerat",
+      summary: "Gjendja merret nga llogaritë dhe cash-i që ke regjistruar, pa i bashkuar verbërisht Lekë dhe Euro.",
+      steps: [
+        formulaStep("Gjendje Lekë", moneyLekShort(accountTotals.ALL), "Nga llogaritë në Lekë."),
+        formulaStep("Gjendje Euro", moneyEuroCompact(accountTotals.EUR), "Nga llogaritë në Euro."),
+        formulaStep("Totali në Lekë", moneyLekShort(totalLek), "Euro kthehet me kursin aktual."),
+        formulaStep("Totali në Euro", moneyEuroCompact(totalLek / state.exchangeRate), `1€ = ${formatRateInput(state.exchangeRate)} L`),
+      ],
+    };
+  }
+
+  if (topic === "savings") {
+    const saved = budget.savedToDateLek;
+    return {
+      eyebrow: "Kursime",
+      title: "Kursyer deri tani",
+      summary: "Krahasohet buxheti që duhet të kishe shpenzuar deri sot me shpenzimet reale.",
+      steps: [
+        formulaStep("Buxheti i lejuar deri sot", moneyLekShort(budget.spendBudgetToDateLek)),
+        formulaStep("Shpenzuar deri sot", `- ${moneyLekShort(budget.spentMonthLek)}`),
+        formulaStep(
+          "Kursyer deri tani",
+          `${saved < 0 ? "-" : ""}${moneyLekShort(Math.abs(saved))} / ${saved < 0 ? "-" : ""}${moneyEuroCompact(Math.abs(saved) / state.exchangeRate)}`,
+          "Pozitive kur shpenzon më pak se plani.",
+          saved >= 0 ? "positive" : "warning"
+        ),
+        formulaStep("Objektivi mujor", `${moneyLekShort(budget.monthlyTargetLek)} / ${moneyEuroCompact(budget.monthlyTargetLek / state.exchangeRate)}`),
+      ],
+    };
+  }
+
+  if (topic === "forecast") {
+    const delta = budget.forecastDeltaLek;
+    return {
+      eyebrow: "Parashikimi",
+      title: "Fundi i muajit",
+      summary: "Llogarit çfarë pritet të ndodhë nëse vazhdon me të njëjtin ritëm shpenzimi.",
+      steps: [
+        formulaStep("Mesatarja ditore", moneyLekShort(budget.dailyAverageLek), `${budget.daysElapsed} ditë të kaluara.`),
+        formulaStep("Parashikimi fund-muaji", `${moneyLekShort(budget.projectedSpendLek)} / ${moneyEuroCompact(budget.projectedSpendLek / state.exchangeRate)}`),
+        formulaStep(
+          "Diferenca me buxhetin",
+          `${delta < 0 ? "-" : ""}${moneyLekShort(Math.abs(delta))}`,
+          delta >= 0 ? "Nën buxhet me ritmin aktual." : "Mbi buxhet me ritmin aktual.",
+          delta >= 0 ? "positive" : "warning"
+        ),
+      ],
+    };
+  }
+
+  return {
+    eyebrow: "Formula kryesore",
+    title: "Mund të shpenzosh",
+    summary: "Kjo është shifra që të tregon sa mund të shpenzosh sot pa prekur objektivin e kursimit.",
+    steps: [
+      formulaStep("Të ardhura këtë muaj", moneyLekShort(budget.monthlyIncomeLek)),
+      formulaStep("Minus objektivi i kursimit", `- ${moneyLekShort(budget.monthlyTargetLek)}`),
+      formulaStep("Minus shpenzime fikse të mbetura", `- ${moneyLekShort(budget.fixedRemainingLek)}`),
+      formulaStep("Minus shpenzimet e bëra", `- ${moneyLekShort(budget.spentMonthLek)}`),
+      formulaStep(
+        "Buxheti i mbetur",
+        `${moneyLekShort(Math.max(budget.remainingLek, 0))} / ${moneyEuroCompact(Math.max(budget.remainingLek, 0) / state.exchangeRate)}`,
+        "Kjo vlerë ndahet me ditët e mbetura.",
+        "balance"
+      ),
+      formulaStep(
+        "Mund të shpenzosh sot",
+        `${moneyLekShort(budget.dailySafeLek)} / ${moneyEuroCompact(budget.dailySafeLek / state.exchangeRate)}`,
+        `${budget.daysRemaining} ditë të mbetura.`,
+        "positive"
+      ),
+    ],
+  };
+}
+
+function formulaStep(label, value, detail = "", tone = "") {
+  return { label, value, detail, tone };
+}
+
+function ratioText(value, total) {
+  if (!(Number(total) > 0)) return "0%";
+  return `${Math.round(clamp01(value / total) * 100)}%`;
 }
 
 function goToZone(zone = "home") {
@@ -1332,6 +1530,7 @@ function snapshotFinanceState() {
     limits: { ...state.limits },
     savingsGoal: { ...state.savingsGoal },
     exchangeRate: state.exchangeRate,
+    setupComplete: state.setupComplete,
   };
 }
 
@@ -1345,6 +1544,7 @@ function restoreFinanceSnapshot(snapshot) {
   state.limits = snapshot.limits ? { ...snapshot.limits } : state.limits;
   state.savingsGoal = snapshot.savingsGoal ? { ...snapshot.savingsGoal } : state.savingsGoal;
   state.exchangeRate = Number(snapshot.exchangeRate) > 0 ? Number(snapshot.exchangeRate) : state.exchangeRate;
+  if (typeof snapshot.setupComplete === "boolean") state.setupComplete = snapshot.setupComplete;
 
   ensureDefaultBanks();
   saveEntries();
@@ -1354,6 +1554,7 @@ function restoreFinanceSnapshot(snapshot) {
   saveLimits();
   saveSavingsGoal();
   saveExchangeRate(state.exchangeRate);
+  saveSetupComplete();
   if (els.eurToLekRateInput) els.eurToLekRateInput.value = formatRateInput(state.exchangeRate);
   render();
 }
@@ -1730,6 +1931,98 @@ function openSavingsGoalEditor() {
 
 function closeSavingsGoalEditor() {
   els.savingsGoalOverlay.hidden = true;
+}
+
+function maybeOpenSetup() {
+  if (state.setupComplete) return;
+
+  const hasRealData =
+    state.entries.length ||
+    state.recurringExpenses.length ||
+    state.banks.some((bank) => Math.abs(Number(bank.balance) || 0) > 0);
+  if (hasRealData) {
+    saveSetupComplete(true);
+    return;
+  }
+
+  window.setTimeout(() => openSetupOverlay(true), 450);
+}
+
+function openSetupOverlay(isFirstRun = false) {
+  if (!els.setupOverlay) return;
+
+  const totals = bankTotals();
+  if (els.setupLekBalanceInput) els.setupLekBalanceInput.value = formatPlainNumber(totals.ALL);
+  if (els.setupEuroBalanceInput) els.setupEuroBalanceInput.value = formatPlainNumber(totals.EUR);
+  if (els.setupGoalAmountInput) els.setupGoalAmountInput.value = formatPlainNumber(state.savingsGoal.amount);
+  if (els.setupGoalCurrencyInput) els.setupGoalCurrencyInput.value = normalizeCurrency(state.savingsGoal.currency);
+  if (els.setupGoalMonthsInput) els.setupGoalMonthsInput.value = String(state.savingsGoal.months || 12);
+  els.setupOverlay.dataset.firstRun = String(Boolean(isFirstRun));
+  els.setupOverlay.hidden = false;
+  window.setTimeout(() => els.setupLekBalanceInput?.focus(), 50);
+}
+
+function closeSetupOverlay(markComplete = false) {
+  if (els.setupOverlay) els.setupOverlay.hidden = true;
+  if (markComplete) saveSetupComplete(true);
+}
+
+function handleSetupSubmit(event) {
+  event.preventDefault();
+  const snapshot = snapshotFinanceState();
+  createAutoBackup();
+
+  upsertSetupBank("ALL", Number(els.setupLekBalanceInput?.value) || 0);
+  upsertSetupBank("EUR", Number(els.setupEuroBalanceInput?.value) || 0);
+  state.savingsGoal = normalizeSavingsGoal({
+    amount: Number(els.setupGoalAmountInput?.value) || DEFAULT_SAVINGS_GOAL.amount,
+    currency: els.setupGoalCurrencyInput?.value || DEFAULT_SAVINGS_GOAL.currency,
+    months: Number(els.setupGoalMonthsInput?.value) || DEFAULT_SAVINGS_GOAL.months,
+  });
+
+  ensureDefaultBanks();
+  saveBanks();
+  saveSavingsGoal();
+  saveSetupComplete(true);
+  closeSetupOverlay(false);
+  render();
+  showUndoToast("Setup u ruajt.", () => restoreFinanceSnapshot(snapshot));
+}
+
+function upsertSetupBank(currency, amount) {
+  const normalizedCurrency = normalizeCurrency(currency);
+  const normalizedAmount = Math.max(Number(amount) || 0, 0);
+  const existing = state.banks.find((bank) => bank.currency === normalizedCurrency && bank.name === setupBankName(normalizedCurrency));
+
+  if (!existing && normalizedAmount <= 0) return;
+
+  state.banks.forEach((bank) => {
+    if (bank.currency === normalizedCurrency) bank.isDefault = false;
+  });
+
+  if (existing) {
+    existing.balance = normalizedAmount;
+    existing.isDefault = true;
+    return;
+  }
+
+  state.banks.push({
+    id: crypto.randomUUID(),
+    name: setupBankName(normalizedCurrency),
+    currency: normalizedCurrency,
+    balance: normalizedAmount,
+    isDefault: true,
+    createdAt: new Date().toISOString(),
+  });
+}
+
+function setupBankName(currency) {
+  return currency === "EUR" ? "Gjendje fillestare euro" : "Gjendje fillestare lekë";
+}
+
+function formatPlainNumber(value) {
+  const number = Number(value) || 0;
+  return Number.isInteger(number) ? String(number) : String(Number(number.toFixed(2)));
 }
 
 function openIncomeDetail() {
@@ -2877,7 +3170,7 @@ async function imageFromFile(file) {
 function exportData() {
   const backup = {
     app: "financat-e-mia",
-    version: 5,
+    version: 6,
     exportedAt: new Date().toISOString(),
     entries: state.entries,
     banks: state.banks,
@@ -2886,6 +3179,7 @@ function exportData() {
     limits: state.limits,
     savingsGoal: state.savingsGoal,
     exchangeRate: state.exchangeRate,
+    setupComplete: state.setupComplete,
   };
   const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
@@ -2916,6 +3210,7 @@ function importData(event) {
       const importedSavingsGoal = parsed.savingsGoal ? normalizeSavingsGoal(parsed.savingsGoal) : null;
       const importedExchangeRate = Number(parsed.exchangeRate);
       const hasExchangeRate = importedExchangeRate > 0;
+      const importedSetupComplete = Object.prototype.hasOwnProperty.call(parsed, "setupComplete") ? Boolean(parsed.setupComplete) : null;
 
       if (
         !importedEntries.length &&
@@ -2924,7 +3219,8 @@ function importData(event) {
         !importedNetWorthHistory.length &&
         !importedLimits &&
         !importedSavingsGoal &&
-        !hasExchangeRate
+        !hasExchangeRate &&
+        importedSetupComplete === null
       ) {
         alert("Ky backup nuk ka të dhëna për t'u importuar.");
         return;
@@ -2941,6 +3237,8 @@ function importData(event) {
       if (importedLimits) state.limits = importedLimits;
       if (importedSavingsGoal) state.savingsGoal = importedSavingsGoal;
       if (hasExchangeRate) state.exchangeRate = importedExchangeRate;
+      if (importedSetupComplete !== null) state.setupComplete = importedSetupComplete;
+      else state.setupComplete = true;
       ensureDefaultBanks();
       saveBanks();
       saveEntries();
@@ -2949,6 +3247,7 @@ function importData(event) {
       saveLimits();
       saveSavingsGoal();
       saveExchangeRate(state.exchangeRate);
+      saveSetupComplete();
       els.eurToLekRateInput.value = formatRateInput(state.exchangeRate);
       render();
 
@@ -3174,6 +3473,15 @@ function saveTheme() {
   localStorage.setItem(THEME_KEY, state.theme);
 }
 
+function loadSetupComplete() {
+  return localStorage.getItem(SETUP_KEY) === "true";
+}
+
+function saveSetupComplete(value = state.setupComplete) {
+  state.setupComplete = Boolean(value);
+  localStorage.setItem(SETUP_KEY, state.setupComplete ? "true" : "false");
+}
+
 function applyTheme() {
   document.documentElement.dataset.theme = state.theme;
   els.themeToggle.removeAttribute("aria-pressed");
@@ -3235,6 +3543,7 @@ function createAutoBackup() {
       limits: state.limits,
       savingsGoal: state.savingsGoal,
       exchangeRate: state.exchangeRate,
+      setupComplete: state.setupComplete,
       savedAt: new Date().toISOString(),
     })
   );
@@ -3265,6 +3574,7 @@ function restoreAutoBackup() {
     state.limits = backup.limits ? normalizeLimits(backup.limits) : state.limits;
     state.savingsGoal = backup.savingsGoal ? normalizeSavingsGoal(backup.savingsGoal) : state.savingsGoal;
     state.exchangeRate = Number(backup.exchangeRate) > 0 ? Number(backup.exchangeRate) : state.exchangeRate;
+    if (typeof backup.setupComplete === "boolean") state.setupComplete = backup.setupComplete;
     saveEntries();
     saveBanks();
     saveRecurringExpenses();
@@ -3272,6 +3582,7 @@ function restoreAutoBackup() {
     saveLimits();
     saveSavingsGoal();
     saveExchangeRate(state.exchangeRate);
+    saveSetupComplete();
     els.eurToLekRateInput.value = formatRateInput(state.exchangeRate);
     render();
   } catch {

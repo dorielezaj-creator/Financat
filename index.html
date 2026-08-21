@@ -10,10 +10,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
-    <link rel="manifest" href="manifest.webmanifest?v=20260820-1" />
+    <link rel="manifest" href="manifest.webmanifest?v=20260820-2" />
     <link rel="icon" href="icon.svg?v=20260820-1" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="icon.svg?v=20260820-1" />
-    <link rel="stylesheet" href="styles.css?v=20260820-1" />
+    <link rel="stylesheet" href="styles.css?v=20260820-2" />
   </head>
   <body>
     <main class="app-shell">
@@ -40,6 +40,7 @@
       <section class="overview-home pdf-home-v2" aria-labelledby="overviewTitle">
         <article class="safe-spend-card" aria-label="Sa mund të shpenzosh sot">
           <button id="safeSpendOpen" class="overview-arrow" type="button" aria-label="Ndrysho objektivin e kursimeve">›</button>
+          <button id="safeSpendInfo" class="info-chip safe-info-chip" type="button" aria-label="Shpjego formulën">?</button>
           <div class="safe-spend-copy">
             <span>Mund të shpenzosh sot</span>
             <strong id="safeSpendLek">0 L</strong>
@@ -92,6 +93,7 @@
         <div class="quick-metric-grid" aria-label="Përmbledhje e shpejtë">
           <article class="quick-metric-card">
             <button id="quickExpenseOpen" class="overview-arrow" type="button" aria-label="Hap listën e shpenzimeve">›</button>
+            <button id="quickExpenseInfo" class="info-chip" type="button" aria-label="Shpjego shpenzimet">?</button>
             <h2>Shpenzuar</h2>
             <span id="quickExpenseDays">këtë muaj</span>
             <strong id="quickExpenseLek" class="expense-value">0 L</strong>
@@ -100,6 +102,7 @@
 
           <article class="quick-metric-card">
             <button id="quickAccountsOpen" class="overview-arrow" type="button" aria-label="Hap llogaritë bankare">›</button>
+            <button id="quickAccountsInfo" class="info-chip" type="button" aria-label="Shpjego gjendjen">?</button>
             <h2>Gjendja</h2>
             <span>totale</span>
             <strong id="quickAccountLek" class="green-value">0 L</strong>
@@ -108,6 +111,7 @@
 
           <article class="quick-metric-card">
             <button id="quickSavingsOpen" class="overview-arrow" type="button" aria-label="Ndrysho objektivin e kursimeve">›</button>
+            <button id="quickSavingsInfo" class="info-chip" type="button" aria-label="Shpjego kursimet">?</button>
             <h2>Kursyer</h2>
             <span>deri tani</span>
             <strong id="quickSavingsLek" class="green-value">0 L</strong>
@@ -116,6 +120,7 @@
 
           <article class="quick-metric-card">
             <button id="quickAverageOpen" class="overview-arrow" type="button" aria-label="Hap parashikimin fund-muaji">›</button>
+            <button id="quickAverageInfo" class="info-chip" type="button" aria-label="Shpjego parashikimin">?</button>
             <h2>Parashikimi</h2>
             <span id="quickAverageNote" class="quick-metric-note">fund-muaji</span>
             <strong id="quickAverageLek" class="purple-value">0 L</strong>
@@ -498,6 +503,7 @@
             <button id="profileExpensesBtn" type="button">Shpenzime</button>
             <button id="profileRecurringBtn" type="button">Shpenzime fikse</button>
             <button id="profileIncomeBtn" type="button">Të ardhurat</button>
+            <button id="profileSetupBtn" type="button">Setup fillestar</button>
             <button id="profileThemeBtn" type="button">
               <span>Dark mode</span>
               <strong id="profileThemeState">Off</strong>
@@ -625,6 +631,61 @@
           <button id="saveSavingsGoalBtn" class="primary-button" type="submit">
             <span>Ruaj objektivin</span>
           </button>
+        </form>
+      </section>
+
+      <section id="formulaOverlay" class="editor-overlay profile-page-overlay" hidden>
+        <div class="formula-window" role="dialog" aria-modal="true" aria-labelledby="formulaTitle">
+          <button id="closeFormulaBtn" class="icon-button small profile-close-button" type="button" aria-label="Mbyll">×</button>
+          <span id="formulaEyebrow" class="formula-eyebrow">Formula</span>
+          <h2 id="formulaTitle">Si llogaritet</h2>
+          <p id="formulaSummary">Këtu shfaqet shpjegimi i vlerës që po sheh.</p>
+          <div id="formulaSteps" class="formula-steps" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section id="setupOverlay" class="editor-overlay profile-page-overlay" hidden>
+        <form id="setupForm" class="setup-window" autocomplete="off">
+          <button id="closeSetupBtn" class="icon-button small profile-close-button" type="button" aria-label="Mbyll">×</button>
+          <span class="setup-eyebrow">Setup fillestar</span>
+          <h2>Nise me gjendjen reale</h2>
+          <p>Vendos sa para ke tani dhe objektivin e kursimit. Mund t'i ndryshosh më vonë nga profili.</p>
+
+          <div class="setup-grid">
+            <label>
+              Gjendje Lekë
+              <input id="setupLekBalanceInput" type="number" inputmode="decimal" min="0" step="0.01" placeholder="p.sh. 150000" />
+            </label>
+            <label>
+              Gjendje Euro
+              <input id="setupEuroBalanceInput" type="number" inputmode="decimal" min="0" step="0.01" placeholder="p.sh. 2500" />
+            </label>
+            <label>
+              Objektivi
+              <input id="setupGoalAmountInput" type="number" inputmode="decimal" min="0" step="0.01" placeholder="p.sh. 12000" />
+            </label>
+            <label>
+              Monedha
+              <select id="setupGoalCurrencyInput">
+                <option value="EUR">Euro</option>
+                <option value="ALL">Lekë</option>
+              </select>
+            </label>
+            <label>
+              Afati
+              <select id="setupGoalMonthsInput">
+                <option value="1">1 muaj</option>
+                <option value="2">2 muaj</option>
+                <option value="6">6 muaj</option>
+                <option value="12">1 vit</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="setup-actions">
+            <button id="setupLaterBtn" class="secondary-button" type="button">Më vonë</button>
+            <button class="setup-save-button" type="submit">Ruaj setup-in</button>
+          </div>
         </form>
       </section>
 
@@ -859,6 +920,6 @@
       </div>
     </template>
 
-    <script src="app.js?v=20260820-1"></script>
+    <script src="app.js?v=20260820-2"></script>
   </body>
 </html>
