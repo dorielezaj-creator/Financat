@@ -10,10 +10,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
-    <link rel="manifest" href="manifest.webmanifest?v=20260820-2" />
+    <link rel="manifest" href="manifest.webmanifest?v=20260821-1" />
     <link rel="icon" href="icon.svg?v=20260820-1" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="icon.svg?v=20260820-1" />
-    <link rel="stylesheet" href="styles.css?v=20260820-2" />
+    <link rel="stylesheet" href="styles.css?v=20260822-1" />
   </head>
   <body>
     <main class="app-shell">
@@ -499,7 +499,8 @@
             <button id="profileNetWorthBtn" type="button">Pasuria ime</button>
             <button id="profileInsightsBtn" type="button">Insights</button>
             <button id="profilePersonalBtn" type="button">Të dhënat personale</button>
-            <button id="profileSavingsBtn" type="button">Kursimet</button>
+            <button id="profileSavingsBtn" type="button">Objektivat</button>
+            <button id="profileCategoriesBtn" type="button">Kategoritë</button>
             <button id="profileExpensesBtn" type="button">Shpenzime</button>
             <button id="profileRecurringBtn" type="button">Shpenzime fikse</button>
             <button id="profileIncomeBtn" type="button">Të ardhurat</button>
@@ -583,6 +584,101 @@
           </article>
 
           <div id="insightsList" class="insights-list"></div>
+        </div>
+      </section>
+
+      <section id="goalsOverlay" class="editor-overlay entry-page-overlay goals-overlay" hidden>
+        <div class="archive-window goals-window" aria-labelledby="goalsTitle">
+          <div class="archive-header">
+            <h2 id="goalsTitle">Objektivat</h2>
+            <button id="closeGoalsBtn" class="icon-button small" type="button" aria-label="Mbyll">×</button>
+          </div>
+          <p class="window-intro">Vendos arkat virtuale. Objektivat aktive ulen automatikisht nga buxheti që mund të shpenzosh.</p>
+          <div class="goal-summary-grid">
+            <article>
+              <span>Duhet të kursesh</span>
+              <strong id="goalsSummaryMonthly">0 L / 0€</strong>
+              <small>në muaj</small>
+            </article>
+            <article>
+              <span>Ritmi ditor</span>
+              <strong id="goalsSummaryDaily">0 L / 0€</strong>
+              <small>çdo ditë</small>
+            </article>
+            <article>
+              <span>Buxheti pas objektivave</span>
+              <strong id="goalsSummaryBudget">0 L / 0€</strong>
+              <small>nga të ardhurat e muajit</small>
+            </article>
+          </div>
+          <button id="newGoalBtn" class="secondary-button wide-button" type="button">+ Shto objektiv</button>
+          <div id="goalsList" class="goals-list"></div>
+        </div>
+      </section>
+
+      <section id="goalEditorOverlay" class="editor-overlay profile-page-overlay" hidden>
+        <form id="goalForm" class="profile-page-window goal-editor-window" autocomplete="off">
+          <input id="goalIdInput" type="hidden" />
+          <button id="cancelGoalBtn" class="icon-button small profile-close-button" type="button" aria-label="Mbyll">×</button>
+          <h2 id="goalEditorTitle" class="profile-page-title">Shto objektiv</h2>
+          <div class="savings-goal-grid">
+            <label>
+              Emri
+              <input id="goalNameInput" type="text" maxlength="60" placeholder="p.sh. Makinë e re" required />
+            </label>
+            <label>
+              Vlera
+              <input id="goalAmountInput" type="number" inputmode="decimal" min="0" step="0.01" placeholder="p.sh. 12000" required />
+            </label>
+            <label>
+              Monedha
+              <select id="goalCurrencyInput">
+                <option value="EUR">Euro</option>
+                <option value="ALL">Lekë</option>
+              </select>
+            </label>
+            <label>
+              Afati
+              <select id="goalMonthsInput">
+                <option value="1">1 muaj</option>
+                <option value="2">2 muaj</option>
+                <option value="6">6 muaj</option>
+                <option value="12">1 vit</option>
+              </select>
+            </label>
+            <label class="checkbox-label goal-active-label">
+              <input id="goalActiveInput" type="checkbox" checked />
+              Llogarite në buxhet
+            </label>
+          </div>
+          <div class="savings-goal-summary" aria-live="polite">
+            <span>Ky objektiv kërkon</span>
+            <strong id="goalMonthlyValue">0 L / 0€ në muaj</strong>
+            <strong id="goalDailyValue">0 L / 0€ në ditë</strong>
+          </div>
+          <div class="editor-actions split">
+            <button id="deleteGoalBtn" class="danger-button" type="button">Fshi</button>
+            <button class="primary-button" type="submit"><span>Ruaj objektivin</span></button>
+          </div>
+        </form>
+      </section>
+
+      <section id="categoriesOverlay" class="editor-overlay entry-page-overlay categories-overlay" hidden>
+        <div class="archive-window categories-window" aria-labelledby="categoriesTitle">
+          <div class="archive-header">
+            <h2 id="categoriesTitle">Kategoritë</h2>
+            <button id="closeCategoriesBtn" class="icon-button small" type="button" aria-label="Mbyll">×</button>
+          </div>
+          <p class="window-intro">Shto kategoritë që përdor shpesh. Kategoritë ekzistuese të zërave ruhen automatikisht.</p>
+          <div id="categoriesTabs" class="segmented-tabs">
+            <button class="active" type="button" data-category-type="expense">Shpenzime</button>
+            <button type="button" data-category-type="income">Të ardhura</button>
+          </div>
+          <form id="categoryForm" class="category-form" autocomplete="off">
+            <input id="categoryNameInput" type="text" maxlength="32" placeholder="p.sh. Udhëtime" required />
+            <button class="secondary-button" type="submit">Shto</button>
+          </form>
+          <div id="categoriesList" class="categories-list"></div>
         </div>
       </section>
 
@@ -920,6 +1016,6 @@
       </div>
     </template>
 
-    <script src="app.js?v=20260820-2"></script>
+    <script src="app.js?v=20260822-1"></script>
   </body>
 </html>

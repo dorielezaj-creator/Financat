@@ -5,6 +5,8 @@ const BACKUP_KEY = "financat-e-mia:auto-backup";
 const EXCHANGE_RATE_KEY = "financat-e-mia:eur-all-rate:v1";
 const LIMITS_KEY = "financat-e-mia:monthly-limits:v1";
 const SAVINGS_GOAL_KEY = "financat-e-mia:savings-goal:v1";
+const GOALS_KEY = "financat-e-mia:goals:v1";
+const CATEGORIES_KEY = "financat-e-mia:categories:v1";
 const RECURRING_KEY = "financat-e-mia:recurring:v1";
 const THEME_KEY = "financat-e-mia:theme:v1";
 const RECEIPT_AI_ENDPOINT_KEY = "financat-e-mia:receipt-ai-endpoint:v1";
@@ -26,16 +28,15 @@ const DEFAULT_SAVINGS_GOAL = {
   currency: "EUR",
   months: 12,
 };
+const DEFAULT_CATEGORIES = {
+  expense: ["Ushqim", "Transport", "Shtëpi", "Fatura", "Argëtim", "Shëndet", "Tjetër"],
+  income: ["Rrogë", "Punë ekstra", "Biznes", "Dhuratë", "Tjetër"],
+};
 const BANK_OF_ALBANIA_RATE_URL = "https://www.bankofalbania.org/Markets/Official_exchange_rate/";
 const EXPENSE_PREVIEW_LIMIT = 10;
 const DEFAULT_SAVINGS_GOAL_ALL = 10000;
 const DEFAULT_SAVINGS_GOAL_MONTHS = 12;
 let limitsEditorMode = "all";
-
-const categories = {
-  expense: ["Ushqim", "Transport", "Shtëpi", "Fatura", "Argëtim", "Shëndet", "Tjetër"],
-  income: ["Rrogë", "Punë ekstra", "Biznes", "Dhuratë", "Tjetër"],
-};
 
 const colors = ["#ef6f5a", "#6f62db", "#34d184", "#111111", "#b5b5bb", "#dedee3", "#8f8f98"];
 const monthNames = ["janar", "shkurt", "mars", "prill", "maj", "qershor", "korrik", "gusht", "shtator", "tetor", "nëntor", "dhjetor"];
@@ -45,6 +46,8 @@ const state = {
   type: "expense",
   editingEntryId: "",
   editingRecurringId: "",
+  editingGoalId: "",
+  categoryManagerType: "expense",
   visibleLists: {
     expenses: true,
     income: true,
@@ -71,6 +74,8 @@ const state = {
   exchangeRate: loadExchangeRate(),
   limits: loadLimits(),
   savingsGoal: loadSavingsGoal(),
+  goals: loadGoals(),
+  categories: loadCategories(),
   entries: loadEntries(),
   banks: loadBanks(),
   recurringExpenses: loadRecurringExpenses(),
@@ -286,12 +291,39 @@ const els = {
   profileMenuOverlay: document.querySelector("#profileMenuOverlay"),
   profilePersonalBtn: document.querySelector("#profilePersonalBtn"),
   profileSavingsBtn: document.querySelector("#profileSavingsBtn"),
+  profileCategoriesBtn: document.querySelector("#profileCategoriesBtn"),
   profileExpensesBtn: document.querySelector("#profileExpensesBtn"),
   profileRecurringBtn: document.querySelector("#profileRecurringBtn"),
   profileIncomeBtn: document.querySelector("#profileIncomeBtn"),
   profileThemeBtn: document.querySelector("#profileThemeBtn"),
   profileThemeState: document.querySelector("#profileThemeState"),
   profileSetupBtn: document.querySelector("#profileSetupBtn"),
+  goalsOverlay: document.querySelector("#goalsOverlay"),
+  closeGoalsBtn: document.querySelector("#closeGoalsBtn"),
+  newGoalBtn: document.querySelector("#newGoalBtn"),
+  goalsList: document.querySelector("#goalsList"),
+  goalsSummaryMonthly: document.querySelector("#goalsSummaryMonthly"),
+  goalsSummaryDaily: document.querySelector("#goalsSummaryDaily"),
+  goalsSummaryBudget: document.querySelector("#goalsSummaryBudget"),
+  goalEditorOverlay: document.querySelector("#goalEditorOverlay"),
+  goalForm: document.querySelector("#goalForm"),
+  goalEditorTitle: document.querySelector("#goalEditorTitle"),
+  goalIdInput: document.querySelector("#goalIdInput"),
+  goalNameInput: document.querySelector("#goalNameInput"),
+  goalAmountInput: document.querySelector("#goalAmountInput"),
+  goalCurrencyInput: document.querySelector("#goalCurrencyInput"),
+  goalMonthsInput: document.querySelector("#goalMonthsInput"),
+  goalActiveInput: document.querySelector("#goalActiveInput"),
+  goalMonthlyValue: document.querySelector("#goalMonthlyValue"),
+  goalDailyValue: document.querySelector("#goalDailyValue"),
+  cancelGoalBtn: document.querySelector("#cancelGoalBtn"),
+  deleteGoalBtn: document.querySelector("#deleteGoalBtn"),
+  categoriesOverlay: document.querySelector("#categoriesOverlay"),
+  closeCategoriesBtn: document.querySelector("#closeCategoriesBtn"),
+  categoriesTabs: document.querySelector("#categoriesTabs"),
+  categoriesList: document.querySelector("#categoriesList"),
+  categoryForm: document.querySelector("#categoryForm"),
+  categoryNameInput: document.querySelector("#categoryNameInput"),
   savingsGoalOverlay: document.querySelector("#savingsGoalOverlay"),
   savingsGoalForm: document.querySelector("#savingsGoalForm"),
   closeSavingsGoalBtn: document.querySelector("#closeSavingsGoalBtn"),
@@ -355,6 +387,14 @@ const els = {
   emptyTemplate: document.querySelector("#emptyTemplate"),
 };
 
+state.categories = learnCategoriesFromData(state.categories, state.entries, state.recurringExpenses);
+if (!state.goals.length && localStorage.getItem(GOALS_KEY) === null && Number(state.savingsGoal?.amount) > 0) {
+  state.goals = [goalFromSavingsGoal(state.savingsGoal, { name: "Objektivi kryesor" })];
+}
+syncPrimarySavingsGoal();
+saveCategories();
+saveGoals();
+
 els.dateInput.value = todayIso();
 els.eurToLekRateInput.value = formatRateInput(state.exchangeRate);
 applyTheme();
@@ -383,7 +423,7 @@ els.homeIncomeLimitOpen?.addEventListener("click", openIncomeDetail);
 els.incomeYearDots?.addEventListener("click", openIncomeDetail);
 els.homeSavingsLimitOpen?.addEventListener("click", openSavingsDetail);
 els.savingsYearDots?.addEventListener("click", openSavingsDetail);
-els.safeSpendOpen?.addEventListener("click", openSavingsGoalEditor);
+els.safeSpendOpen?.addEventListener("click", openGoalsWindow);
 els.safeSpendInfo?.addEventListener("click", () => openFormulaOverlay("safe"));
 els.quickAccountsOpen?.addEventListener("click", openNetWorthWindow);
 els.quickAccountsInfo?.addEventListener("click", () => openFormulaOverlay("accounts"));
@@ -391,7 +431,7 @@ els.quickExpenseOpen?.addEventListener("click", openExpenseArchive);
 els.quickExpenseInfo?.addEventListener("click", () => openFormulaOverlay("expense"));
 els.quickAverageOpen?.addEventListener("click", openInsightsWindow);
 els.quickAverageInfo?.addEventListener("click", () => openFormulaOverlay("forecast"));
-els.quickSavingsOpen?.addEventListener("click", openSavingsGoalEditor);
+els.quickSavingsOpen?.addEventListener("click", openGoalsWindow);
 els.quickSavingsInfo?.addEventListener("click", () => openFormulaOverlay("savings"));
 els.openLimitsBtn.addEventListener("click", () => openLimitsEditor("expense"));
 els.cancelLimitsBtn.addEventListener("click", closeLimitsEditor);
@@ -675,7 +715,11 @@ els.profilePersonalBtn?.addEventListener("click", () => {
 });
 els.profileSavingsBtn?.addEventListener("click", () => {
   closeProfileMenu();
-  openSavingsGoalEditor();
+  openGoalsWindow();
+});
+els.profileCategoriesBtn?.addEventListener("click", () => {
+  closeProfileMenu();
+  openCategoriesWindow();
 });
 els.profileExpensesBtn?.addEventListener("click", () => {
   closeProfileMenu();
@@ -719,15 +763,43 @@ els.savingsGoalCurrencyInput?.addEventListener("change", renderSavingsGoalSummar
 els.savingsGoalMonthsInput?.addEventListener("change", renderSavingsGoalSummary);
 els.savingsGoalForm?.addEventListener("submit", (event) => {
   event.preventDefault();
+  const snapshot = snapshotFinanceState();
+  createAutoBackup();
   state.savingsGoal = normalizeSavingsGoal({
     amount: Number(els.savingsGoalAmountInput.value) || 0,
     currency: els.savingsGoalCurrencyInput.value,
     months: Number(els.savingsGoalMonthsInput.value) || 12,
   });
+  upsertPrimaryGoalFromSavingsGoal(state.savingsGoal);
   saveSavingsGoal();
+  saveGoals();
   closeSavingsGoalEditor();
   render();
+  showUndoToast("Objektivi u ruajt.", () => restoreFinanceSnapshot(snapshot));
 });
+els.goalsOverlay?.addEventListener("click", (event) => {
+  if (event.target === els.goalsOverlay) closeGoalsWindow();
+});
+els.closeGoalsBtn?.addEventListener("click", closeGoalsWindow);
+els.newGoalBtn?.addEventListener("click", () => openGoalEditor());
+els.goalsList?.addEventListener("click", handleGoalsListClick);
+els.goalEditorOverlay?.addEventListener("click", (event) => {
+  if (event.target === els.goalEditorOverlay) closeGoalEditor();
+});
+els.cancelGoalBtn?.addEventListener("click", closeGoalEditor);
+els.goalForm?.addEventListener("submit", handleGoalSubmit);
+els.deleteGoalBtn?.addEventListener("click", () => deleteGoal(state.editingGoalId));
+[els.goalNameInput, els.goalAmountInput, els.goalCurrencyInput, els.goalMonthsInput, els.goalActiveInput].forEach((input) => {
+  input?.addEventListener("input", renderGoalEditorSummary);
+  input?.addEventListener("change", renderGoalEditorSummary);
+});
+els.categoriesOverlay?.addEventListener("click", (event) => {
+  if (event.target === els.categoriesOverlay) closeCategoriesWindow();
+});
+els.closeCategoriesBtn?.addEventListener("click", closeCategoriesWindow);
+els.categoriesTabs?.addEventListener("click", handleCategoryTabClick);
+els.categoryForm?.addEventListener("submit", handleCategorySubmit);
+els.categoriesList?.addEventListener("click", handleCategoryListClick);
 els.closeFormulaBtn?.addEventListener("click", closeFormulaOverlay);
 els.formulaOverlay?.addEventListener("click", (event) => {
   if (event.target === els.formulaOverlay) closeFormulaOverlay();
@@ -792,6 +864,8 @@ function render() {
   if (els.transactionsOverlay && !els.transactionsOverlay.hidden) renderTransactions();
   if (els.netWorthOverlay && !els.netWorthOverlay.hidden) renderNetWorth();
   if (els.insightsOverlay && !els.insightsOverlay.hidden) renderInsights();
+  if (els.goalsOverlay && !els.goalsOverlay.hidden) renderGoalsWindow();
+  if (els.categoriesOverlay && !els.categoriesOverlay.hidden) renderCategoryManager();
 }
 
 function renderOverview(now, monthEntries, yearEntries, spentToday, spentMonth, spentYear, incomeMonth, incomeYear, incomeMonthlyTotals, accountTotals) {
@@ -1473,7 +1547,7 @@ function savingsPerformanceForMonth(year, monthIndex, now = new Date()) {
   };
 }
 
-function savingsGoalPlan(date, incomeTotals, goal = state.savingsGoal) {
+function savingsGoalPlan(date, incomeTotals, goal = null) {
   const monthDays = daysInMonth(date);
   const monthlyTargetLek = savingsGoalMonthlyTargetLek(goal);
   const incomeLek = Math.max(totalsToLek(incomeTotals), 0);
@@ -1488,11 +1562,23 @@ function savingsGoalPlan(date, incomeTotals, goal = state.savingsGoal) {
   };
 }
 
-function savingsGoalMonthlyTargetLek(goal = state.savingsGoal) {
+function savingsGoalMonthlyTargetLek(goal = null) {
+  if (goal) return singleSavingsGoalMonthlyTargetLek(goal);
+  if (Array.isArray(state.goals)) return goalsMonthlyTargetLek();
+  return singleSavingsGoalMonthlyTargetLek(state.savingsGoal);
+}
+
+function singleSavingsGoalMonthlyTargetLek(goal = state.savingsGoal) {
   const amount = Math.max(Number(goal?.amount) || 0, 0);
   const months = Math.max(Number(goal?.months) || 1, 1);
   const monthlyAmount = amount / months;
   return normalizeCurrency(goal?.currency) === "EUR" ? monthlyAmount * state.exchangeRate : monthlyAmount;
+}
+
+function goalsMonthlyTargetLek(goals = state.goals) {
+  return normalizeGoals(goals)
+    .filter((goal) => goal.active !== false)
+    .reduce((sum, goal) => sum + singleSavingsGoalMonthlyTargetLek(goal), 0);
 }
 
 function monthlyAverageTotals(monthlyTotals, currentMonthIndex) {
@@ -1527,6 +1613,8 @@ function snapshotFinanceState() {
     banks: state.banks.map((bank) => ({ ...bank })),
     recurringExpenses: state.recurringExpenses.map((item) => ({ ...item })),
     netWorthHistory: state.netWorthHistory.map((item) => ({ ...item })),
+    goals: state.goals.map((goal) => ({ ...goal })),
+    categories: normalizeCategoriesData(state.categories),
     limits: { ...state.limits },
     savingsGoal: { ...state.savingsGoal },
     exchangeRate: state.exchangeRate,
@@ -1541,21 +1629,27 @@ function restoreFinanceSnapshot(snapshot) {
   state.banks = Array.isArray(snapshot.banks) ? snapshot.banks.map((bank) => ({ ...bank })) : state.banks;
   state.recurringExpenses = normalizeRecurringExpenses(snapshot.recurringExpenses || []);
   if (Array.isArray(snapshot.netWorthHistory)) state.netWorthHistory = normalizeNetWorthHistory(snapshot.netWorthHistory);
+  state.goals = normalizeGoals(snapshot.goals || state.goals);
+  state.categories = normalizeCategoriesData(snapshot.categories || state.categories);
   state.limits = snapshot.limits ? { ...snapshot.limits } : state.limits;
   state.savingsGoal = snapshot.savingsGoal ? { ...snapshot.savingsGoal } : state.savingsGoal;
   state.exchangeRate = Number(snapshot.exchangeRate) > 0 ? Number(snapshot.exchangeRate) : state.exchangeRate;
   if (typeof snapshot.setupComplete === "boolean") state.setupComplete = snapshot.setupComplete;
+  syncPrimarySavingsGoal();
 
   ensureDefaultBanks();
   saveEntries();
   saveBanks();
   saveRecurringExpenses();
   saveNetWorthHistory();
+  saveGoals();
+  saveCategories();
   saveLimits();
   saveSavingsGoal();
   saveExchangeRate(state.exchangeRate);
   saveSetupComplete();
   if (els.eurToLekRateInput) els.eurToLekRateInput.value = formatRateInput(state.exchangeRate);
+  syncTypeControls();
   render();
 }
 
@@ -1842,8 +1936,10 @@ function closeRecurringEditor() {
 }
 
 function renderRecurringCategoryOptions(selected = "Fatura") {
-  els.recurringCategoryInput.innerHTML = categories.expense
-    .map((category) => `<option value="${escapeHtml(category)}"${category === selected ? " selected" : ""}>${escapeHtml(category)}</option>`)
+  const options = getCategories("expense");
+  const selectedCategory = options.includes(selected) ? selected : "Fatura";
+  els.recurringCategoryInput.innerHTML = options
+    .map((category) => `<option value="${escapeHtml(category)}"${category === selectedCategory ? " selected" : ""}>${escapeHtml(category)}</option>`)
     .join("");
 }
 
@@ -1933,6 +2029,263 @@ function closeSavingsGoalEditor() {
   els.savingsGoalOverlay.hidden = true;
 }
 
+function openGoalsWindow() {
+  renderGoalsWindow();
+  els.goalsOverlay.hidden = false;
+}
+
+function closeGoalsWindow() {
+  els.goalsOverlay.hidden = true;
+}
+
+function renderGoalsWindow() {
+  if (!els.goalsList) return;
+
+  const goals = normalizeGoals(state.goals);
+  const activeGoals = goals.filter((goal) => goal.active !== false);
+  const monthlyLek = goalsMonthlyTargetLek(activeGoals);
+  const now = new Date();
+  const monthDays = daysInMonth(now);
+  const incomeMonth = monthlyTotalsByType(now.getFullYear(), "income")[now.getMonth()];
+  const budgetLek = Math.max(totalsToLek(incomeMonth) - monthlyLek, 0);
+
+  setText(els.goalsSummaryMonthly, `${moneyLekShort(monthlyLek)} / ${moneyEuroCompact(monthlyLek / state.exchangeRate)}`);
+  setText(els.goalsSummaryDaily, `${moneyLekShort(monthlyLek / Math.max(monthDays, 1))} / ${moneyEuroCompact(monthlyLek / state.exchangeRate / Math.max(monthDays, 1))}`);
+  setText(els.goalsSummaryBudget, `${moneyLekShort(budgetLek)} / ${moneyEuroCompact(budgetLek / state.exchangeRate)}`);
+
+  els.goalsList.innerHTML = goals.length
+    ? goals
+        .map((goal) => {
+          const monthlyLekTarget = singleSavingsGoalMonthlyTargetLek(goal);
+          return `
+            <article class="goal-row ${goal.active === false ? "is-paused" : ""}">
+              <div>
+                <strong>${escapeHtml(goal.name)}</strong>
+                <span>${escapeHtml(goalAmountLabel(goal))} · ${escapeHtml(goalDurationLabel(goal.months))}</span>
+                <small>${moneyLekShort(monthlyLekTarget)} / ${moneyEuroCompact(monthlyLekTarget / state.exchangeRate)} në muaj</small>
+              </div>
+              <div class="goal-row-actions">
+                <button type="button" data-toggle-goal="${escapeHtml(goal.id)}">${goal.active === false ? "Aktivizo" : "Pauzo"}</button>
+                <button type="button" data-edit-goal="${escapeHtml(goal.id)}">Edit</button>
+              </div>
+            </article>
+          `;
+        })
+        .join("")
+    : `<p class="empty-state">Shto objektivin e parë që buxheti të llogaritet sipas planeve të tua.</p>`;
+}
+
+function openGoalEditor(id = "") {
+  const goal = normalizeGoals(state.goals).find((item) => item.id === id);
+  state.editingGoalId = goal?.id || "";
+  els.goalForm.reset();
+  setText(els.goalEditorTitle, goal ? "Edito objektiv" : "Shto objektiv");
+  els.goalIdInput.value = goal?.id || "";
+  els.goalNameInput.value = goal?.name || "";
+  els.goalAmountInput.value = goal?.amount ? formatPlainNumber(goal.amount) : "";
+  els.goalCurrencyInput.value = normalizeCurrency(goal?.currency || "EUR");
+  els.goalMonthsInput.value = String(goal?.months || 12);
+  els.goalActiveInput.checked = goal?.active !== false;
+  els.deleteGoalBtn.hidden = !goal;
+  renderGoalEditorSummary();
+  els.goalEditorOverlay.hidden = false;
+  window.setTimeout(() => els.goalNameInput?.focus(), 50);
+}
+
+function closeGoalEditor() {
+  els.goalEditorOverlay.hidden = true;
+  state.editingGoalId = "";
+}
+
+function renderGoalEditorSummary() {
+  if (!els.goalMonthlyValue || !els.goalDailyValue) return;
+
+  const goal = normalizeGoal(
+    {
+      id: state.editingGoalId || "preview-goal",
+      name: els.goalNameInput?.value || "Objektiv kursimi",
+      amount: Number(els.goalAmountInput?.value) || 0,
+      currency: els.goalCurrencyInput?.value || "EUR",
+      months: Number(els.goalMonthsInput?.value) || 12,
+      active: els.goalActiveInput?.checked !== false,
+    },
+    { id: "preview-goal" }
+  );
+  const monthlyLek = singleSavingsGoalMonthlyTargetLek(goal);
+  const dailyLek = monthlyLek / Math.max(daysInMonth(new Date()), 1);
+
+  setText(els.goalMonthlyValue, `${moneyLekShort(monthlyLek)} / ${moneyEuroCompact(monthlyLek / state.exchangeRate)} në muaj`);
+  setText(els.goalDailyValue, `${moneyLekShort(dailyLek)} / ${moneyEuroCompact(dailyLek / state.exchangeRate)} në ditë`);
+}
+
+function handleGoalSubmit(event) {
+  event.preventDefault();
+
+  const name = normalizeGoalName(els.goalNameInput?.value);
+  const amount = Number(els.goalAmountInput?.value);
+  if (!name || !amount || amount <= 0) return;
+
+  const snapshot = snapshotFinanceState();
+  createAutoBackup();
+
+  const existing = normalizeGoals(state.goals).find((goal) => goal.id === state.editingGoalId);
+  const goal = normalizeGoal({
+    id: existing?.id || crypto.randomUUID(),
+    name,
+    amount,
+    currency: els.goalCurrencyInput?.value,
+    months: Number(els.goalMonthsInput?.value) || 12,
+    active: els.goalActiveInput?.checked !== false,
+    createdAt: existing?.createdAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  });
+  const goals = normalizeGoals(state.goals);
+  const index = goals.findIndex((item) => item.id === goal.id);
+
+  if (index >= 0) goals[index] = goal;
+  else goals.push(goal);
+
+  state.goals = normalizeGoals(goals);
+  syncPrimarySavingsGoal();
+  saveGoals();
+  closeGoalEditor();
+  render();
+  showUndoToast(existing ? "Objektivi u përditësua." : "Objektivi u shtua.", () => restoreFinanceSnapshot(snapshot));
+}
+
+function handleGoalsListClick(event) {
+  const editButton = event.target.closest("[data-edit-goal]");
+  if (editButton) {
+    openGoalEditor(editButton.dataset.editGoal);
+    return;
+  }
+
+  const toggleButton = event.target.closest("[data-toggle-goal]");
+  if (toggleButton) toggleGoal(toggleButton.dataset.toggleGoal);
+}
+
+function toggleGoal(id) {
+  const snapshot = snapshotFinanceState();
+  createAutoBackup();
+  state.goals = normalizeGoals(state.goals).map((goal) =>
+    goal.id === id ? { ...goal, active: goal.active === false, updatedAt: new Date().toISOString() } : goal
+  );
+  syncPrimarySavingsGoal();
+  saveGoals();
+  render();
+  showUndoToast("Objektivi u ndryshua.", () => restoreFinanceSnapshot(snapshot));
+}
+
+function deleteGoal(id) {
+  if (!id) return;
+
+  const goal = normalizeGoals(state.goals).find((item) => item.id === id);
+  if (!goal) return;
+  if (!confirm(`A dëshiron ta fshish “${goal.name}”?`)) return;
+
+  const snapshot = snapshotFinanceState();
+  createAutoBackup();
+  state.goals = normalizeGoals(state.goals).filter((item) => item.id !== id);
+  syncPrimarySavingsGoal();
+  saveGoals();
+  closeGoalEditor();
+  render();
+  showUndoToast("Objektivi u fshi.", () => restoreFinanceSnapshot(snapshot));
+}
+
+function goalDurationLabel(months) {
+  return Number(months) === 12 ? "1 vit" : `${Number(months) || 1} muaj`;
+}
+
+function goalAmountLabel(goal) {
+  return normalizeCurrency(goal.currency) === "EUR" ? moneyEuroCompact(goal.amount) : moneyLekShort(goal.amount);
+}
+
+function openCategoriesWindow(type = state.type) {
+  state.categoryManagerType = type === "income" ? "income" : "expense";
+  renderCategoryManager();
+  els.categoriesOverlay.hidden = false;
+}
+
+function closeCategoriesWindow() {
+  els.categoriesOverlay.hidden = true;
+}
+
+function renderCategoryManager() {
+  if (!els.categoriesTabs || !els.categoriesList) return;
+
+  const type = state.categoryManagerType === "income" ? "income" : "expense";
+  els.categoriesTabs.querySelectorAll("[data-category-type]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.categoryType === type);
+  });
+
+  els.categoriesList.innerHTML = getCategories(type)
+    .map((category) => {
+      const protectedCategory = isDefaultCategory(type, category);
+      return `
+        <article class="category-row ${protectedCategory ? "is-protected" : ""}">
+          <span>${escapeHtml(category)}</span>
+          <button type="button" data-delete-category="${escapeHtml(category)}"${protectedCategory ? " disabled" : ""}>
+            ${protectedCategory ? "Bazë" : "Fshi"}
+          </button>
+        </article>
+      `;
+    })
+    .join("");
+}
+
+function handleCategoryTabClick(event) {
+  const button = event.target.closest("[data-category-type]");
+  if (!button) return;
+  state.categoryManagerType = button.dataset.categoryType === "income" ? "income" : "expense";
+  renderCategoryManager();
+}
+
+function handleCategorySubmit(event) {
+  event.preventDefault();
+
+  const name = normalizeCategoryName(els.categoryNameInput?.value);
+  if (!name) return;
+
+  const type = state.categoryManagerType === "income" ? "income" : "expense";
+  if (categoryExists(type, name)) {
+    els.categoryNameInput.value = "";
+    return;
+  }
+
+  const snapshot = snapshotFinanceState();
+  createAutoBackup();
+  state.categories = normalizeCategoriesData(state.categories);
+  state.categories[type] = addCategoryToList(state.categories[type], name);
+  saveCategories();
+  els.categoryNameInput.value = "";
+  syncTypeControls();
+  render();
+  showUndoToast("Kategoria u shtua.", () => restoreFinanceSnapshot(snapshot));
+}
+
+function handleCategoryListClick(event) {
+  const button = event.target.closest("[data-delete-category]");
+  if (!button || button.disabled) return;
+  deleteCategory(state.categoryManagerType, button.dataset.deleteCategory);
+}
+
+function deleteCategory(type, category) {
+  const normalizedType = type === "income" ? "income" : "expense";
+  if (isDefaultCategory(normalizedType, category)) return;
+  if (!confirm(`A dëshiron ta fshish kategorinë “${category}”? Zërat ekzistues nuk preken.`)) return;
+
+  const snapshot = snapshotFinanceState();
+  createAutoBackup();
+  const categoryKey = normalizeCategoryName(category).toLowerCase();
+  state.categories = normalizeCategoriesData(state.categories);
+  state.categories[normalizedType] = state.categories[normalizedType].filter((item) => item.toLowerCase() !== categoryKey);
+  saveCategories();
+  syncTypeControls();
+  render();
+  showUndoToast("Kategoria u fshi.", () => restoreFinanceSnapshot(snapshot));
+}
+
 function maybeOpenSetup() {
   if (state.setupComplete) return;
 
@@ -1979,10 +2332,12 @@ function handleSetupSubmit(event) {
     currency: els.setupGoalCurrencyInput?.value || DEFAULT_SAVINGS_GOAL.currency,
     months: Number(els.setupGoalMonthsInput?.value) || DEFAULT_SAVINGS_GOAL.months,
   });
+  upsertPrimaryGoalFromSavingsGoal(state.savingsGoal);
 
   ensureDefaultBanks();
   saveBanks();
   saveSavingsGoal();
+  saveGoals();
   saveSetupComplete(true);
   closeSetupOverlay(false);
   render();
@@ -3027,7 +3382,10 @@ function syncTypeControls() {
     button.classList.toggle("active", button.dataset.type === state.type);
   });
 
-  els.categoryInput.innerHTML = categories[state.type].map((category) => `<option>${category}</option>`).join("");
+  const selectedCategory = els.categoryInput.value;
+  const options = getCategories(state.type);
+  els.categoryInput.innerHTML = options.map((category) => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`).join("");
+  if (options.includes(selectedCategory)) els.categoryInput.value = selectedCategory;
   els.receiptAiTools.hidden = state.type !== "expense";
   if (state.type !== "expense") setReceiptAiStatus("");
   els.submitLabel.textContent = state.type === "expense" ? "Shto shpenzim" : "Shto të ardhur";
@@ -3111,7 +3469,7 @@ function receiptAiToken() {
 
 function applyReceiptResult(result) {
   const currency = normalizeCurrency(result.currency);
-  const category = categories.expense.includes(result.category) ? result.category : "Tjetër";
+  const category = categoryExists("expense", result.category) ? normalizeCategoryName(result.category) : "Tjetër";
   const amount = Number(result.amount) || 0;
   const date = /^\d{4}-\d{2}-\d{2}$/.test(result.date || "") ? result.date : todayIso();
   const description = String(result.description || result.merchant || "Faturë").trim().slice(0, 60);
@@ -3170,7 +3528,7 @@ async function imageFromFile(file) {
 function exportData() {
   const backup = {
     app: "financat-e-mia",
-    version: 6,
+    version: 8,
     exportedAt: new Date().toISOString(),
     entries: state.entries,
     banks: state.banks,
@@ -3178,6 +3536,8 @@ function exportData() {
     netWorthHistory: state.netWorthHistory,
     limits: state.limits,
     savingsGoal: state.savingsGoal,
+    goals: normalizeGoals(state.goals),
+    categories: normalizeCategoriesData(state.categories),
     exchangeRate: state.exchangeRate,
     setupComplete: state.setupComplete,
   };
@@ -3208,6 +3568,9 @@ function importData(event) {
       const importedNetWorthHistory = normalizeNetWorthHistory(parsed.netWorthHistory || parsed.netWorth || []);
       const importedLimits = parsed.limits ? normalizeLimits(parsed.limits) : null;
       const importedSavingsGoal = parsed.savingsGoal ? normalizeSavingsGoal(parsed.savingsGoal) : null;
+      const hasImportedGoals = Array.isArray(parsed.goals);
+      const importedGoals = hasImportedGoals ? normalizeGoals(parsed.goals) : [];
+      const importedCategories = parsed.categories ? normalizeCategoriesData(parsed.categories) : null;
       const importedExchangeRate = Number(parsed.exchangeRate);
       const hasExchangeRate = importedExchangeRate > 0;
       const importedSetupComplete = Object.prototype.hasOwnProperty.call(parsed, "setupComplete") ? Boolean(parsed.setupComplete) : null;
@@ -3219,6 +3582,8 @@ function importData(event) {
         !importedNetWorthHistory.length &&
         !importedLimits &&
         !importedSavingsGoal &&
+        !importedGoals.length &&
+        !importedCategories &&
         !hasExchangeRate &&
         importedSetupComplete === null
       ) {
@@ -3230,12 +3595,22 @@ function importData(event) {
       const beforeCount = state.entries.length;
       const beforeRecurringCount = state.recurringExpenses.length;
       const beforeNetWorthCount = state.netWorthHistory.length;
+      const beforeGoalCount = state.goals.length;
+      const beforeCategoryCount = getCategories("expense").length + getCategories("income").length;
       state.entries = mergeEntries(state.entries, importedEntries);
       if (importedBanks?.length) state.banks = mergeBanks(state.banks, importedBanks);
       if (importedRecurringExpenses.length) state.recurringExpenses = mergeRecurringExpenses(state.recurringExpenses, importedRecurringExpenses);
       if (importedNetWorthHistory.length) state.netWorthHistory = mergeNetWorthHistory(state.netWorthHistory, importedNetWorthHistory);
       if (importedLimits) state.limits = importedLimits;
-      if (importedSavingsGoal) state.savingsGoal = importedSavingsGoal;
+      if (importedCategories) state.categories = mergeCategories(state.categories, importedCategories);
+      state.categories = learnCategoriesFromData(state.categories, state.entries, state.recurringExpenses);
+      if (importedGoals.length) state.goals = mergeGoals(state.goals, importedGoals);
+      if (importedSavingsGoal) {
+        state.savingsGoal = importedSavingsGoal;
+        if (!hasImportedGoals) upsertPrimaryGoalFromSavingsGoal(importedSavingsGoal);
+      }
+      if (!state.goals.length && importedSavingsGoal && importedSavingsGoal.amount > 0) upsertPrimaryGoalFromSavingsGoal(importedSavingsGoal);
+      syncPrimarySavingsGoal();
       if (hasExchangeRate) state.exchangeRate = importedExchangeRate;
       if (importedSetupComplete !== null) state.setupComplete = importedSetupComplete;
       else state.setupComplete = true;
@@ -3246,16 +3621,21 @@ function importData(event) {
       saveNetWorthHistory();
       saveLimits();
       saveSavingsGoal();
+      saveGoals();
+      saveCategories();
       saveExchangeRate(state.exchangeRate);
       saveSetupComplete();
+      syncTypeControls();
       els.eurToLekRateInput.value = formatRateInput(state.exchangeRate);
       render();
 
       const addedCount = state.entries.length - beforeCount;
       const addedRecurringCount = state.recurringExpenses.length - beforeRecurringCount;
       const addedNetWorthCount = state.netWorthHistory.length - beforeNetWorthCount;
+      const addedGoalCount = state.goals.length - beforeGoalCount;
+      const addedCategoryCount = getCategories("expense").length + getCategories("income").length - beforeCategoryCount;
       alert(
-        `Importi u krye. U lexuan ${importedEntries.length} zëra (${addedCount} të rinj), ${importedBanks?.length || 0} llogari bankare, ${importedRecurringExpenses.length} shpenzime fikse (${addedRecurringCount} të reja), ${importedNetWorthHistory.length} pika pasurie (${addedNetWorthCount} të reja) dhe konfigurimet e backup-it.`
+        `Importi u krye. U lexuan ${importedEntries.length} zëra (${addedCount} të rinj), ${importedBanks?.length || 0} llogari bankare, ${importedRecurringExpenses.length} shpenzime fikse (${addedRecurringCount} të reja), ${importedNetWorthHistory.length} pika pasurie (${addedNetWorthCount} të reja), ${importedGoals.length} objektiva (${Math.max(addedGoalCount, 0)} të reja) dhe ${Math.max(addedCategoryCount, 0)} kategori të reja.`
       );
     } catch {
       alert("Nuk u importuan të dhënat. Kontrollo skedarin JSON.");
@@ -3445,8 +3825,9 @@ function loadSavingsGoal() {
 
 function normalizeSavingsGoal(goal) {
   const months = Number(goal?.months) || Number(goal?.period) || DEFAULT_SAVINGS_GOAL.months;
+  const amount = Number(goal?.amount);
   return {
-    amount: Math.max(Number(goal?.amount) || DEFAULT_SAVINGS_GOAL.amount, 0),
+    amount: Number.isFinite(amount) ? Math.max(amount, 0) : DEFAULT_SAVINGS_GOAL.amount,
     currency: normalizeCurrency(goal?.currency || DEFAULT_SAVINGS_GOAL.currency),
     months: [1, 2, 6, 12].includes(months) ? months : DEFAULT_SAVINGS_GOAL.months,
   };
@@ -3454,6 +3835,203 @@ function normalizeSavingsGoal(goal) {
 
 function saveSavingsGoal() {
   localStorage.setItem(SAVINGS_GOAL_KEY, JSON.stringify(state.savingsGoal));
+}
+
+function cloneDefaultCategories() {
+  return {
+    expense: [...DEFAULT_CATEGORIES.expense],
+    income: [...DEFAULT_CATEGORIES.income],
+  };
+}
+
+function normalizeCategoryName(value) {
+  return String(value || "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .slice(0, 32);
+}
+
+function addCategoryToList(list, value) {
+  const name = normalizeCategoryName(value);
+  const next = Array.isArray(list) ? [...list] : [];
+  if (!name) return next;
+  return next.some((item) => String(item).toLowerCase() === name.toLowerCase()) ? next : [...next, name];
+}
+
+function normalizeCategoriesData(data) {
+  const next = cloneDefaultCategories();
+
+  ["expense", "income"].forEach((type) => {
+    const source = Array.isArray(data?.[type]) ? data[type] : [];
+    source.forEach((category) => {
+      next[type] = addCategoryToList(next[type], category);
+    });
+    if (!next[type].some((category) => category.toLowerCase() === "tjetër")) next[type].push("Tjetër");
+  });
+
+  return next;
+}
+
+function loadCategories() {
+  try {
+    return normalizeCategoriesData(JSON.parse(localStorage.getItem(CATEGORIES_KEY)));
+  } catch {
+    return cloneDefaultCategories();
+  }
+}
+
+function saveCategories() {
+  localStorage.setItem(CATEGORIES_KEY, JSON.stringify(normalizeCategoriesData(state.categories)));
+}
+
+function getCategories(type = state.type) {
+  const normalizedType = type === "income" ? "income" : "expense";
+  return normalizeCategoriesData(state.categories)[normalizedType];
+}
+
+function categoryExists(type, value) {
+  const name = normalizeCategoryName(value).toLowerCase();
+  return getCategories(type).some((category) => category.toLowerCase() === name);
+}
+
+function categoryExistsInData(data, type, value) {
+  const name = normalizeCategoryName(value).toLowerCase();
+  return normalizeCategoriesData(data)[type === "income" ? "income" : "expense"].some((category) => category.toLowerCase() === name);
+}
+
+function isDefaultCategory(type, value) {
+  const name = normalizeCategoryName(value).toLowerCase();
+  return (DEFAULT_CATEGORIES[type === "income" ? "income" : "expense"] || []).some((category) => category.toLowerCase() === name);
+}
+
+function learnCategoriesFromData(base, entries = [], recurring = []) {
+  const next = normalizeCategoriesData(base);
+
+  entries.forEach((entry) => {
+    const type = entry?.type === "income" ? "income" : "expense";
+    next[type] = addCategoryToList(next[type], entry.category);
+  });
+
+  recurring.forEach((item) => {
+    next.expense = addCategoryToList(next.expense, item.category);
+  });
+
+  return normalizeCategoriesData(next);
+}
+
+function mergeCategories(current, imported) {
+  const next = normalizeCategoriesData(current);
+  const source = normalizeCategoriesData(imported);
+
+  ["expense", "income"].forEach((type) => {
+    source[type].forEach((category) => {
+      next[type] = addCategoryToList(next[type], category);
+    });
+  });
+
+  return normalizeCategoriesData(next);
+}
+
+function loadGoals() {
+  try {
+    return normalizeGoals(JSON.parse(localStorage.getItem(GOALS_KEY)));
+  } catch {
+    return [];
+  }
+}
+
+function saveGoals() {
+  localStorage.setItem(GOALS_KEY, JSON.stringify(normalizeGoals(state.goals)));
+}
+
+function normalizeGoalName(value) {
+  return (
+    String(value || "Objektiv kursimi")
+      .trim()
+      .replace(/\s+/g, " ")
+      .slice(0, 60) || "Objektiv kursimi"
+  );
+}
+
+function normalizeGoal(goal = {}, fallback = {}) {
+  const months = Number(goal?.months) || Number(goal?.period) || Number(fallback.months) || DEFAULT_SAVINGS_GOAL.months;
+  const amount = Math.max(Number(goal?.amount ?? fallback.amount ?? DEFAULT_SAVINGS_GOAL.amount) || 0, 0);
+
+  return {
+    id: String(goal?.id || fallback.id || crypto.randomUUID()),
+    name: normalizeGoalName(goal?.name || fallback.name || "Objektiv kursimi"),
+    amount,
+    currency: normalizeCurrency(goal?.currency || fallback.currency || DEFAULT_SAVINGS_GOAL.currency),
+    months: [1, 2, 6, 12].includes(months) ? months : DEFAULT_SAVINGS_GOAL.months,
+    active: goal?.active === false ? false : true,
+    createdAt: typeof goal?.createdAt === "string" ? goal.createdAt : new Date().toISOString(),
+    updatedAt: typeof goal?.updatedAt === "string" ? goal.updatedAt : new Date().toISOString(),
+  };
+}
+
+function normalizeGoals(goals) {
+  if (!Array.isArray(goals)) return [];
+  const seen = new Set();
+
+  return goals
+    .map((goal) => normalizeGoal(goal))
+    .filter((goal) => {
+      const key = goalKey(goal);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
+function goalFromSavingsGoal(goal, options = {}) {
+  return normalizeGoal(
+    {
+      ...(goal || {}),
+      id: options.id || "primary-savings-goal",
+      name: options.name || "Objektivi kryesor",
+      active: true,
+    },
+    { id: "primary-savings-goal" }
+  );
+}
+
+function goalKey(goal) {
+  return String(goal?.id || `${goal?.name}-${goal?.currency}-${goal?.amount}-${goal?.months}`).toLowerCase();
+}
+
+function mergeGoals(current = [], imported = []) {
+  const map = new Map();
+  [...normalizeGoals(current), ...normalizeGoals(imported)].forEach((goal) => {
+    const existing = map.get(goalKey(goal));
+    const goalTime = Date.parse(goal.updatedAt || goal.createdAt || "") || 0;
+    const existingTime = existing ? Date.parse(existing.updatedAt || existing.createdAt || "") || 0 : 0;
+    if (!existing || goalTime >= existingTime) map.set(goalKey(goal), goal);
+  });
+
+  return Array.from(map.values()).sort((a, b) => (Date.parse(a.createdAt || "") || 0) - (Date.parse(b.createdAt || "") || 0));
+}
+
+function syncPrimarySavingsGoal() {
+  const goals = normalizeGoals(state.goals);
+  const activeGoals = goals.filter((goal) => goal.active !== false);
+  state.savingsGoal = activeGoals.length
+    ? normalizeSavingsGoal(activeGoals[0])
+    : !goals.length
+      ? normalizeSavingsGoal({ amount: 0, currency: state.savingsGoal?.currency, months: state.savingsGoal?.months })
+      : normalizeSavingsGoal(state.savingsGoal);
+  saveSavingsGoal();
+}
+
+function upsertPrimaryGoalFromSavingsGoal(goal) {
+  const next = goalFromSavingsGoal(goal, { name: "Objektivi kryesor" });
+  const goals = normalizeGoals(state.goals);
+  const index = goals.findIndex((item) => item.id === next.id);
+
+  if (index >= 0) goals[index] = { ...goals[index], ...next, updatedAt: new Date().toISOString() };
+  else goals.unshift(next);
+
+  state.goals = normalizeGoals(goals);
+  syncPrimarySavingsGoal();
 }
 
 function loadExchangeRate() {
@@ -3530,7 +4108,14 @@ function setExchangeRateStatus(text) {
 }
 
 function createAutoBackup() {
-  const hasData = state.entries.length || state.banks.length || state.recurringExpenses.length || state.netWorthHistory.length;
+  const hasData =
+    state.entries.length ||
+    state.banks.length ||
+    state.recurringExpenses.length ||
+    state.netWorthHistory.length ||
+    state.goals.length ||
+    getCategories("expense").length ||
+    getCategories("income").length;
   if (!hasData) return;
 
   localStorage.setItem(
@@ -3540,6 +4125,8 @@ function createAutoBackup() {
       banks: state.banks,
       recurringExpenses: state.recurringExpenses,
       netWorthHistory: state.netWorthHistory,
+      goals: normalizeGoals(state.goals),
+      categories: normalizeCategoriesData(state.categories),
       limits: state.limits,
       savingsGoal: state.savingsGoal,
       exchangeRate: state.exchangeRate,
@@ -3557,7 +4144,9 @@ function restoreAutoBackup() {
       (!Array.isArray(backup.entries) &&
         !Array.isArray(backup.banks) &&
         !Array.isArray(backup.recurringExpenses) &&
-        !Array.isArray(backup.netWorthHistory))
+        !Array.isArray(backup.netWorthHistory) &&
+        !Array.isArray(backup.goals) &&
+        !backup.categories)
     ) {
       alert("Nuk ka backup lokal për të rikthyer.");
       return;
@@ -3571,19 +4160,27 @@ function restoreAutoBackup() {
     state.banks = normalizeBanks(Array.isArray(backup.banks) ? backup.banks.filter(isValidBank) : loadBanks());
     state.recurringExpenses = normalizeRecurringExpenses(backup.recurringExpenses || []);
     if (Array.isArray(backup.netWorthHistory)) state.netWorthHistory = normalizeNetWorthHistory(backup.netWorthHistory);
+    if (Array.isArray(backup.goals)) state.goals = normalizeGoals(backup.goals);
+    state.categories = backup.categories
+      ? normalizeCategoriesData(backup.categories)
+      : learnCategoriesFromData(state.categories, state.entries, state.recurringExpenses);
     state.limits = backup.limits ? normalizeLimits(backup.limits) : state.limits;
     state.savingsGoal = backup.savingsGoal ? normalizeSavingsGoal(backup.savingsGoal) : state.savingsGoal;
+    syncPrimarySavingsGoal();
     state.exchangeRate = Number(backup.exchangeRate) > 0 ? Number(backup.exchangeRate) : state.exchangeRate;
     if (typeof backup.setupComplete === "boolean") state.setupComplete = backup.setupComplete;
     saveEntries();
     saveBanks();
     saveRecurringExpenses();
     saveNetWorthHistory();
+    saveGoals();
+    saveCategories();
     saveLimits();
     saveSavingsGoal();
     saveExchangeRate(state.exchangeRate);
     saveSetupComplete();
     els.eurToLekRateInput.value = formatRateInput(state.exchangeRate);
+    syncTypeControls();
     render();
   } catch {
     alert("Backup-i lokal nuk mund të lexohet.");
@@ -3666,7 +4263,14 @@ function mergeRecurringExpenses(current, imported) {
 function normalizeRecurringExpense(item = {}) {
   const name = String(item.name || item.note || "Shpenzim fiks").trim() || "Shpenzim fiks";
   const dueDay = Math.max(1, Math.min(31, Math.round(Number(item.dueDay ?? item.day ?? item.dateDay) || 1)));
-  const category = categories.expense.includes(item.category) ? item.category : "Fatura";
+  const categorySource = (() => {
+    try {
+      return normalizeCategoriesData(JSON.parse(localStorage.getItem(CATEGORIES_KEY)));
+    } catch {
+      return cloneDefaultCategories();
+    }
+  })();
+  const category = categoryExistsInData(categorySource, "expense", item.category) ? normalizeCategoryName(item.category) : "Fatura";
 
   return {
     id: item.id || crypto.randomUUID(),
