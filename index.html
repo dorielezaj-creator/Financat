@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#1d1d1f" />
+    <meta name="theme-color" content="#ffffff" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Financat" />
     <title>Financat e Mia</title>
@@ -13,13 +13,13 @@
     <link rel="manifest" href="manifest.webmanifest?v=20260821-1" />
     <link rel="icon" href="icon.svg?v=20260820-1" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="icon.svg?v=20260820-1" />
-    <link rel="stylesheet" href="styles.css?v=20260822-1" />
+    <link rel="stylesheet" href="styles.css?v=20260902-14" />
   </head>
   <body>
     <main class="app-shell">
       <header class="hero-header">
         <div class="hero-copy">
-          <p>Përmbledhje</p>
+          <p>Hi Dorian</p>
           <small id="todayLabel">Sot</small>
         </div>
         <div class="top-actions">
@@ -34,7 +34,7 @@
         <button id="zoneHomeBtn" class="active" type="button" data-zone="home">Home</button>
         <button id="zoneTransactionsBtn" type="button" data-zone="transactions">Zërat</button>
         <button id="zoneAccountsBtn" type="button" data-zone="accounts">Llogaritë</button>
-        <button id="zoneInsightsBtn" type="button" data-zone="insights">Insights</button>
+        <button id="zoneInsightsBtn" type="button" data-zone="insights">Insight</button>
       </nav>
 
       <section class="overview-home pdf-home-v2" aria-labelledby="overviewTitle">
@@ -42,7 +42,7 @@
           <button id="safeSpendOpen" class="overview-arrow" type="button" aria-label="Ndrysho objektivin e kursimeve">›</button>
           <button id="safeSpendInfo" class="info-chip safe-info-chip" type="button" aria-label="Shpjego formulën">?</button>
           <div class="safe-spend-copy">
-            <span>Mund të shpenzosh sot</span>
+            <span>Sot mund të shpenzosh:</span>
             <strong id="safeSpendLek">0 L</strong>
             <small id="safeSpendEuro">≈ 0€ / ditë</small>
           </div>
@@ -63,112 +63,62 @@
           <p id="safeSpendForecast" class="safe-spend-forecast">Vendos të ardhura dhe objektiv kursimi për parashikim.</p>
         </article>
 
-        <article class="activity-card">
-          <h2 id="overviewTitle">Aktivitetet</h2>
-          <div class="activity-body">
-            <div class="activity-visual" aria-hidden="true">
-              <div id="activityRing" class="activity-ring">
-                <span class="ring-outer"></span>
-                <span class="ring-middle"></span>
-                <span class="ring-inner"></span>
-              </div>
-            </div>
-            <div class="activity-breakdown" aria-label="Kategoritë kryesore të shpenzimeve">
-              <div class="activity-breakdown-row food">
-                <span>Ushqim</span>
-                <strong id="activityFoodValue">0 L / 0€</strong>
-              </div>
-              <div class="activity-breakdown-row bills">
-                <span>Fatura</span>
-                <strong id="activityBillsValue">0 L / 0€</strong>
-              </div>
-              <div class="activity-breakdown-row fun">
-                <span>Argëtim</span>
-                <strong id="activityFunValue">0 L / 0€</strong>
-              </div>
-            </div>
+        <button id="homeSetupHint" class="home-setup-hint" type="button" hidden></button>
+
+        <div id="homeGoalsGrid" class="home-goals-grid" aria-label="Objektivat e kursimit"></div>
+
+        <article class="activity-card savings-plan-card" aria-labelledby="overviewTitle">
+          <button id="savingsPlanOpen" class="overview-arrow" type="button" aria-label="Hap objektivat">›</button>
+          <button id="savingsPlanInfo" class="info-chip plan-info-chip" type="button" aria-label="Shpjego grafikun">?</button>
+          <h2 id="overviewTitle" class="sr-only">Plani i kursimeve</h2>
+          <div class="plan-tabs" role="tablist" aria-label="Zgjidh grafikun">
+            <button id="planExpensesTab" type="button" role="tab" aria-selected="false" data-home-plan-tab="expenses">Shpenzime</button>
+            <button id="planSavingsTab" class="active" type="button" role="tab" aria-selected="true" data-home-plan-tab="savings">Kursime</button>
           </div>
+          <div id="savingsPlanList" class="savings-plan-list" role="tabpanel" aria-live="polite" aria-label="Progresi i objektivave"></div>
         </article>
 
-        <div class="quick-metric-grid" aria-label="Përmbledhje e shpejtë">
-          <article class="quick-metric-card">
-            <button id="quickExpenseOpen" class="overview-arrow" type="button" aria-label="Hap listën e shpenzimeve">›</button>
-            <button id="quickExpenseInfo" class="info-chip" type="button" aria-label="Shpjego shpenzimet">?</button>
-            <h2>Shpenzuar</h2>
-            <span id="quickExpenseDays">këtë muaj</span>
-            <strong id="quickExpenseLek" class="expense-value">0 L</strong>
-            <strong id="quickExpenseEuro" class="expense-value euro-line">0€</strong>
-          </article>
+        <article class="month-summary-card">
+          <button id="quickExpenseOpen" class="overview-arrow" type="button" aria-label="Hap shpenzimet">›</button>
+          <h2>Këtë muaj</h2>
+          <div class="month-summary-values">
+            <div><span>Shpenzuar</span><strong id="quickExpenseLek">0 L</strong><small id="quickExpenseEuro">0€</small></div>
+            <div><span>Për tu shpenzuar</span><strong id="monthSpendableLek">0 L</strong><small id="monthSpendableEuro">≈0€</small></div>
+            <div><span>Të ardhura</span><strong id="monthIncomeSummaryLek">0 L</strong><small id="monthIncomeSummaryEuro">0€</small></div>
+          </div>
+          <div id="monthSummaryProgress" class="summary-progress" aria-hidden="true"><span class="spent"></span><span class="available"></span></div>
+        </article>
 
-          <article class="quick-metric-card">
-            <button id="quickAccountsOpen" class="overview-arrow" type="button" aria-label="Hap llogaritë bankare">›</button>
-            <button id="quickAccountsInfo" class="info-chip" type="button" aria-label="Shpjego gjendjen">?</button>
-            <h2>Gjendja</h2>
-            <span>totale</span>
-            <strong id="quickAccountLek" class="green-value">0 L</strong>
-            <strong id="quickAccountEuro" class="green-value euro-line">0€</strong>
+        <div class="balance-grid">
+          <article class="balance-card">
+            <h2>Gjendja</h2><span>Lek</span>
+            <strong id="quickAccountLek">0 L</strong>
           </article>
+          <article class="balance-card">
+            <button id="quickAccountsOpen" class="overview-arrow" type="button" aria-label="Hap gjendjen">›</button>
+            <h2>Gjendja</h2><span>Euro</span>
+            <strong id="quickAccountEuro">0€</strong>
+          </article>
+        </div>
 
-          <article class="quick-metric-card">
-            <button id="quickSavingsOpen" class="overview-arrow" type="button" aria-label="Ndrysho objektivin e kursimeve">›</button>
+        <div class="quick-metric-grid savings-forecast-grid" aria-label="Kursime dhe parashikim">
+          <article class="quick-metric-card savings-direction-card">
+            <button id="quickSavingsOpen" class="overview-arrow" type="button" aria-label="Hap objektivat">›</button>
             <button id="quickSavingsInfo" class="info-chip" type="button" aria-label="Shpjego kursimet">?</button>
-            <h2>Kursyer</h2>
-            <span>deri tani</span>
-            <strong id="quickSavingsLek" class="green-value">0 L</strong>
-            <strong id="quickSavingsEuro" class="green-value euro-line">0€</strong>
+            <h2>Kursyer</h2><span>deri tani</span>
+            <strong id="quickSavingsLek">0 L</strong><strong id="quickSavingsEuro" class="euro-line">0€</strong>
+            <div id="savingsDirectionBar" class="direction-progress" aria-hidden="true"><span></span></div>
           </article>
-
-          <article class="quick-metric-card">
-            <button id="quickAverageOpen" class="overview-arrow" type="button" aria-label="Hap parashikimin fund-muaji">›</button>
+          <article class="quick-metric-card forecast-card">
+            <button id="quickAverageOpen" class="overview-arrow" type="button" aria-label="Hap parashikimin">›</button>
             <button id="quickAverageInfo" class="info-chip" type="button" aria-label="Shpjego parashikimin">?</button>
-            <h2>Parashikimi</h2>
-            <span id="quickAverageNote" class="quick-metric-note">fund-muaji</span>
-            <strong id="quickAverageLek" class="purple-value">0 L</strong>
-            <strong id="quickAverageEuro" class="purple-value euro-line">0€</strong>
+            <h2>Parashikim</h2><span id="quickAverageNote">fund-muaji</span>
+            <strong id="quickAverageLek">0 L</strong><strong id="quickAverageEuro" class="euro-line">0€</strong>
+            <div id="forecastProgress" class="simple-progress" aria-hidden="true"><span></span></div>
           </article>
         </div>
 
         <div class="overview-card-grid">
-          <article class="overview-card home-expense-card">
-            <div class="overview-card-head">
-              <h2>Shpenzime</h2>
-              <button id="homeExpenseOpen" class="overview-arrow" type="button" aria-label="Hap listën e shpenzimeve">›</button>
-            </div>
-            <div class="home-metric-row">
-              <div>
-                <span>Muaji</span>
-                <strong id="homeExpenseMonthLek">0 L</strong>
-              </div>
-              <div>
-                <span>Sot</span>
-                <strong id="homeExpenseTodayLek" class="green-value">0 L</strong>
-              </div>
-              <div>
-                <span>Max</span>
-                <strong id="homeExpenseLimitLek">150,000 L</strong>
-              </div>
-            </div>
-            <div id="homeExpenseLekProgress" class="home-progress expense-progress" aria-hidden="true">
-              <span class="month-fill"></span>
-              <span class="today-fill"></span>
-            </div>
-            <div class="home-metric-row compact">
-              <div>
-                <strong id="homeExpenseMonthEuro">0€</strong>
-              </div>
-              <div>
-                <strong id="homeExpenseTodayEuro" class="green-value">0€</strong>
-              </div>
-              <div>
-                <strong id="homeExpenseLimitEuro">1000€</strong>
-              </div>
-            </div>
-            <div id="homeExpenseEuroProgress" class="home-progress expense-progress" aria-hidden="true">
-              <span class="month-fill"></span>
-              <span class="today-fill"></span>
-            </div>
-          </article>
-
           <article class="overview-card home-year-card income-year-card">
             <div class="overview-card-head">
               <h2>Të ardhura</h2>
@@ -186,15 +136,15 @@
                 <strong id="homeIncomeYearEuro" class="euro-line">0€</strong>
               </div>
             </div>
-            <div id="incomeYearDots" class="monthly-dot-chart green-chart" aria-label="Grafik i të ardhurave sipas muajve"></div>
+            <div id="incomeYearDots" class="monthly-dot-chart green-chart" aria-label="Grafiku i të ardhurave sipas muajve"></div>
             <div class="month-letter-row" aria-hidden="true">
-              <span>J</span><span>S</span><span>M</span><span>P</span><span>M</span><span>Q</span><span>K</span><span>G</span><span>S</span><span>T</span><span>N</span><span>D</span>
+              <span>Jan</span><span>Shk</span><span>Mar</span><span>Pri</span><span>Maj</span><span>Qer</span><span>Kor</span><span>Gus</span><span>Sht</span><span>Tet</span><span>Nën</span><span>Dhj</span>
             </div>
           </article>
 
           <article class="overview-card home-year-card savings-year-card">
             <div class="overview-card-head">
-              <h2>Kursimet</h2>
+              <h2>Të Kursime</h2>
               <button id="homeSavingsLimitOpen" class="overview-arrow" type="button" aria-label="Hap grafikun e detajuar të kursimeve">›</button>
             </div>
             <div class="year-card-values">
@@ -209,9 +159,9 @@
                 <strong id="homeSavingsYearEuro" class="euro-line">0€</strong>
               </div>
             </div>
-            <div id="savingsYearDots" class="monthly-dot-chart purple-chart" aria-label="Grafik i kursimeve sipas muajve"></div>
+            <div id="savingsYearDots" class="monthly-dot-chart purple-chart" aria-label="Grafiku i kursimeve sipas muajve"></div>
             <div class="month-letter-row" aria-hidden="true">
-              <span>J</span><span>S</span><span>M</span><span>P</span><span>M</span><span>Q</span><span>K</span><span>G</span><span>S</span><span>T</span><span>N</span><span>D</span>
+              <span>Jan</span><span>Shk</span><span>Mar</span><span>Pri</span><span>Maj</span><span>Qer</span><span>Kor</span><span>Gus</span><span>Sht</span><span>Tet</span><span>Nën</span><span>Dhj</span>
             </div>
           </article>
         </div>
@@ -231,7 +181,37 @@
         </div>
       </section>
 
+      <section id="importPreviewOverlay" class="editor-overlay import-preview-overlay" hidden>
+        <div class="import-preview-sheet" role="dialog" aria-modal="true" aria-labelledby="importPreviewTitle">
+          <button id="closeImportPreviewBtn" class="icon-button small import-preview-close" type="button" aria-label="Mbyll">×</button>
+          <span class="dialog-eyebrow">Kontrolli i backup-it</span>
+          <h2 id="importPreviewTitle">Para importit</h2>
+          <div id="importPreviewSummary" class="import-preview-summary"></div>
+          <p id="importPreviewWarning" class="import-preview-warning"></p>
+          <div class="editor-actions split">
+            <button id="cancelImportBtn" class="secondary-button" type="button">Anulo</button>
+            <button id="confirmImportBtn" class="primary-button" type="button">Importo të dhënat</button>
+          </div>
+        </div>
+      </section>
+
       <button id="addEntryBtn" class="add-entry-button" type="button" aria-label="Shto zë">+</button>
+
+      <section id="quickAddOverlay" class="editor-overlay quick-add-overlay" hidden>
+        <div class="quick-add-sheet" role="dialog" aria-modal="true" aria-labelledby="quickAddTitle">
+          <button id="closeQuickAddBtn" class="icon-button small quick-add-close" type="button" aria-label="Mbyll">×</button>
+          <span class="dialog-eyebrow">Zë i ri</span>
+          <h2 id="quickAddTitle">Çfarë do të shtosh?</h2>
+          <div class="quick-add-actions">
+            <button id="quickAddExpenseBtn" class="quick-add-choice is-expense" type="button">
+              <span>−</span><strong>Shpenzim</strong><small>Para që dalin nga një llogari</small>
+            </button>
+            <button id="quickAddIncomeBtn" class="quick-add-choice is-income" type="button">
+              <span>+</span><strong>Të ardhur</strong><small>Para që hyjnë në një llogari</small>
+            </button>
+          </div>
+        </div>
+      </section>
 
       <section class="flow-section home-hidden-panel" aria-labelledby="expenseSectionTitle" aria-hidden="true">
         <div class="flow-title-row">
@@ -284,11 +264,11 @@
         <div id="incomePreviewList" class="pill-list"></div>
       </section>
 
-      <section class="accounts-summary" aria-labelledby="accountsSummaryTitle">
+      <section class="accounts-summary home-hidden-panel" aria-labelledby="accountsSummaryTitle" aria-hidden="true">
         <h2 id="accountsSummaryTitle">Total Llogaritë</h2>
         <div class="total-pills">
           <button id="openAccountsBtn" type="button"><span id="accountsLekValue">0 Lekë</span></button>
-          <button type="button"><span id="accountsEuroValue">0 €</span></button>
+          <button id="openAccountsEuroBtn" type="button"><span id="accountsEuroValue">0 €</span></button>
         </div>
         <button id="toggleAccountsBtn" class="month-button accounts-arrow" type="button" aria-expanded="true" aria-controls="accountList" aria-label="Shfaq ose fshih llogaritë">
           <span></span>
@@ -394,7 +374,7 @@
         <div class="archive-window" aria-labelledby="expenseArchiveTitle">
           <div class="archive-header">
             <h2 id="expenseArchiveTitle">Shpenzimet</h2>
-            <button id="closeExpenseArchiveBtn" class="icon-button small" type="button" aria-label="Kthehu">×</button>
+            <button id="closeExpenseArchiveBtn" class="icon-button small page-back-button" type="button" aria-label="Kthehu">←</button>
           </div>
           <div class="archive-search" role="search">
             <label class="sr-only" for="expenseArchiveSearch">Kërko shpenzime</label>
@@ -409,7 +389,7 @@
         <div class="archive-window" aria-labelledby="incomeArchiveTitle">
           <div class="archive-header">
             <h2 id="incomeArchiveTitle">Të ardhurat</h2>
-            <button id="closeIncomeArchiveBtn" class="icon-button small" type="button" aria-label="Kthehu">×</button>
+            <button id="closeIncomeArchiveBtn" class="icon-button small page-back-button" type="button" aria-label="Kthehu">←</button>
           </div>
           <div class="archive-search" role="search">
             <label class="sr-only" for="incomeArchiveSearch">Kërko të ardhura</label>
@@ -424,7 +404,7 @@
         <div class="archive-window savings-detail-window income-detail-window" aria-labelledby="incomeDetailTitle">
           <div class="archive-header savings-detail-header">
             <h2 id="incomeDetailTitle">Të ardhura</h2>
-            <button id="closeIncomeDetailBtn" class="icon-button small" type="button" aria-label="Kthehu">×</button>
+            <button id="closeIncomeDetailBtn" class="icon-button small page-back-button" type="button" aria-label="Kthehu">←</button>
           </div>
 
           <div class="savings-detail-summary income-detail-summary">
@@ -456,7 +436,7 @@
         <div class="archive-window savings-detail-window" aria-labelledby="savingsDetailTitle">
           <div class="archive-header savings-detail-header">
             <h2 id="savingsDetailTitle">Kursimet</h2>
-            <button id="closeSavingsDetailBtn" class="icon-button small" type="button" aria-label="Kthehu">×</button>
+            <button id="closeSavingsDetailBtn" class="icon-button small page-back-button" type="button" aria-label="Kthehu">←</button>
           </div>
 
           <div class="savings-detail-summary">
@@ -517,7 +497,7 @@
         <div class="archive-window transactions-window" aria-labelledby="transactionsTitle">
           <div class="archive-header">
             <h2 id="transactionsTitle">Zërat</h2>
-            <button id="closeTransactionsBtn" class="icon-button small" type="button" aria-label="Mbyll">×</button>
+            <button id="closeTransactionsBtn" class="icon-button small page-back-button" type="button" aria-label="Kthehu">←</button>
           </div>
 
           <div class="transactions-summary-grid">
@@ -535,11 +515,28 @@
 
           <div class="transactions-toolbar">
             <input id="transactionsSearch" type="search" placeholder="Kërko zëra..." aria-label="Kërko zëra" />
+          </div>
+          <div class="transactions-filters" aria-label="Filtrat e zërave">
+            <select id="transactionsMonthFilter" aria-label="Filtro muajin">
+              <option value="all">Çdo muaj</option>
+            </select>
             <select id="transactionsTypeFilter" aria-label="Filtro zërat">
               <option value="all">Të gjitha</option>
               <option value="expense">Shpenzime</option>
               <option value="income">Të ardhura</option>
             </select>
+            <select id="transactionsCategoryFilter" aria-label="Filtro kategorinë">
+              <option value="all">Çdo kategori</option>
+            </select>
+            <select id="transactionsBankFilter" aria-label="Filtro llogarinë">
+              <option value="all">Çdo llogari</option>
+            </select>
+            <select id="transactionsCurrencyFilter" aria-label="Filtro monedhën">
+              <option value="all">Çdo monedhë</option>
+              <option value="ALL">Lekë</option>
+              <option value="EUR">Euro</option>
+            </select>
+            <button id="transactionsResetFilters" type="button">Pastro filtrat</button>
           </div>
 
           <div id="transactionsList" class="archive-list transactions-list"></div>
@@ -550,7 +547,7 @@
         <div class="archive-window net-worth-window" aria-labelledby="netWorthTitle">
           <div class="archive-header">
             <h2 id="netWorthTitle">Pasuria ime</h2>
-            <button id="closeNetWorthBtn" class="icon-button small" type="button" aria-label="Mbyll">×</button>
+            <button id="closeNetWorthBtn" class="icon-button small page-back-button" type="button" aria-label="Kthehu">←</button>
           </div>
 
           <article class="net-worth-hero">
@@ -574,11 +571,11 @@
         <div class="archive-window insights-window" aria-labelledby="insightsWindowTitle">
           <div class="archive-header">
             <h2 id="insightsWindowTitle">Insights</h2>
-            <button id="closeInsightsBtn" class="icon-button small" type="button" aria-label="Mbyll">×</button>
+            <button id="closeInsightsBtn" class="icon-button small page-back-button" type="button" aria-label="Kthehu">←</button>
           </div>
 
           <article class="insight-safe-card">
-            <span>Safe to spend today</span>
+            <span>Mund të shpenzosh sot</span>
             <strong id="insightsSafeLek">0 L</strong>
             <small id="insightsSafeEuro">≈ 0€ / ditë</small>
           </article>
@@ -591,7 +588,7 @@
         <div class="archive-window goals-window" aria-labelledby="goalsTitle">
           <div class="archive-header">
             <h2 id="goalsTitle">Objektivat</h2>
-            <button id="closeGoalsBtn" class="icon-button small" type="button" aria-label="Mbyll">×</button>
+            <button id="closeGoalsBtn" class="icon-button small page-back-button" type="button" aria-label="Kthehu">←</button>
           </div>
           <p class="window-intro">Vendos arkat virtuale. Objektivat aktive ulen automatikisht nga buxheti që mund të shpenzosh.</p>
           <div class="goal-summary-grid">
@@ -609,6 +606,11 @@
               <span>Buxheti pas objektivave</span>
               <strong id="goalsSummaryBudget">0 L / 0€</strong>
               <small>nga të ardhurat e muajit</small>
+            </article>
+            <article>
+              <span>Kursyer gjithsej</span>
+              <strong id="goalsSummarySaved">0 L / 0€</strong>
+              <small>sipas objektivave individuale</small>
             </article>
           </div>
           <button id="newGoalBtn" class="secondary-button wide-button" type="button">+ Shto objektiv</button>
@@ -646,6 +648,27 @@
                 <option value="12">1 vit</option>
               </select>
             </label>
+            <label>
+              Kursyer deri tani
+              <input id="goalSavedAmountInput" type="number" inputmode="decimal" min="0" step="0.01" placeholder="p.sh. 950" />
+            </label>
+            <label>
+              Kontributi
+              <select id="goalContributionModeInput">
+                <option value="manual">Manual</option>
+                <option value="automatic">Automatik çdo muaj</option>
+              </select>
+            </label>
+            <label id="goalMonthlyContributionLabel">
+              Shuma mujore automatike
+              <input id="goalMonthlyContributionInput" type="number" inputmode="decimal" min="0" step="0.01" placeholder="p.sh. 100" />
+            </label>
+            <label>
+              Llogaria burim
+              <select id="goalBankInput">
+                <option value="">Pa llogari të caktuar</option>
+              </select>
+            </label>
             <label class="checkbox-label goal-active-label">
               <input id="goalActiveInput" type="checkbox" checked />
               Llogarite në buxhet
@@ -655,6 +678,7 @@
             <span>Ky objektiv kërkon</span>
             <strong id="goalMonthlyValue">0 L / 0€ në muaj</strong>
             <strong id="goalDailyValue">0 L / 0€ në ditë</strong>
+            <small id="goalProgressValue">0% e realizuar</small>
           </div>
           <div class="editor-actions split">
             <button id="deleteGoalBtn" class="danger-button" type="button">Fshi</button>
@@ -667,7 +691,7 @@
         <div class="archive-window categories-window" aria-labelledby="categoriesTitle">
           <div class="archive-header">
             <h2 id="categoriesTitle">Kategoritë</h2>
-            <button id="closeCategoriesBtn" class="icon-button small" type="button" aria-label="Mbyll">×</button>
+            <button id="closeCategoriesBtn" class="icon-button small page-back-button" type="button" aria-label="Kthehu">←</button>
           </div>
           <p class="window-intro">Shto kategoritë që përdor shpesh. Kategoritë ekzistuese të zërave ruhen automatikisht.</p>
           <div id="categoriesTabs" class="segmented-tabs">
@@ -1016,6 +1040,6 @@
       </div>
     </template>
 
-    <script src="app.js?v=20260822-1"></script>
+    <script src="app.js?v=20260902-14"></script>
   </body>
 </html>
