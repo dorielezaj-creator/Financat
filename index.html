@@ -13,7 +13,7 @@
     <link rel="manifest" href="manifest.webmanifest?v=20260821-1" />
     <link rel="icon" href="icon.svg?v=20260820-1" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="icon.svg?v=20260820-1" />
-    <link rel="stylesheet" href="styles.css?v=20260902-14" />
+    <link rel="stylesheet" href="styles.css?v=20260903-10" />
   </head>
   <body>
     <main class="app-shell">
@@ -37,8 +37,8 @@
         <button id="zoneInsightsBtn" type="button" data-zone="insights">Insight</button>
       </nav>
 
-      <section class="overview-home pdf-home-v2" aria-labelledby="overviewTitle">
-        <article class="safe-spend-card" aria-label="Sa mund të shpenzosh sot">
+      <section id="overviewHome" class="overview-home pdf-home-v2" aria-labelledby="overviewTitle" data-reorder-enabled="true">
+        <article class="safe-spend-card" aria-label="Sa mund të shpenzosh sot" data-home-block="safe-spend" data-home-block-label="Buxheti ditor">
           <button id="safeSpendOpen" class="overview-arrow" type="button" aria-label="Ndrysho objektivin e kursimeve">›</button>
           <button id="safeSpendInfo" class="info-chip safe-info-chip" type="button" aria-label="Shpjego formulën">?</button>
           <div class="safe-spend-copy">
@@ -65,9 +65,9 @@
 
         <button id="homeSetupHint" class="home-setup-hint" type="button" hidden></button>
 
-        <div id="homeGoalsGrid" class="home-goals-grid" aria-label="Objektivat e kursimit"></div>
+        <div id="homeGoalsGrid" class="home-goals-grid" aria-label="Objektivat e kursimit" data-home-block="goals" data-home-block-label="Objektivat"></div>
 
-        <article class="activity-card savings-plan-card" aria-labelledby="overviewTitle">
+        <article class="activity-card savings-plan-card" aria-labelledby="overviewTitle" data-home-block="plan" data-home-block-label="Shpenzime dhe kursime">
           <button id="savingsPlanOpen" class="overview-arrow" type="button" aria-label="Hap objektivat">›</button>
           <button id="savingsPlanInfo" class="info-chip plan-info-chip" type="button" aria-label="Shpjego grafikun">?</button>
           <h2 id="overviewTitle" class="sr-only">Plani i kursimeve</h2>
@@ -78,18 +78,21 @@
           <div id="savingsPlanList" class="savings-plan-list" role="tabpanel" aria-live="polite" aria-label="Progresi i objektivave"></div>
         </article>
 
-        <article class="month-summary-card">
+        <article class="month-summary-card" data-home-block="month" data-home-block-label="Përmbledhja mujore">
           <button id="quickExpenseOpen" class="overview-arrow" type="button" aria-label="Hap shpenzimet">›</button>
           <h2>Këtë muaj</h2>
           <div class="month-summary-values">
             <div><span>Shpenzuar</span><strong id="quickExpenseLek">0 L</strong><small id="quickExpenseEuro">0€</small></div>
-            <div><span>Për tu shpenzuar</span><strong id="monthSpendableLek">0 L</strong><small id="monthSpendableEuro">≈0€</small></div>
+            <div><span>Për t’u shpenzuar</span><strong id="monthSpendableLek">0 L</strong><small id="monthSpendableEuro">≈0€</small></div>
             <div><span>Të ardhura</span><strong id="monthIncomeSummaryLek">0 L</strong><small id="monthIncomeSummaryEuro">0€</small></div>
           </div>
-          <div id="monthSummaryProgress" class="summary-progress" aria-hidden="true"><span class="spent"></span><span class="available"></span></div>
+          <button id="monthSummaryProgress" class="summary-progress" type="button" aria-label="Ndarja e buxhetit mujor">
+            <span class="spent"></span><span class="available"></span><span class="reserved"></span><span class="overspent"></span>
+          </button>
+          <p id="monthSummaryStatus" class="month-summary-status">Pa buxhet këtë muaj</p>
         </article>
 
-        <div class="balance-grid">
+        <div class="balance-grid" data-home-block="balances" data-home-block-label="Gjendja e llogarive">
           <article class="balance-card">
             <h2>Gjendja</h2><span>Lek</span>
             <strong id="quickAccountLek">0 L</strong>
@@ -101,7 +104,7 @@
           </article>
         </div>
 
-        <div class="quick-metric-grid savings-forecast-grid" aria-label="Kursime dhe parashikim">
+        <div class="quick-metric-grid savings-forecast-grid" aria-label="Kursime dhe parashikim" data-home-block="forecast" data-home-block-label="Kursyer dhe parashikim">
           <article class="quick-metric-card savings-direction-card">
             <button id="quickSavingsOpen" class="overview-arrow" type="button" aria-label="Hap objektivat">›</button>
             <button id="quickSavingsInfo" class="info-chip" type="button" aria-label="Shpjego kursimet">?</button>
@@ -118,7 +121,7 @@
           </article>
         </div>
 
-        <div class="overview-card-grid">
+        <div class="overview-card-grid" data-home-block="year-charts" data-home-block-label="Grafikët vjetorë">
           <article class="overview-card home-year-card income-year-card">
             <div class="overview-card-head">
               <h2>Të ardhura</h2>
@@ -421,14 +424,14 @@
 
           <div class="savings-detail-tabs income-detail-tabs" role="group" aria-label="Filtri i grafikut të të ardhurave">
             <button type="button" data-income-detail-range="today">Dita</button>
-            <button class="active" type="button" data-income-detail-range="week">Java</button>
-            <button type="button" data-income-detail-range="month">Muaji</button>
+            <button type="button" data-income-detail-range="week">Java</button>
+            <button class="active" type="button" data-income-detail-range="month">Muaji</button>
             <button type="button" data-income-detail-range="year">Viti</button>
           </div>
 
-          <div id="incomeDetailChart" class="income-detail-chart" aria-label="Grafik i detajuar i të ardhurave"></div>
-          <div id="incomeDetailAxis" class="savings-detail-axis income-detail-axis" aria-hidden="true"></div>
-          <p id="incomeDetailNote" class="savings-detail-note">Të ardhurat llogariten nga zërat realë sipas datës së regjistrimit.</p>
+          <div id="incomeDetailChart" class="income-detail-chart detail-bar-chart" aria-label="Grafik i detajuar i të ardhurave"></div>
+          <div id="incomeDetailAxis" class="savings-detail-axis income-detail-axis detail-bar-axis" aria-hidden="true"></div>
+          <p id="incomeDetailNote" class="savings-detail-note">Çdo shtyllë llogaritet nga zërat realë sipas datës së regjistrimit.</p>
         </div>
       </section>
 
@@ -452,14 +455,14 @@
           </div>
 
           <div class="savings-detail-tabs" role="group" aria-label="Filtri i grafikut të kursimeve">
-            <button class="active" type="button" data-savings-detail-range="today">Sot</button>
-            <button type="button" data-savings-detail-range="week">Javë</button>
-            <button type="button" data-savings-detail-range="month">Muaj</button>
-            <button type="button" data-savings-detail-range="year">Vit</button>
+            <button type="button" data-savings-detail-range="today">Dita</button>
+            <button type="button" data-savings-detail-range="week">Java</button>
+            <button class="active" type="button" data-savings-detail-range="month">Muaji</button>
+            <button type="button" data-savings-detail-range="year">Viti</button>
           </div>
 
-          <div id="savingsDetailChart" class="savings-detail-chart" aria-label="Grafik i detajuar i kursimeve"></div>
-          <div id="savingsDetailAxis" class="savings-detail-axis" aria-hidden="true"></div>
+          <div id="savingsDetailChart" class="savings-detail-chart detail-bar-chart" aria-label="Grafik i detajuar i kursimeve"></div>
+          <div id="savingsDetailAxis" class="savings-detail-axis detail-bar-axis" aria-hidden="true"></div>
           <p id="savingsDetailNote" class="savings-detail-note">Kursimet llogariten nga buxheti i lejuar minus shpenzimet reale.</p>
         </div>
       </section>
@@ -576,8 +579,20 @@
 
           <article class="insight-safe-card">
             <span>Mund të shpenzosh sot</span>
+            <button id="insightsSafeOpen" class="overview-arrow" type="button" aria-label="Shpjego buxhetin e sotëm">›</button>
             <strong id="insightsSafeLek">0 L</strong>
             <small id="insightsSafeEuro">≈ 0€ / ditë</small>
+            <div class="insight-safe-meta">
+              <div>
+                <span>Buxheti i mbetur</span>
+                <b id="insightsRemainingLek">0 L</b>
+              </div>
+              <div>
+                <span>Mbeten edhe</span>
+                <b id="insightsDaysRemaining">0 ditë</b>
+              </div>
+            </div>
+            <div class="insight-safe-progress" aria-hidden="true"><i id="insightsSafeProgress"></i></div>
           </article>
 
           <div id="insightsList" class="insights-list"></div>
@@ -1040,6 +1055,6 @@
       </div>
     </template>
 
-    <script src="app.js?v=20260902-14"></script>
+    <script src="app.js?v=20260903-10"></script>
   </body>
 </html>

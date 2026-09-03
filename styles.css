@@ -8,7 +8,7 @@
   --input-line: #a5a5aa;
   --expense: #ff634f;
   --purple: #6b55df;
-  --green: #05d977;
+  --green: #63d681;
   --expense-track: #eee4e2;
   --purple-track: #deddea;
   --overlay: rgba(255, 255, 255, 0.72);
@@ -421,7 +421,7 @@ p {
 
 .ring-outer {
   inset: 0;
-  background: conic-gradient(from 214deg, var(--green) 0deg var(--food-arc, 318deg), rgba(5, 217, 119, 0.1) var(--food-arc, 318deg) 360deg);
+  background: conic-gradient(from 214deg, var(--green) 0deg var(--food-arc, 318deg), rgba(99, 214, 129, 0.1) var(--food-arc, 318deg) 360deg);
   -webkit-mask: radial-gradient(circle, transparent 61%, #000 62%);
   mask: radial-gradient(circle, transparent 61%, #000 62%);
 }
@@ -658,7 +658,7 @@ p {
 }
 
 .info-chip:focus-visible {
-  outline: 3px solid rgba(52, 209, 132, 0.28);
+  outline: 3px solid rgba(99, 214, 129, 0.28);
   outline-offset: 3px;
 }
 
@@ -866,11 +866,11 @@ p {
 }
 
 .green-chart .month-dot.mid {
-  color: rgba(5, 217, 119, 0.55);
+  color: rgba(99, 214, 129, 0.55);
 }
 
 .green-chart .month-dot.low {
-  color: rgba(5, 217, 119, 0.24);
+  color: rgba(99, 214, 129, 0.24);
 }
 
 .purple-chart .month-dot.high {
@@ -1965,8 +1965,28 @@ body:has(.entry-page-overlay:not([hidden])) .add-entry-button {
   align-items: stretch;
   padding: 0;
   overflow: auto;
+  overscroll-behavior-x: none;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
   background: var(--bg);
   backdrop-filter: none;
+}
+
+.entry-page-overlay.is-page-swiping {
+  transition: none !important;
+  will-change: transform, opacity;
+}
+
+.entry-page-overlay.is-page-settling {
+  transition:
+    transform 180ms cubic-bezier(0.22, 0.8, 0.25, 1),
+    opacity 180ms ease !important;
+  will-change: transform, opacity;
+}
+
+body.page-swipe-active {
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .insights-overlay {
@@ -2509,11 +2529,11 @@ body:has(.entry-page-overlay:not([hidden])) .add-entry-button {
 }
 
 .income-detail-dot.mid::before {
-  border-color: rgba(5, 217, 119, 0.58);
+  border-color: rgba(99, 214, 129, 0.58);
 }
 
 .income-detail-dot.low::before {
-  border-color: rgba(5, 217, 119, 0.28);
+  border-color: rgba(99, 214, 129, 0.28);
 }
 
 .income-detail-dot.is-zero::before {
@@ -2694,7 +2714,7 @@ input::placeholder {
 input:focus,
 select:focus {
   border-color: var(--text);
-  box-shadow: 0 0 0 3px rgba(5, 217, 119, 0.18);
+  box-shadow: 0 0 0 3px rgba(99, 214, 129, 0.18);
 }
 
 .checkbox-label {
@@ -3147,7 +3167,7 @@ select:focus {
 .safe-spend-card::after { content:""; }
 
 .home-goals-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; }
-.home-goal-card { position:relative; min-height:210px; padding:16px 18px; border-radius:14px; background:#c9fb4d; overflow:hidden; }
+.home-goal-card { position:relative; min-height:210px; padding:16px 18px; border-radius:14px; background:#63d681; overflow:hidden; }
 .home-goal-card.goal-tone-1 { background:#ed70b0; }
 .home-goal-card h2 { margin:0 36px 28px 0; font-size:20px; font-weight:500; line-height:.95; }
 .home-goal-card > span,.home-goal-card small { font-size:11px; font-weight:500; }
@@ -3383,7 +3403,7 @@ body {
   min-height: 211px;
   padding: 14px 18px 13px;
   border-radius: 15px;
-  background: #c8fb4b;
+  background: #63d681;
   scroll-snap-align: start;
   scroll-snap-stop: always;
 }
@@ -3575,8 +3595,8 @@ body {
 
 .plan-ring-value.ring-tone-lime,
 .plan-ring-dot.ring-tone-lime {
-  stroke: #c6fb43;
-  background: #c6fb43;
+  stroke: #63d681;
+  background: #63d681;
 }
 
 .plan-ring-value.ring-tone-pink,
@@ -3813,7 +3833,7 @@ body {
 }
 
 .direction-progress {
-  background: #c8fb4b;
+  background: #63d681;
 }
 
 .direction-progress::after {
@@ -4417,5 +4437,1031 @@ body,
 
   .quick-add-choice {
     min-height: 112px;
+  }
+}
+
+/* Long-press Home block reordering */
+.overview-home > [data-home-block] {
+  position: relative;
+  -webkit-touch-callout: none;
+}
+
+body.home-reorder-active {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+body.home-reorder-active .overview-home > [data-home-block] {
+  transition: opacity 120ms ease, box-shadow 120ms ease, outline-color 120ms ease;
+}
+
+.overview-home > [data-home-block].is-reordering {
+  z-index: 100;
+  box-sizing: border-box;
+  outline: 3px solid var(--green);
+  outline-offset: 4px;
+  border-radius: 22px;
+  box-shadow: 0 24px 56px rgba(0, 0, 0, 0.2);
+  opacity: 0.96;
+  transform: scale(1.015);
+  cursor: grabbing;
+  touch-action: none;
+  pointer-events: none;
+}
+
+.home-reorder-placeholder {
+  width: 100%;
+  min-height: 72px;
+  border: 2px dashed color-mix(in srgb, var(--green) 72%, var(--line));
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--green) 8%, transparent);
+}
+
+/* Zërat — compact mobile layout aligned with Home */
+.transactions-overlay .transactions-window {
+  width: min(100%, 420px);
+  gap: 0;
+  padding-inline: 16px;
+}
+
+.transactions-overlay .archive-header {
+  margin-inline: -16px;
+  padding: max(42px, env(safe-area-inset-top)) 16px 22px;
+}
+
+.transactions-overlay .archive-header h2 {
+  font-size: clamp(40px, 11vw, 48px);
+  font-weight: 500;
+  letter-spacing: -1.5px;
+  line-height: 1;
+}
+
+.transactions-overlay .page-back-button {
+  width: 44px;
+  height: 44px;
+  flex-basis: 44px;
+  font-size: 30px !important;
+}
+
+.transactions-overlay .transactions-summary-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0 0 18px;
+}
+
+.transactions-overlay .transactions-summary-grid article {
+  min-width: 0;
+  min-height: 116px;
+  align-content: space-between;
+  gap: 5px;
+  padding: 16px;
+  border: 0;
+  border-radius: 20px;
+  background: var(--home-card);
+}
+
+.transactions-overlay .transactions-summary-grid span {
+  color: var(--home-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.transactions-overlay .transactions-summary-grid strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--green);
+  font-size: clamp(20px, 6.2vw, 27px);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  letter-spacing: -0.6px;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.transactions-overlay .transactions-summary-grid small {
+  overflow: hidden;
+  color: var(--home-text);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.transactions-overlay .transactions-toolbar {
+  display: block;
+  margin: 0 0 10px;
+}
+
+.transactions-overlay .transactions-toolbar input {
+  width: 100%;
+  min-height: 50px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--home-card);
+  color: var(--home-text);
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.transactions-overlay .transactions-toolbar input::placeholder {
+  color: var(--home-muted);
+  opacity: 1;
+}
+
+.transactions-overlay .transactions-toolbar input:focus {
+  outline: 2px solid color-mix(in srgb, var(--green) 60%, transparent);
+  outline-offset: 1px;
+}
+
+.transactions-overlay .transactions-filters {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0 0 24px;
+}
+
+.transactions-overlay .transactions-filters select,
+.transactions-overlay .transactions-filters button {
+  width: 100%;
+  min-width: 0;
+  min-height: 46px;
+  overflow: hidden;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 16px;
+  background-color: var(--home-card);
+  color: var(--home-text);
+  font-size: clamp(12px, 3.5vw, 14px);
+  font-weight: 550;
+  line-height: 1;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.transactions-overlay .transactions-filters button {
+  color: var(--home-muted);
+  text-align: center;
+}
+
+.transactions-overlay .transactions-filters select:focus-visible,
+.transactions-overlay .transactions-filters button:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 1px;
+}
+
+.transactions-overlay .transactions-list {
+  gap: 10px;
+  padding-top: 0;
+}
+
+.transactions-overlay .transactions-month-title {
+  margin: 22px 2px 6px;
+  color: var(--home-text);
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+  line-height: 1.1;
+}
+
+.transactions-overlay .transactions-month-title:first-child {
+  margin-top: 0;
+}
+
+.transactions-list .entry-row.pill-row {
+  min-height: 0;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "details amount"
+    "actions actions";
+  gap: 13px 10px;
+  align-items: center;
+  padding: 15px;
+  border: 0;
+  border-radius: 20px;
+  background: var(--home-card);
+}
+
+.transactions-list .entry-left {
+  grid-area: details;
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.transactions-list .entry-title {
+  overflow: hidden;
+  color: var(--home-text);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.transactions-list .entry-meta {
+  overflow: hidden;
+  color: var(--home-muted);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.transactions-list .entry-amount {
+  grid-area: amount;
+  justify-self: end;
+  color: var(--home-text);
+  font-size: clamp(16px, 4.8vw, 19px);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  letter-spacing: -0.35px;
+  line-height: 1;
+  text-align: right;
+}
+
+.transactions-list .entry-actions {
+  grid-area: actions;
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.transactions-list .entry-actions button {
+  min-width: 0;
+  min-height: 38px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--home-control);
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.transactions-list .duplicate-entry-button,
+.transactions-list .edit-entry-button {
+  color: var(--green) !important;
+}
+
+.transactions-list .delete-entry-button {
+  color: var(--expense);
+}
+
+@media (max-width: 380px) {
+  .transactions-overlay .transactions-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .transactions-overlay .transactions-summary-grid article {
+    padding: 14px;
+  }
+
+  .transactions-list .entry-row.pill-row {
+    padding: 13px;
+  }
+}
+
+/* Llogaritë — compact mobile layout aligned with Home */
+.net-worth-overlay .net-worth-window {
+  width: min(100%, 420px);
+  gap: 0;
+  padding-inline: 16px;
+}
+
+.net-worth-overlay .archive-header {
+  margin-inline: -16px;
+  padding: max(42px, env(safe-area-inset-top)) 16px 22px;
+}
+
+.net-worth-overlay .archive-header h2 {
+  font-size: clamp(40px, 11vw, 48px);
+  font-weight: 500;
+  letter-spacing: -1.5px;
+  line-height: 1;
+}
+
+.net-worth-overlay .page-back-button {
+  width: 44px;
+  height: 44px;
+  flex-basis: 44px;
+  font-size: 30px !important;
+}
+
+.net-worth-overlay .net-worth-hero {
+  min-height: 126px;
+  align-content: space-between;
+  gap: 5px;
+  margin: 0 0 10px;
+  padding: 18px;
+  border: 0;
+  border-radius: 20px;
+  background: var(--home-card);
+}
+
+.net-worth-overlay .net-worth-hero span {
+  color: var(--home-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.net-worth-overlay .net-worth-hero strong {
+  overflow: hidden;
+  color: var(--green);
+  font-size: clamp(30px, 9vw, 38px);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  letter-spacing: -1px;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.net-worth-overlay .net-worth-hero small {
+  overflow: hidden;
+  color: var(--home-text);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.net-worth-overlay .net-worth-actions {
+  gap: 8px;
+  margin: 0 0 10px;
+}
+
+.net-worth-overlay .net-worth-actions button {
+  min-width: 0;
+  min-height: 46px;
+  overflow: hidden;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--home-card);
+  color: var(--home-text);
+  font-size: clamp(11px, 3.3vw, 13px);
+  font-weight: 600;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.net-worth-overlay .net-worth-actions button:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 1px;
+}
+
+.net-worth-overlay .net-worth-status {
+  margin: 0 2px 14px;
+  color: var(--home-muted);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.net-worth-overlay .net-worth-trend {
+  min-height: 184px;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 22px 14px 16px;
+  border: 0;
+  border-radius: 20px;
+  background: var(--home-card);
+}
+
+.net-worth-overlay .net-worth-plot {
+  height: 120px;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.net-worth-overlay .net-worth-bar,
+.net-worth-overlay .net-worth-bar.has-value {
+  min-height: 6px;
+  border-radius: 5px;
+  background: var(--home-bar);
+}
+
+.net-worth-overlay .net-worth-bar.is-empty,
+.net-worth-overlay .net-worth-bar.is-future {
+  background: var(--home-future-bar);
+}
+
+.net-worth-overlay .net-worth-bar.is-current {
+  background: var(--home-text);
+}
+
+.net-worth-overlay .net-worth-bar.is-negative:not(.is-current) {
+  opacity: 0.65;
+}
+
+.net-worth-overlay .net-worth-axis {
+  gap: 4px;
+  color: var(--home-subtext);
+  font-size: clamp(7px, 2vw, 9px);
+  font-weight: 500;
+  line-height: 1;
+}
+
+.net-worth-overlay .net-worth-axis span {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.net-worth-overlay .net-worth-list {
+  gap: 10px;
+}
+
+.net-worth-list .account-row {
+  min-height: 0;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "account balance"
+    "actions actions";
+  gap: 13px 10px;
+  align-items: center;
+  padding: 15px;
+  border: 0;
+  border-radius: 20px;
+  background: var(--home-card);
+}
+
+.net-worth-list .account-main {
+  grid-area: account;
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.net-worth-list .account-main strong {
+  overflow: hidden;
+  color: var(--home-text);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.net-worth-list .account-main span {
+  overflow: hidden;
+  color: var(--home-muted);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.net-worth-list .account-balance {
+  grid-area: balance;
+  justify-self: end;
+  color: var(--home-text);
+  font-size: clamp(16px, 4.8vw, 19px);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  letter-spacing: -0.35px;
+  line-height: 1;
+  text-align: right;
+}
+
+.net-worth-list .account-actions {
+  grid-area: actions;
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.net-worth-list .account-actions button {
+  min-width: 0;
+  min-height: 38px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--home-control);
+  color: var(--green);
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.net-worth-list .account-actions button[data-delete-bank] {
+  color: var(--expense);
+}
+
+@media (max-width: 380px) {
+  .net-worth-overlay .net-worth-hero,
+  .net-worth-list .account-row {
+    padding: 14px;
+  }
+}
+
+/* Year charts — heights are driven by the real monthly values */
+.home-month-bar {
+  min-height: 6px;
+  transition: height 220ms ease, background-color 180ms ease, opacity 180ms ease;
+}
+
+/* Insight — visual hierarchy and metric cards aligned with Home */
+.insights-overlay .insights-window {
+  width: min(100%, 420px);
+  gap: 0;
+  padding-inline: 16px;
+}
+
+.insights-overlay .archive-header {
+  margin-inline: -16px;
+  padding: max(42px, env(safe-area-inset-top)) 16px 22px;
+}
+
+.insights-overlay .archive-header h2 {
+  font-size: clamp(40px, 11vw, 48px);
+  font-weight: 500;
+  letter-spacing: -1.5px;
+  line-height: 1;
+}
+
+.insights-overlay .page-back-button {
+  width: 44px;
+  height: 44px;
+  flex-basis: 44px;
+  font-size: 30px !important;
+}
+
+.insights-overlay .insight-safe-card {
+  position: relative;
+  min-height: 228px;
+  align-content: start;
+  gap: 5px;
+  margin: 0 0 10px;
+  padding: 18px;
+  border: 0;
+  border-radius: 20px;
+  background: var(--home-card);
+}
+
+.insights-overlay .insight-safe-card > span {
+  padding-right: 42px;
+  color: var(--home-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.insights-overlay .insight-safe-card > strong {
+  overflow: hidden;
+  margin-top: 3px;
+  color: var(--green);
+  font-size: clamp(38px, 11vw, 46px);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  letter-spacing: -1.2px;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.insights-overlay .insight-safe-card > small {
+  color: var(--home-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.insights-overlay .insight-safe-card > .overview-arrow {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+}
+
+.insight-safe-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: auto;
+}
+
+.insight-safe-meta > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.insight-safe-meta span {
+  overflow: hidden;
+  color: var(--home-muted);
+  font-size: 11px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.insight-safe-meta b {
+  overflow: hidden;
+  color: var(--home-text);
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.insight-safe-progress,
+.insight-card-progress {
+  width: 100%;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--home-control);
+}
+
+.insight-safe-progress {
+  height: 18px;
+  margin-top: 10px;
+}
+
+.insight-safe-progress i,
+.insight-card-progress i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--green);
+}
+
+.insights-overlay .insights-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.insights-overlay .insight-card.is-actionable {
+  position: relative;
+  min-width: 0;
+  min-height: 168px;
+  display: grid;
+  align-content: space-between;
+  gap: 7px;
+  padding: 16px;
+  border: 0;
+  border-radius: 20px;
+  background: var(--home-card);
+  color: var(--home-text);
+  text-align: left;
+}
+
+.insights-overlay .insight-card.is-wide {
+  min-height: 154px;
+  grid-column: 1 / -1;
+}
+
+.insights-overlay .insight-card.is-actionable::after {
+  content: none;
+}
+
+.insight-card-label {
+  overflow: hidden;
+  padding-right: 32px;
+  color: var(--home-muted) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.insight-card-value {
+  overflow: hidden;
+  color: var(--home-text) !important;
+  font-size: clamp(20px, 6vw, 26px) !important;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600 !important;
+  letter-spacing: -0.6px;
+  line-height: 1 !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.insight-card.is-positive .insight-card-value {
+  color: var(--green) !important;
+}
+
+.insight-card.is-negative .insight-card-value {
+  color: var(--expense) !important;
+}
+
+.insight-card-detail {
+  min-height: 2.4em;
+  overflow: hidden;
+  display: -webkit-box;
+  color: var(--home-subtext) !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  line-height: 1.2;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.insight-card-arrow {
+  position: absolute;
+  top: 13px;
+  right: 13px;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--home-control);
+  color: var(--home-text);
+  font-size: 25px;
+  font-style: normal;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.insight-card-progress {
+  height: 12px;
+  margin-top: 3px;
+}
+
+.insight-card.is-negative .insight-card-progress i {
+  background: var(--expense);
+}
+
+.insight-card.is-actionable:focus-visible,
+.insights-overlay .insight-safe-card > .overview-arrow:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+
+@media (max-width: 350px) {
+  .insights-overlay .insights-list {
+    grid-template-columns: 1fr;
+  }
+
+  .insights-overlay .insight-card.is-wide {
+    grid-column: auto;
+  }
+}
+
+/* Detail charts — one functional visual system shared with Home */
+.income-detail-overlay .savings-detail-summary article,
+.savings-detail-overlay .savings-detail-summary article {
+  border-radius: 20px;
+  background: var(--home-card);
+  color: var(--home-text);
+}
+
+.income-detail-overlay .savings-detail-summary span,
+.savings-detail-overlay .savings-detail-summary span,
+.income-detail-overlay .savings-detail-note,
+.savings-detail-overlay .savings-detail-note {
+  color: var(--home-muted);
+}
+
+.income-detail-overlay .savings-detail-summary strong,
+.income-detail-overlay .savings-detail-summary small,
+.savings-detail-overlay .savings-detail-summary strong,
+.savings-detail-overlay .savings-detail-summary small {
+  color: var(--home-text) !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.income-detail-tabs,
+.savings-detail-tabs {
+  gap: 4px;
+  padding: 4px;
+  border-color: var(--home-track);
+  background: var(--home-control);
+}
+
+.income-detail-tabs button,
+.savings-detail-tabs button {
+  min-height: 40px;
+  color: var(--home-text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.income-detail-tabs button.active,
+.savings-detail-tabs button.active {
+  background: var(--home-text);
+  color: var(--home-bg);
+}
+
+.income-detail-tabs button:focus-visible,
+.savings-detail-tabs button:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 1px;
+}
+
+.income-detail-chart.detail-bar-chart,
+.savings-detail-chart.detail-bar-chart {
+  position: relative;
+  min-height: 252px;
+  height: 252px;
+  display: grid;
+  grid-template-columns: repeat(var(--point-count, 12), minmax(0, 1fr));
+  gap: 4px;
+  align-items: stretch;
+  margin: 0;
+  padding: 22px 14px 8px;
+  overflow: hidden;
+  border-radius: 20px 20px 0 0;
+  background: var(--home-card);
+}
+
+.income-detail-chart.detail-bar-chart.is-dense,
+.savings-detail-chart.detail-bar-chart.is-dense {
+  gap: 2px;
+}
+
+.savings-detail-chart.detail-bar-chart::after {
+  content: none;
+}
+
+.detail-chart-bar {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.detail-chart-bar::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: clamp(5px, 82%, 34px);
+  height: var(--bar-height, 6%);
+  min-height: 6px;
+  border-radius: 5px;
+  background: var(--home-bar);
+  transform: translateX(-50%);
+  transition: height 220ms ease, background-color 180ms ease, opacity 180ms ease, box-shadow 180ms ease;
+}
+
+.detail-chart-bar.is-future::before,
+.detail-chart-bar.is-zero::before {
+  background: var(--home-future-bar);
+}
+
+.detail-chart-bar.is-current::before {
+  background: var(--home-text);
+}
+
+.detail-chart-bar.is-negative:not(.is-current)::before {
+  opacity: 0.65;
+}
+
+.detail-chart-bar.is-selected::before {
+  box-shadow: 0 0 0 3px var(--green);
+}
+
+.detail-chart-bar:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: -2px;
+}
+
+.savings-detail-axis.detail-bar-axis,
+.income-detail-axis.detail-bar-axis {
+  display: grid;
+  grid-template-columns: repeat(var(--point-count, 12), minmax(0, 1fr));
+  gap: 4px;
+  margin: 0;
+  padding: 2px 14px 16px;
+  border-radius: 0 0 20px 20px;
+  background: var(--home-card);
+  color: var(--home-subtext);
+  font-size: clamp(7px, 2vw, 9px);
+  font-weight: 500;
+  line-height: 1;
+}
+
+.savings-detail-axis.detail-bar-axis.is-dense,
+.income-detail-axis.detail-bar-axis.is-dense {
+  gap: 2px;
+}
+
+.savings-detail-axis.detail-bar-axis span,
+.income-detail-axis.detail-bar-axis span {
+  min-width: 0;
+  overflow: hidden;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.income-detail-overlay .savings-detail-note,
+.savings-detail-overlay .savings-detail-note {
+  min-height: 32px;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+@media (max-width: 380px) {
+  .income-detail-chart.detail-bar-chart,
+  .savings-detail-chart.detail-bar-chart {
+    min-height: 224px;
+    height: 224px;
+    padding-inline: 10px;
+  }
+
+  .savings-detail-axis.detail-bar-axis,
+  .income-detail-axis.detail-bar-axis {
+    padding-inline: 10px;
+  }
+}
+
+/* Monthly budget — explicit spent, available, reserved and overspent states */
+.month-summary-card {
+  min-height: 184px;
+}
+
+button.summary-progress {
+  width: 100%;
+  display: block;
+  padding: 0;
+  border: 0;
+  appearance: none;
+  cursor: pointer;
+}
+
+.summary-progress .available {
+  background: var(--green);
+}
+
+.summary-progress .reserved,
+.summary-progress .overspent {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+}
+
+.summary-progress .reserved {
+  left: calc(var(--spent, 0%) + var(--available, 0%));
+  width: var(--reserved, 0%);
+  border-radius: 0 999px 999px 0;
+  background: var(--home-progress);
+}
+
+.summary-progress .overspent {
+  right: 0;
+  width: var(--overspent, 0%);
+  border-radius: 999px 0 0 999px;
+  background: var(--expense);
+}
+
+.summary-progress.is-no-budget {
+  background: var(--home-track);
+}
+
+.summary-progress.is-no-budget > span {
+  width: 0 !important;
+}
+
+.summary-progress:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+
+.month-summary-status {
+  min-height: 15px;
+  margin: 7px 0 0;
+  overflow: hidden;
+  color: var(--home-subtext);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.month-summary-status.is-neutral {
+  color: var(--home-muted);
+}
+
+.month-summary-status.is-warning {
+  color: var(--expense);
+  font-weight: 650;
+}
+
+@media (max-width: 380px) {
+  .month-summary-status {
+    white-space: normal;
   }
 }

@@ -13,6 +13,7 @@ const RECEIPT_AI_ENDPOINT_KEY = "financat-e-mia:receipt-ai-endpoint:v1";
 const RECEIPT_AI_TOKEN_KEY = "financat-e-mia:receipt-ai-token:v1";
 const NET_WORTH_HISTORY_KEY = "financat-e-mia:net-worth-history:v1";
 const SETUP_KEY = "financat-e-mia:setup-complete:v1";
+const HOME_ORDER_KEY = "financat-e-mia:home-order:v1";
 const LEGACY_STORAGE_KEYS = ["financat-e-mia:v1"];
 const DEFAULT_LIMITS = {
   expenseALL: 150000,
@@ -36,9 +37,38 @@ const BANK_OF_ALBANIA_RATE_URL = "https://www.bankofalbania.org/Markets/Official
 const EXPENSE_PREVIEW_LIMIT = 10;
 const DEFAULT_SAVINGS_GOAL_ALL = 10000;
 const DEFAULT_SAVINGS_GOAL_MONTHS = 12;
+const DEFAULT_HOME_ORDER = ["safe-spend", "goals", "plan", "month", "balances", "forecast", "year-charts"];
+const PRIMARY_ZONE_ORDER = ["transactions", "accounts", "insights"];
 let limitsEditorMode = "all";
+let homeReorderSession = {
+  timer: 0,
+  inputType: "",
+  pointerId: null,
+  touchId: null,
+  block: null,
+  placeholder: null,
+  startX: 0,
+  startY: 0,
+  grabOffsetY: 0,
+  dragHeight: 0,
+  originalStyle: null,
+  active: false,
+  moved: false,
+  suppressClickUntil: 0,
+};
+let pageSwipeSession = {
+  touchId: null,
+  overlay: null,
+  startX: 0,
+  startY: 0,
+  deltaX: 0,
+  horizontal: false,
+  cancelled: false,
+  transitioning: false,
+  timer: 0,
+};
 
-const colors = ["#ef6f5a", "#6f62db", "#34d184", "#111111", "#b5b5bb", "#dedee3", "#8f8f98"];
+const colors = ["#ef6f5a", "#6f62db", "#63d681", "#111111", "#b5b5bb", "#dedee3", "#8f8f98"];
 const monthNames = ["janar", "shkurt", "mars", "prill", "maj", "qershor", "korrik", "gusht", "shtator", "tetor", "nëntor", "dhjetor"];
 const dayNames = ["e diel", "e hënë", "e martë", "e mërkurë", "e enjte", "e premte", "e shtunë"];
 
@@ -55,7 +85,7 @@ const state = {
   },
   dailyCurrency: "TOTAL",
   selectedDailyDate: "",
-  incomeDetailRange: "week",
+  incomeDetailRange: "month",
   savingsDetailRange: "month",
   homePlanTab: "savings",
   archiveSearch: {
@@ -69,6 +99,7 @@ const state = {
   transactionCategoryFilter: "all",
   transactionBankFilter: "all",
   transactionCurrencyFilter: "all",
+  homeOrder: loadHomeOrder(),
   pendingImport: null,
   netWorthHistory: loadNetWorthHistory(),
   undo: {
@@ -88,6 +119,7 @@ const state = {
 };
 
 const els = {
+  overviewHome: document.querySelector("#overviewHome"),
   balanceValue: document.querySelector("#balanceValue"),
   balanceAlt: document.querySelector("#balanceAlt"),
   incomeValue: document.querySelector("#incomeValue"),
@@ -213,6 +245,7 @@ const els = {
   monthIncomeSummaryLek: document.querySelector("#monthIncomeSummaryLek"),
   monthIncomeSummaryEuro: document.querySelector("#monthIncomeSummaryEuro"),
   monthSummaryProgress: document.querySelector("#monthSummaryProgress"),
+  monthSummaryStatus: document.querySelector("#monthSummaryStatus"),
   balanceCompareLek: document.querySelector("#balanceCompareLek"),
   balanceCompareEuro: document.querySelector("#balanceCompareEuro"),
   savingsDirectionBar: document.querySelector("#savingsDirectionBar"),
@@ -391,8 +424,12 @@ const els = {
   netWorthList: document.querySelector("#netWorthList"),
   insightsOverlay: document.querySelector("#insightsOverlay"),
   closeInsightsBtn: document.querySelector("#closeInsightsBtn"),
+  insightsSafeOpen: document.querySelector("#insightsSafeOpen"),
   insightsSafeLek: document.querySelector("#insightsSafeLek"),
   insightsSafeEuro: document.querySelector("#insightsSafeEuro"),
+  insightsRemainingLek: document.querySelector("#insightsRemainingLek"),
+  insightsDaysRemaining: document.querySelector("#insightsDaysRemaining"),
+  insightsSafeProgress: document.querySelector("#insightsSafeProgress"),
   insightsList: document.querySelector("#insightsList"),
   homeSetupHint: document.querySelector("#homeSetupHint"),
   formulaOverlay: document.querySelector("#formulaOverlay"),
@@ -445,6 +482,7 @@ els.eurToLekRateInput.value = formatRateInput(state.exchangeRate);
 applyTheme();
 syncTypeControls();
 render();
+applyHomeOrder();
 maybeOpenSetup();
 
 document.querySelectorAll("[data-type]").forEach((button) => {
@@ -458,11 +496,26 @@ document.querySelectorAll("[data-zone]").forEach((button) => {
   button.addEventListener("click", () => goToZone(button.dataset.zone));
 });
 
+document.addEventListener("touchstart", handlePageSwipeStart, { passive: true });
+window.addEventListener("touchmove", handlePageSwipeMove, { passive: false });
+window.addEventListener("touchend", handlePageSwipeEnd);
+window.addEventListener("touchcancel", cancelPageSwipe);
+
 els.currencyInput.addEventListener("change", renderBankOptions);
 els.receiptImageInput.addEventListener("change", handleReceiptImage);
 els.resetReceiptAiBtn.addEventListener("click", resetReceiptAiConnection);
 
 els.addEntryBtn.addEventListener("click", openQuickAdd);
+els.overviewHome?.addEventListener("pointerdown", handleHomeReorderPointerDown);
+window.addEventListener("pointermove", handleHomeReorderPointerMove, { passive: false });
+window.addEventListener("pointerup", handleHomeReorderPointerUp);
+window.addEventListener("pointercancel", handleHomeReorderPointerCancel);
+els.overviewHome?.addEventListener("touchstart", handleHomeReorderTouchStart, { passive: false });
+window.addEventListener("touchmove", handleHomeReorderTouchMove, { passive: false });
+window.addEventListener("touchend", handleHomeReorderTouchEnd);
+window.addEventListener("touchcancel", handleHomeReorderTouchCancel);
+els.overviewHome?.addEventListener("contextmenu", handleHomeReorderContextMenu);
+els.overviewHome?.addEventListener("click", handleHomeReorderClick, true);
 els.closeQuickAddBtn?.addEventListener("click", closeQuickAdd);
 els.quickAddOverlay?.addEventListener("click", (event) => {
   if (event.target === els.quickAddOverlay) closeQuickAdd();
@@ -474,6 +527,7 @@ els.homeIncomeLimitOpen?.addEventListener("click", openIncomeDetail);
 els.homeSavingsLimitOpen?.addEventListener("click", openSavingsDetail);
 els.incomeYearDots?.addEventListener("click", handleHomeMonthChartClick);
 els.savingsYearDots?.addEventListener("click", handleHomeMonthChartClick);
+els.monthSummaryProgress?.addEventListener("click", handleHomeMonthChartClick);
 els.safeSpendOpen?.addEventListener("click", openGoalsWindow);
 els.savingsPlanOpen?.addEventListener("click", openSavingsPlanDetail);
 els.savingsPlanInfo?.addEventListener("click", () => openFormulaOverlay("plan"));
@@ -703,6 +757,7 @@ els.netWorthSnapshotBtn?.addEventListener("click", () => saveNetWorthSnapshot(ne
 els.netWorthAddAccountBtn?.addEventListener("click", () => openAccountEditor());
 els.netWorthTrend?.addEventListener("click", handleHomeMonthChartClick);
 els.closeInsightsBtn?.addEventListener("click", closeInsightsWindow);
+els.insightsSafeOpen?.addEventListener("click", () => openFormulaOverlay("safe"));
 els.insightsOverlay?.addEventListener("click", (event) => {
   if (event.target === els.insightsOverlay) closeInsightsWindow();
 });
@@ -725,7 +780,7 @@ els.incomeDetailOverlay?.addEventListener("click", (event) => {
 });
 document.querySelectorAll("[data-income-detail-range]").forEach((button) => {
   button.addEventListener("click", () => {
-    state.incomeDetailRange = button.dataset.incomeDetailRange || "week";
+    state.incomeDetailRange = button.dataset.incomeDetailRange || "month";
     renderIncomeDetail();
   });
 });
@@ -1057,13 +1112,49 @@ function renderHomeSetupHint(incomeMonth) {
 
 function renderHomeSummaryBars(budget, spentMonthToDate, incomeMonth) {
   const spent = Math.max(totalsToLek(spentMonthToDate), 0);
-  const income = Math.max(totalsToLek(incomeMonth), 1);
-  const spentPct = Math.min((spent / income) * 100, 100);
-  const availablePct = Math.min((Math.max(budget.remainingLek, 0) / income) * 100, 100 - spentPct);
+  const income = Math.max(totalsToLek(incomeMonth), 0);
+  const available = Math.max(budget.remainingLek, 0);
+  const overspent = Math.max(-budget.remainingLek, 0);
+  const hasBudget = income > 0;
+  const spentPct = hasBudget ? Math.min((spent / income) * 100, 100) : 0;
+  const availablePct = hasBudget ? Math.min((available / income) * 100, Math.max(100 - spentPct, 0)) : 0;
+  const reservedPct = hasBudget ? Math.max(100 - spentPct - availablePct, 0) : 0;
+  const reserved = hasBudget ? Math.max(income - Math.min(spent, income) - available, 0) : 0;
+  const overspentPct = hasBudget && overspent > 0 ? Math.min(Math.max((overspent / income) * 100, 6), 32) : 0;
+
   if (els.monthSummaryProgress) {
     els.monthSummaryProgress.style.setProperty("--spent", `${spentPct}%`);
     els.monthSummaryProgress.style.setProperty("--available", `${availablePct}%`);
+    els.monthSummaryProgress.style.setProperty("--reserved", `${reservedPct}%`);
+    els.monthSummaryProgress.style.setProperty("--overspent", `${overspentPct}%`);
+    els.monthSummaryProgress.classList.toggle("is-no-budget", !hasBudget);
+    els.monthSummaryProgress.classList.toggle("is-overspent", hasBudget && overspent > 0);
+
+    const progressMessage = !hasBudget
+      ? `Pa buxhet këtë muaj. Shpenzuar ${moneyLekShort(spent)}. Shto të ardhura për ta aktivizuar.`
+      : overspent > 0
+        ? `Mbi buxhet me ${moneyLekShort(overspent)}. Shpenzuar ${moneyLekShort(spent)} nga ${moneyLekShort(income)} të ardhura.`
+        : `Shpenzuar ${moneyLekShort(spent)}. Në dispozicion ${moneyLekShort(available)}. Rezervuar ${moneyLekShort(reserved)}.`;
+    els.monthSummaryProgress.dataset.chartMessage = progressMessage;
+    els.monthSummaryProgress.title = progressMessage;
+    els.monthSummaryProgress.setAttribute("aria-label", progressMessage);
   }
+
+  if (els.monthSummaryStatus) {
+    const statusText = !hasBudget
+      ? spent > 0
+        ? `Pa buxhet këtë muaj · ${moneyLekShort(spent)} të shpenzuara`
+        : "Pa buxhet këtë muaj"
+      : overspent > 0
+        ? `Mbi buxhet me ${moneyLekShort(overspent)}`
+        : reserved > 0
+          ? `Rezervuar për objektiva dhe detyrime: ${moneyLekShort(reserved)}`
+          : `Në dispozicion: ${moneyLekShort(available)}`;
+    setText(els.monthSummaryStatus, statusText);
+    els.monthSummaryStatus.classList.toggle("is-warning", hasBudget && overspent > 0);
+    els.monthSummaryStatus.classList.toggle("is-neutral", !hasBudget);
+  }
+
   if (els.savingsDirectionBar) {
     const target = Math.max(budget.monthlyTargetLek, Math.abs(budget.savedToDateLek), 1);
     const magnitude = Math.min(Math.abs(budget.savedToDateLek) / target * 50, 50);
@@ -1338,6 +1429,144 @@ function ratioText(value, total) {
   return `${Math.round(clamp01(value / total) * 100)}%`;
 }
 
+function primaryZoneOverlay(zone = state.activeZone) {
+  if (zone === "transactions") return els.transactionsOverlay;
+  if (zone === "accounts") return els.netWorthOverlay;
+  if (zone === "insights") return els.insightsOverlay;
+  return null;
+}
+
+function nextPrimaryZone(zone = state.activeZone) {
+  const currentIndex = PRIMARY_ZONE_ORDER.indexOf(zone);
+  if (currentIndex < 0) return PRIMARY_ZONE_ORDER[0];
+  return PRIMARY_ZONE_ORDER[(currentIndex + 1) % PRIMARY_ZONE_ORDER.length];
+}
+
+function handlePageSwipeStart(event) {
+  if (pageSwipeSession.transitioning || event.touches.length !== 1) return;
+  const overlay = primaryZoneOverlay();
+  if (!overlay || overlay.hidden || !overlay.contains(event.target)) return;
+
+  const target = event.target instanceof Element ? event.target : null;
+  if (target?.closest("button, a, input, select, textarea, label, [role='button'], [contenteditable='true']")) return;
+
+  const touch = event.touches[0];
+  clearTimeout(pageSwipeSession.timer);
+  pageSwipeSession.touchId = touch.identifier;
+  pageSwipeSession.overlay = overlay;
+  pageSwipeSession.startX = touch.clientX;
+  pageSwipeSession.startY = touch.clientY;
+  pageSwipeSession.deltaX = 0;
+  pageSwipeSession.horizontal = false;
+  pageSwipeSession.cancelled = false;
+}
+
+function handlePageSwipeMove(event) {
+  if (pageSwipeSession.touchId === null || pageSwipeSession.cancelled || pageSwipeSession.transitioning) return;
+  const touch = Array.from(event.touches).find((item) => item.identifier === pageSwipeSession.touchId);
+  if (!touch) return;
+
+  const deltaX = touch.clientX - pageSwipeSession.startX;
+  const deltaY = touch.clientY - pageSwipeSession.startY;
+  const horizontalDistance = Math.abs(deltaX);
+  const verticalDistance = Math.abs(deltaY);
+
+  if (!pageSwipeSession.horizontal) {
+    if (verticalDistance > 10 && verticalDistance > horizontalDistance) {
+      pageSwipeSession.cancelled = true;
+      return;
+    }
+    if (horizontalDistance < 12 || horizontalDistance <= verticalDistance * 1.15) return;
+    pageSwipeSession.horizontal = true;
+    pageSwipeSession.overlay?.classList.add("is-page-swiping");
+    document.body.classList.add("page-swipe-active");
+  }
+
+  event.preventDefault();
+  pageSwipeSession.deltaX = deltaX;
+  const width = Math.max(window.innerWidth, 1);
+  const opacity = 1 - Math.min(horizontalDistance / width, 1) * 0.14;
+  if (pageSwipeSession.overlay) {
+    pageSwipeSession.overlay.style.transform = `translate3d(${deltaX}px, 0, 0)`;
+    pageSwipeSession.overlay.style.opacity = String(opacity);
+  }
+}
+
+function handlePageSwipeEnd(event) {
+  if (pageSwipeSession.touchId === null) return;
+  const endedTouch = Array.from(event.changedTouches).find((item) => item.identifier === pageSwipeSession.touchId);
+  if (!endedTouch) return;
+
+  if (pageSwipeSession.horizontal) {
+    pageSwipeSession.deltaX = endedTouch.clientX - pageSwipeSession.startX;
+  }
+
+  const overlay = pageSwipeSession.overlay;
+  const deltaX = pageSwipeSession.deltaX;
+  const completed = pageSwipeSession.horizontal
+    && Math.abs(deltaX) >= Math.min(96, Math.max(64, window.innerWidth * 0.18));
+
+  if (!overlay || !pageSwipeSession.horizontal || pageSwipeSession.cancelled) {
+    resetPageSwipeSession();
+    return;
+  }
+
+  pageSwipeSession.transitioning = true;
+  overlay.classList.remove("is-page-swiping");
+  overlay.classList.add("is-page-settling");
+
+  if (!completed) {
+    overlay.style.transform = "translate3d(0, 0, 0)";
+    overlay.style.opacity = "1";
+    pageSwipeSession.timer = window.setTimeout(resetPageSwipeSession, 190);
+    return;
+  }
+
+  const targetZone = deltaX < 0 ? "home" : nextPrimaryZone();
+  overlay.style.transform = `translate3d(${deltaX < 0 ? "-105vw" : "105vw"}, 0, 0)`;
+  overlay.style.opacity = "0.86";
+  pageSwipeSession.timer = window.setTimeout(() => {
+    resetPageSwipeSession();
+    goToZone(targetZone);
+  }, 190);
+}
+
+function cancelPageSwipe() {
+  if (pageSwipeSession.touchId === null) return;
+  const overlay = pageSwipeSession.overlay;
+  if (overlay && pageSwipeSession.horizontal) {
+    overlay.classList.remove("is-page-swiping");
+    overlay.classList.add("is-page-settling");
+    overlay.style.transform = "translate3d(0, 0, 0)";
+    overlay.style.opacity = "1";
+    pageSwipeSession.transitioning = true;
+    pageSwipeSession.timer = window.setTimeout(resetPageSwipeSession, 190);
+    return;
+  }
+  resetPageSwipeSession();
+}
+
+function resetPageSwipeSession() {
+  clearTimeout(pageSwipeSession.timer);
+  if (pageSwipeSession.overlay) {
+    pageSwipeSession.overlay.classList.remove("is-page-swiping", "is-page-settling");
+    pageSwipeSession.overlay.style.removeProperty("transform");
+    pageSwipeSession.overlay.style.removeProperty("opacity");
+  }
+  document.body.classList.remove("page-swipe-active");
+  pageSwipeSession = {
+    touchId: null,
+    overlay: null,
+    startX: 0,
+    startY: 0,
+    deltaX: 0,
+    horizontal: false,
+    cancelled: false,
+    transitioning: false,
+    timer: 0,
+  };
+}
+
 function goToZone(zone = "home") {
   state.activeZone = zone;
   if (zone === "transactions") {
@@ -1385,7 +1614,10 @@ function openTransactionsWindow() {
   state.transactionSearch = "";
   if (els.transactionsSearch) els.transactionsSearch.value = "";
   renderTransactions();
-  if (els.transactionsOverlay) els.transactionsOverlay.hidden = false;
+  if (els.transactionsOverlay) {
+    els.transactionsOverlay.hidden = false;
+    els.transactionsOverlay.scrollTop = 0;
+  }
   syncZoneNav();
 }
 
@@ -1400,7 +1632,10 @@ function openNetWorthWindow() {
   if (els.transactionsOverlay) els.transactionsOverlay.hidden = true;
   if (els.insightsOverlay) els.insightsOverlay.hidden = true;
   renderNetWorth();
-  if (els.netWorthOverlay) els.netWorthOverlay.hidden = false;
+  if (els.netWorthOverlay) {
+    els.netWorthOverlay.hidden = false;
+    els.netWorthOverlay.scrollTop = 0;
+  }
   syncZoneNav();
 }
 
@@ -1415,7 +1650,10 @@ function openInsightsWindow() {
   if (els.transactionsOverlay) els.transactionsOverlay.hidden = true;
   if (els.netWorthOverlay) els.netWorthOverlay.hidden = true;
   renderInsights();
-  if (els.insightsOverlay) els.insightsOverlay.hidden = false;
+  if (els.insightsOverlay) {
+    els.insightsOverlay.hidden = false;
+    els.insightsOverlay.scrollTop = 0;
+  }
   syncZoneNav();
 }
 
@@ -1543,21 +1781,40 @@ function renderNetWorth() {
 function renderNetWorthTrend() {
   if (!els.netWorthTrend) return;
 
-  const currentYear = String(new Date().getFullYear());
+  const now = new Date();
+  const currentYear = String(now.getFullYear());
+  const currentMonthIndex = now.getMonth();
   const latestByMonth = new Map();
   normalizeNetWorthHistory(state.netWorthHistory)
     .filter((item) => String(item.date || "").startsWith(currentYear))
     .forEach((item) => latestByMonth.set(String(item.date).slice(5, 7), item));
-  const values = Array.from({ length: 12 }, (_, index) => latestByMonth.get(String(index + 1).padStart(2, "0"))?.totalLek || 0);
-  const max = Math.max(...values, 1);
-  const bars = values
-    .map((value, index) => {
-      const height = value ? Math.max((value / max) * 100, 10) : 3;
-      const message = `${capitalizeFirst(monthNames[index])}: ${moneyLekShort(value)}`;
-      return `<button class="net-worth-bar ${value ? "has-value" : ""}" type="button" style="height:${height}%" title="${escapeHtml(message)}" data-chart-message="${escapeHtml(message)}"></button>`;
+  const monthlyPoints = Array.from({ length: 12 }, (_, index) => {
+    const item = latestByMonth.get(String(index + 1).padStart(2, "0"));
+    return {
+      value: Number(item?.totalLek) || 0,
+      hasValue: Boolean(item),
+    };
+  });
+  const max = Math.max(...monthlyPoints.map(({ value }) => Math.abs(value)), 1);
+  const bars = monthlyPoints
+    .map(({ value, hasValue }, index) => {
+      const isFuture = index > currentMonthIndex;
+      const height = !hasValue || isFuture ? 6 : scaledMonthlyBarHeight(Math.abs(value), max);
+      const message = `${capitalizeFirst(monthNames[index])}: ${moneyLekShort(value)} / ${moneyEuroCompact(value / state.exchangeRate)}`;
+      const classes = [
+        "home-month-bar",
+        "net-worth-bar",
+        hasValue ? "has-value" : "is-empty",
+        value < 0 ? "is-negative" : "",
+        index === currentMonthIndex ? "is-current" : "",
+        isFuture ? "is-future" : "",
+      ].filter(Boolean).join(" ");
+      return `<button class="${classes}" type="button" style="height:${height}%" title="${escapeHtml(message)}" aria-label="${escapeHtml(message)}" data-chart-message="${escapeHtml(message)}"></button>`;
     })
     .join("");
-  const axis = ["J", "S", "M", "P", "M", "Q", "K", "G", "S", "T", "N", "D"].map((label) => `<span>${label}</span>`).join("");
+  const axis = ["Jan", "Shk", "Mar", "Pri", "Maj", "Qer", "Kor", "Gus", "Sht", "Tet", "Nën", "Dhj"]
+    .map((label) => `<span>${label}</span>`)
+    .join("");
   els.netWorthTrend.innerHTML = `<div class="net-worth-plot">${bars}</div><div class="net-worth-axis">${axis}</div>`;
 }
 
@@ -1600,37 +1857,73 @@ function renderInsights() {
   const incomeMonth = monthEntries.filter((entry) => entry.type === "income").reduce(sumMoneyTotals, emptyMoneyTotals());
   const budget = monthlyBudgetInsight(now, spentToday, spentMonth, incomeMonth);
   setText(els.insightsSafeLek, moneyLekShort(budget.dailySafeLek));
-  setText(els.insightsSafeEuro, `≈ ${moneyEuroCompact(budget.dailySafeLek / state.exchangeRate)} / ditë · përditësuar tani`);
+  setText(els.insightsSafeEuro, `≈ ${moneyEuroCompact(budget.dailySafeLek / state.exchangeRate)} / ditë`);
+  setText(els.insightsRemainingLek, moneyLekShort(Math.max(budget.remainingLek, 0)));
+  setText(els.insightsDaysRemaining, `${budget.daysRemaining} ditë`);
+  if (els.insightsSafeProgress) els.insightsSafeProgress.style.width = `${Math.round(budget.remainingRatio * 100)}%`;
 
   const topCategory = topExpenseCategory(monthEntries);
+  const topCategoryShare = topCategory && budget.spentMonthLek > 0
+    ? Math.round(clamp01(topCategory.lekValue / budget.spentMonthLek) * 100)
+    : 0;
+  const forecastAvailable = budget.monthlyBudgetLek > 0;
+  const forecastValue = forecastAvailable
+    ? `${budget.forecastDeltaLek >= 0 ? "+" : "-"}${moneyLekShort(Math.abs(budget.forecastDeltaLek))}`
+    : "—";
+  const forecastProgress = forecastAvailable
+    ? Math.round(clamp01(budget.projectedSpendLek / Math.max(budget.monthlyBudgetLek - budget.fixedRemainingLek, 1)) * 100)
+    : 0;
+  const remainingRecurringCount = recurringRemainingExpenses(now).length;
   const cards = [
     {
-      title: "Mund të shpenzosh",
-      body: `${moneyLekShort(budget.dailySafeLek)} në ditë pa prekur objektivin e kursimit.`,
-      action: "safe",
-    },
-    {
-      title: "Parashikimi i fund-muajit",
-      body: budgetForecastText(budget),
+      title: "Parashikimi",
+      value: forecastValue,
+      detail: forecastAvailable
+        ? budget.forecastDeltaLek >= 0
+          ? "nën buxhet në fund të muajit"
+          : "mbi buxhet në fund të muajit"
+        : "Shto të ardhura për ta aktivizuar",
       action: "forecast",
+      progress: forecastProgress,
+      tone: forecastAvailable ? (budget.forecastDeltaLek >= 0 ? "positive" : "negative") : "neutral",
     },
     {
       title: "Shpenzime fikse",
-      body:
-        budget.fixedRemainingLek > 0
-          ? `${moneyLekShort(budget.fixedRemainingLek)} janë të rezervuara ende këtë muaj.`
-          : "Nuk ka shpenzime fikse të pambyllura këtë muaj.",
+      value: moneyLekShort(budget.fixedRemainingLek),
+      detail: remainingRecurringCount > 0
+        ? `${remainingRecurringCount} ${remainingRecurringCount === 1 ? "detyrim i pambyllur" : "detyrime të pambyllura"}`
+        : "Asnjë detyrim i pambyllur",
       action: "recurring",
+      tone: budget.fixedRemainingLek > 0 ? "warning" : "neutral",
     },
     {
-      title: "Ku po ikin paratë?",
-      body: topCategory ? `${topCategory.category}: ${moneyPairCompact(topCategory.totals)} këtë muaj.` : "Shto shpenzime që të dalë kategoria kryesore.",
+      title: "Kategoria kryesore",
+      value: topCategory ? topCategory.category : "Pa të dhëna",
+      detail: topCategory
+        ? `${moneyPairCompact(topCategory.totals)} · ${topCategoryShare}% e shpenzimeve`
+        : "Shto shpenzime që të shfaqet analiza",
       action: "expenses",
+      progress: topCategoryShare,
+      tone: "category",
+      wide: true,
     },
   ];
 
   els.insightsList.innerHTML = cards
-    .map((item) => `<button class="insight-card is-actionable" type="button" data-insight-action="${item.action}"><span>${escapeHtml(item.title)}</span><p>${escapeHtml(item.body)}</p></button>`)
+    .map((item) => {
+      const progress = Number.isFinite(item.progress)
+        ? `<div class="insight-card-progress" aria-hidden="true"><i style="width:${Math.max(0, Math.min(item.progress, 100))}%"></i></div>`
+        : "";
+      return `
+        <button class="insight-card is-actionable is-${item.tone}${item.wide ? " is-wide" : ""}" type="button" data-insight-action="${item.action}">
+          <span class="insight-card-label">${escapeHtml(item.title)}</span>
+          <strong class="insight-card-value">${escapeHtml(item.value)}</strong>
+          <small class="insight-card-detail">${escapeHtml(item.detail)}</small>
+          ${progress}
+          <i class="insight-card-arrow" aria-hidden="true">›</i>
+        </button>
+      `;
+    })
     .join("");
 }
 
@@ -1727,9 +2020,10 @@ function renderMonthlyDotChart(container, monthlyTotals, limitALL, limitEUR, acc
     const bar = document.createElement("button");
     bar.type = "button";
     bar.className = `home-month-bar ${index === currentMonthIndex ? "is-current" : ""} ${index > currentMonthIndex ? "is-future" : ""}`;
-    bar.style.height = `${index > currentMonthIndex ? 48 : value > 0 ? Math.max(45, value / max * 100) : 42}%`;
+    bar.style.height = `${index > currentMonthIndex ? 6 : scaledMonthlyBarHeight(value, max)}%`;
     bar.title = `${capitalizeFirst(monthNames[index])}: ${moneyPairCompact(monthlyTotals[index])}`;
     bar.dataset.chartMessage = bar.title;
+    bar.setAttribute("aria-label", bar.title);
     container.append(bar);
   });
 }
@@ -1745,11 +2039,19 @@ function renderSavingsBalanceChart(container, monthlyTotals, limitALL, limitEUR)
     const bar = document.createElement("button");
     bar.type = "button";
     bar.className = `home-month-bar ${value < 0 ? "is-negative" : ""} ${index === currentMonthIndex ? "is-current" : ""} ${index > currentMonthIndex ? "is-future" : ""}`;
-    bar.style.height = `${index > currentMonthIndex ? 48 : value !== 0 ? Math.max(45, Math.abs(value) / max * 100) : 42}%`;
+    bar.style.height = `${index > currentMonthIndex ? 6 : scaledMonthlyBarHeight(Math.abs(value), max)}%`;
     bar.title = `${capitalizeFirst(monthNames[index])}: ${moneyLekShort(value)} / ${moneyEuroCompact(value / state.exchangeRate)}`;
     bar.dataset.chartMessage = bar.title;
+    bar.setAttribute("aria-label", bar.title);
     container.append(bar);
   });
+}
+
+function scaledMonthlyBarHeight(value, maxValue) {
+  const amount = Math.max(Number(value) || 0, 0);
+  const maximum = Math.max(Number(maxValue) || 0, 0);
+  if (!amount || !maximum) return 6;
+  return Math.max(8, Math.min(100, amount / maximum * 100));
 }
 
 function handleHomeMonthChartClick(event) {
@@ -1878,6 +2180,7 @@ function snapshotFinanceState() {
     savingsGoal: { ...state.savingsGoal },
     exchangeRate: state.exchangeRate,
     setupComplete: state.setupComplete,
+    homeOrder: currentHomeOrder(),
   };
 }
 
@@ -1894,6 +2197,7 @@ function restoreFinanceSnapshot(snapshot) {
   state.savingsGoal = snapshot.savingsGoal ? { ...snapshot.savingsGoal } : state.savingsGoal;
   state.exchangeRate = Number(snapshot.exchangeRate) > 0 ? Number(snapshot.exchangeRate) : state.exchangeRate;
   if (typeof snapshot.setupComplete === "boolean") state.setupComplete = snapshot.setupComplete;
+  if (Array.isArray(snapshot.homeOrder)) state.homeOrder = normalizeHomeOrder(snapshot.homeOrder);
   syncPrimarySavingsGoal();
 
   ensureDefaultBanks();
@@ -1907,6 +2211,8 @@ function restoreFinanceSnapshot(snapshot) {
   saveSavingsGoal();
   saveExchangeRate(state.exchangeRate);
   saveSetupComplete();
+  applyHomeOrder(state.homeOrder);
+  saveHomeOrder(state.homeOrder);
   if (els.eurToLekRateInput) els.eurToLekRateInput.value = formatRateInput(state.exchangeRate);
   syncTypeControls();
   render();
@@ -2843,7 +3149,7 @@ function formatPlainNumber(value) {
 }
 
 function openIncomeDetail() {
-  state.incomeDetailRange = state.incomeDetailRange || "week";
+  state.incomeDetailRange = state.incomeDetailRange || "month";
   renderIncomeDetail();
   els.incomeDetailOverlay.hidden = false;
 }
@@ -2855,7 +3161,7 @@ function closeIncomeDetail() {
 function renderIncomeDetail() {
   if (!els.incomeDetailChart || !els.incomeDetailAxis) return;
 
-  const data = incomeDetailData(state.incomeDetailRange || "week");
+  const data = incomeDetailData(state.incomeDetailRange || "month");
   state.incomeDetailRange = data.range;
   document.querySelectorAll("[data-income-detail-range]").forEach((button) => {
     button.classList.toggle("active", button.dataset.incomeDetailRange === data.range);
@@ -2865,7 +3171,7 @@ function renderIncomeDetail() {
   setText(els.incomeDetailTotalLek, moneyLekShort(data.totals.ALL));
   setText(els.incomeDetailTotalEuro, moneyEuroCompact(data.totals.EUR));
   setText(els.incomeDetailNote, data.note);
-  renderIncomeDetailDots(data.points);
+  renderIncomeDetailBars(data.points);
 }
 
 function incomeDetailData(range, now = new Date()) {
@@ -2880,10 +3186,13 @@ function incomeTodayDetail(now) {
   const isoDate = toLocalIso(now);
   const totals = incomesForDate(isoDate);
   const currentHour = now.getHours() + now.getMinutes() / 60;
-  const points = anchors.map((hour) => ({
-    label: String(hour),
+  const currentBucketIndex = hourBucketIndex(currentHour, anchors);
+  const points = anchors.map((hour, index) => ({
+    label: String(hour).padStart(2, "0"),
+    detailLabel: `Ora ${String(hour).padStart(2, "0")}:00`,
     totals: emptyMoneyTotals(),
     muted: hour > currentHour && hour !== 24,
+    current: index === currentBucketIndex,
   }));
 
   state.entries
@@ -2899,7 +3208,7 @@ function incomeTodayDetail(now) {
     range: "today",
     title: "Dita",
     totals,
-    note: "Çdo pikë tregon vetëm hyrjet reale të sotme, të grupuara sipas orës së regjistrimit.",
+    note: "Çdo shtyllë tregon vetëm hyrjet reale të sotme, të grupuara sipas orës së regjistrimit.",
     points,
   };
 }
@@ -2913,8 +3222,10 @@ function incomeWeekDetail(now) {
     const iso = toLocalIso(date);
     return {
       label,
+      detailLabel: capitalizeFirst(date.toLocaleDateString("sq-AL", { weekday: "long", day: "numeric", month: "short" })),
       totals: iso <= today ? incomesForDate(iso) : emptyMoneyTotals(),
       muted: iso > today,
+      current: iso === today,
     };
   });
 
@@ -2922,7 +3233,7 @@ function incomeWeekDetail(now) {
     range: "week",
     title: "Java",
     totals: addMoneyTotals(points.filter((point) => !point.muted).map((point) => point.totals)),
-    note: "Çdo pikë tregon të ardhurat e një dite të javës.",
+    note: "Çdo shtyllë tregon të ardhurat e një dite të javës.",
     points,
   };
 }
@@ -2937,8 +3248,10 @@ function incomeMonthDetail(now) {
     const iso = toLocalIso(date);
     return {
       label: labelDays.has(day) ? String(day) : "",
+      detailLabel: `Dita ${day}`,
       totals: iso <= today ? incomesForDate(iso) : emptyMoneyTotals(),
       muted: iso > today,
+      current: iso === today,
     };
   });
 
@@ -2946,62 +3259,45 @@ function incomeMonthDetail(now) {
     range: "month",
     title: capitalizeFirst(monthNames[now.getMonth()]),
     totals: addMoneyTotals(points.filter((point) => !point.muted).map((point) => point.totals)),
-    note: "Çdo pikë tregon të ardhurat për një ditë të muajit aktual.",
+    note: "Çdo shtyllë tregon të ardhurat për një ditë të muajit aktual.",
     points,
   };
 }
 
 function incomeYearDetail(now) {
-  const monthLetters = ["J", "S", "M", "P", "M", "Q", "K", "G", "S", "T", "N", "D"];
+  const monthLetters = ["Jan", "Shk", "Mar", "Pri", "Maj", "Qer", "Kor", "Gus", "Sht", "Tet", "Nën", "Dhj"];
   const monthlyTotals = monthlyTotalsByType(now.getFullYear(), "income");
   const points = monthlyTotals.map((totals, index) => ({
     label: monthLetters[index],
+    detailLabel: capitalizeFirst(monthNames[index]),
     totals: index <= now.getMonth() ? totals : emptyMoneyTotals(),
     muted: index > now.getMonth(),
+    current: index === now.getMonth(),
   }));
 
   return {
     range: "year",
     title: String(now.getFullYear()),
     totals: addMoneyTotals(points.filter((point) => !point.muted).map((point) => point.totals)),
-    note: "Çdo pikë tregon të ardhurat e muajit përkatës.",
+    note: "Çdo shtyllë tregon të ardhurat e muajit përkatës.",
     points,
   };
 }
 
-function renderIncomeDetailDots(points) {
-  const values = points.map((point) => Math.max(totalsToLek(point.totals), 0));
-  const maxValue = Math.max(...values, 1);
-
-  els.incomeDetailChart.innerHTML = "";
-  els.incomeDetailAxis.innerHTML = "";
-  els.incomeDetailChart.style.setProperty("--point-count", points.length);
-  els.incomeDetailChart.style.setProperty("--point-step", `${100 / Math.max(points.length, 1)}%`);
-  els.incomeDetailAxis.style.setProperty("--point-count", points.length);
-
-  points.forEach((point) => {
-    const valueLek = Math.max(totalsToLek(point.totals), 0);
-    const ratio = clamp01(valueLek / maxValue);
-    const dot = document.createElement("button");
-    dot.className = `income-detail-dot ${monthlyDotTone(ratio)}`;
-    dot.classList.toggle("is-muted", Boolean(point.muted));
-    dot.classList.toggle("is-zero", valueLek === 0);
-    dot.type = "button";
-    dot.style.setProperty("--dot-top", `${86 - ratio * 72}%`);
-    dot.title = `${point.label || "Periudha"}: ${moneyPairCompact(point.totals)}`;
-    dot.setAttribute("aria-label", dot.title);
-    dot.addEventListener("click", () => {
-      els.incomeDetailChart.querySelectorAll(".income-detail-dot.is-selected").forEach((item) => item.classList.remove("is-selected"));
-      dot.classList.add("is-selected");
+function renderIncomeDetailBars(points) {
+  renderDetailBarChart({
+    container: els.incomeDetailChart,
+    axisContainer: els.incomeDetailAxis,
+    points,
+    chartType: "income",
+    valueForPoint: (point) => Math.max(totalsToLek(point.totals), 0),
+    titleForPoint: (point) => `${point.detailLabel || point.label || "Periudha"}: ${moneyPairCompact(point.totals)}`,
+    onSelect: (point) => {
+      const label = point.detailLabel || point.label || "Periudha";
       setText(els.incomeDetailTotalLek, moneyLekShort(point.totals.ALL));
       setText(els.incomeDetailTotalEuro, moneyEuroCompact(point.totals.EUR));
-      setText(els.incomeDetailNote, `${point.label || "Periudha"} · ${moneyPairCompact(point.totals)}`);
-    });
-    els.incomeDetailChart.append(dot);
-
-    const axis = document.createElement("span");
-    axis.textContent = point.label;
-    els.incomeDetailAxis.append(axis);
+      setText(els.incomeDetailNote, `${label} · ${moneyPairCompact(point.totals)}`);
+    },
   });
 }
 
@@ -3065,13 +3361,15 @@ function savingsTodayDetail(now) {
     title: "Sot",
     totalLek,
     note: "Sot ndahet sipas orëve. Shpenzimet pa orë shpërndahen deri në momentin aktual.",
-    points: anchors.map((hour) => {
+    points: anchors.map((hour, index) => {
       const budgetToHour = plan.dailySpendBudgetLek * (hour / 24);
       const spentToHour = spentTodayLek * Math.min(hour / elapsedHour, 1);
       return {
-        label: String(hour),
+        label: String(hour).padStart(2, "0"),
+        detailLabel: `Ora ${String(hour).padStart(2, "0")}:00`,
         value: budgetToHour - spentToHour,
         muted: hour > currentHour && hour !== 24,
+        current: index === hourBucketIndex(currentHour, anchors),
       };
     }),
   };
@@ -3086,8 +3384,10 @@ function savingsWeekDetail(now) {
     const iso = toLocalIso(date);
     return {
       label,
+      detailLabel: capitalizeFirst(date.toLocaleDateString("sq-AL", { weekday: "long", day: "numeric", month: "short" })),
       value: iso <= today ? savingsForDate(date) : 0,
       muted: iso > today,
+      current: iso === today,
     };
   });
 
@@ -3095,7 +3395,7 @@ function savingsWeekDetail(now) {
     range: "week",
     title: "Kjo javë",
     totalLek: sumPointValues(points),
-    note: "Çdo kolonë tregon kursimin ditor të javës.",
+    note: "Çdo shtyllë tregon kursimin ditor të javës.",
     points,
   };
 }
@@ -3109,8 +3409,10 @@ function savingsMonthDetail(now) {
     const iso = toLocalIso(date);
     return {
       label: labelDays.has(index + 1) ? String(index + 1) : "",
+      detailLabel: `Dita ${index + 1}`,
       value: iso <= today ? savingsForDate(date) : 0,
       muted: iso > today,
+      current: iso === today,
     };
   });
 
@@ -3118,19 +3420,21 @@ function savingsMonthDetail(now) {
     range: "month",
     title: capitalizeFirst(monthNames[now.getMonth()]),
     totalLek: sumPointValues(points),
-    note: "Çdo kolonë tregon kursimin për një ditë të muajit aktual.",
+    note: "Çdo shtyllë tregon kursimin për një ditë të muajit aktual.",
     points,
   };
 }
 
 function savingsYearDetail(now) {
-  const monthLetters = ["J", "S", "M", "P", "M", "Q", "K", "G", "S", "T", "N", "D"];
+  const monthLetters = ["Jan", "Shk", "Mar", "Pri", "Maj", "Qer", "Kor", "Gus", "Sht", "Tet", "Nën", "Dhj"];
   const points = monthlySavingsTotals(now.getFullYear(), now).map((totals, index) => {
     const isFuture = index > now.getMonth();
     return {
       label: monthLetters[index],
+      detailLabel: capitalizeFirst(monthNames[index]),
       value: isFuture ? 0 : totalsToLek(totals),
       muted: isFuture,
+      current: index === now.getMonth(),
     };
   });
 
@@ -3138,44 +3442,66 @@ function savingsYearDetail(now) {
     range: "year",
     title: String(now.getFullYear()),
     totalLek: sumPointValues(points),
-    note: "Çdo kolonë tregon kursimin e muajit përkatës.",
+    note: "Çdo shtyllë tregon kursimin e muajit përkatës.",
     points,
   };
 }
 
 function renderSavingsDetailBars(points) {
-  const values = points.map((point) => Number(point.value) || 0);
-  const maxAbs = Math.max(...values.map((value) => Math.abs(value)), 1);
-
-  els.savingsDetailChart.innerHTML = "";
-  els.savingsDetailAxis.innerHTML = "";
-  els.savingsDetailChart.style.setProperty("--point-count", points.length);
-  els.savingsDetailChart.style.setProperty("--point-step", `${100 / Math.max(points.length, 1)}%`);
-  els.savingsDetailAxis.style.setProperty("--point-count", points.length);
-
-  points.forEach((point) => {
-    const value = Number(point.value) || 0;
-    const height = value === 0 ? 3 : Math.max(8, (Math.abs(value) / maxAbs) * 46);
-    const bar = document.createElement("button");
-    bar.className = `savings-detail-bar ${value > 0 ? "is-positive" : value < 0 ? "is-negative" : "is-zero"}`;
-    bar.classList.toggle("is-muted", Boolean(point.muted));
-    bar.type = "button";
-    bar.style.setProperty("--bar-height", `${height}%`);
-    bar.style.setProperty("--bar-top", value < 0 ? "50%" : `${50 - height}%`);
-    bar.title = `${point.label || "Vlerë"}: ${moneyLekShort(value)} / ${moneyEuroCompact(value / state.exchangeRate)}`;
-    bar.setAttribute("aria-label", bar.title);
-    bar.addEventListener("click", () => {
-      els.savingsDetailChart.querySelectorAll(".savings-detail-bar.is-selected").forEach((item) => item.classList.remove("is-selected"));
-      bar.classList.add("is-selected");
+  renderDetailBarChart({
+    container: els.savingsDetailChart,
+    axisContainer: els.savingsDetailAxis,
+    points,
+    chartType: "savings",
+    valueForPoint: (point) => Number(point.value) || 0,
+    titleForPoint: (point, value) => `${point.detailLabel || point.label || "Periudha"}: ${moneyLekShort(value)} / ${moneyEuroCompact(value / state.exchangeRate)}`,
+    onSelect: (point, value) => {
+      const label = point.detailLabel || point.label || "Periudha";
       setText(els.savingsDetailTotalLek, moneyLekShort(value));
       setText(els.savingsDetailTotalEuro, moneyEuroCompact(value / state.exchangeRate));
-      setText(els.savingsDetailNote, `${point.label || "Periudha"} · ${value >= 0 ? "kursim" : "mbi buxhet"} ${moneyLekShort(value)}`);
+      setText(els.savingsDetailNote, `${label} · ${value >= 0 ? "kursim" : "mbi buxhet"} ${moneyLekShort(value)}`);
+    },
+  });
+}
+
+function renderDetailBarChart({ container, axisContainer, points, chartType, valueForPoint, titleForPoint, onSelect }) {
+  if (!container || !axisContainer) return;
+
+  const values = points.map((point) => Number(valueForPoint(point)) || 0);
+  const maxAbs = Math.max(...values.map((value) => Math.abs(value)), 1);
+
+  container.innerHTML = "";
+  axisContainer.innerHTML = "";
+  container.style.setProperty("--point-count", points.length);
+  axisContainer.style.setProperty("--point-count", points.length);
+  container.classList.toggle("is-dense", points.length > 16);
+  axisContainer.classList.toggle("is-dense", points.length > 16);
+
+  points.forEach((point, index) => {
+    const value = values[index];
+    const height = point.muted || value === 0 ? 6 : scaledMonthlyBarHeight(Math.abs(value), maxAbs);
+    const bar = document.createElement("button");
+    bar.className = [
+      "detail-chart-bar",
+      `${chartType}-detail-bar`,
+      value < 0 ? "is-negative" : value > 0 ? "has-value" : "is-zero",
+      point.current ? "is-current" : "",
+      point.muted ? "is-future" : "",
+    ].filter(Boolean).join(" ");
+    bar.type = "button";
+    bar.style.setProperty("--bar-height", `${height}%`);
+    bar.title = titleForPoint(point, value);
+    bar.setAttribute("aria-label", bar.title);
+    bar.addEventListener("click", () => {
+      container.querySelectorAll(".detail-chart-bar.is-selected").forEach((item) => item.classList.remove("is-selected"));
+      bar.classList.add("is-selected");
+      onSelect(point, value);
     });
-    els.savingsDetailChart.append(bar);
+    container.append(bar);
 
     const axis = document.createElement("span");
     axis.textContent = point.label;
-    els.savingsDetailAxis.append(axis);
+    axisContainer.append(axis);
   });
 }
 
@@ -3286,6 +3612,248 @@ function setListVisibility(button, targets, visible) {
 function scrollToSection(selector) {
   const target = document.querySelector(selector);
   target?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function loadHomeOrder() {
+  try {
+    return normalizeHomeOrder(JSON.parse(localStorage.getItem(HOME_ORDER_KEY)));
+  } catch {
+    return [...DEFAULT_HOME_ORDER];
+  }
+}
+
+function normalizeHomeOrder(order) {
+  const valid = Array.isArray(order) ? order.filter((id) => DEFAULT_HOME_ORDER.includes(id)) : [];
+  return [...new Set([...valid, ...DEFAULT_HOME_ORDER])];
+}
+
+function currentHomeBlocks() {
+  return els.overviewHome ? Array.from(els.overviewHome.querySelectorAll(":scope > [data-home-block]")) : [];
+}
+
+function currentHomeOrder() {
+  return currentHomeBlocks().map((block) => block.dataset.homeBlock).filter(Boolean);
+}
+
+function applyHomeOrder(order = state.homeOrder) {
+  if (!els.overviewHome) return;
+
+  const blocks = currentHomeBlocks();
+  const byId = new Map(blocks.map((block) => [block.dataset.homeBlock, block]));
+  const normalized = [...new Set([...(Array.isArray(order) ? order : []), ...DEFAULT_HOME_ORDER])].filter((id) => byId.has(id));
+  normalized.forEach((id) => {
+    const block = byId.get(id);
+    els.overviewHome.append(block);
+    if (id === "safe-spend" && els.homeSetupHint) els.overviewHome.append(els.homeSetupHint);
+  });
+  state.homeOrder = normalized;
+}
+
+function saveHomeOrder(order = currentHomeOrder()) {
+  state.homeOrder = normalizeHomeOrder(order);
+  localStorage.setItem(HOME_ORDER_KEY, JSON.stringify(state.homeOrder));
+}
+
+function handleHomeReorderPointerDown(event) {
+  if (event.pointerType === "touch") return;
+  if (!event.isPrimary || event.button > 0) return;
+  const block = homeBlockFromPressTarget(event.target);
+  if (!block) return;
+  beginHomeReorderPress(block, "pointer", event.pointerId, event.clientX, event.clientY);
+}
+
+function handleHomeReorderPointerMove(event) {
+  if (homeReorderSession.inputType !== "pointer" || event.pointerId !== homeReorderSession.pointerId) return;
+  updateHomeReorderPress(event.clientX, event.clientY, event);
+}
+
+function handleHomeReorderPointerUp(event) {
+  if (homeReorderSession.inputType !== "pointer" || event.pointerId !== homeReorderSession.pointerId) return;
+  endHomeReorderPress();
+}
+
+function handleHomeReorderPointerCancel(event) {
+  if (homeReorderSession.inputType !== "pointer" || event.pointerId !== homeReorderSession.pointerId) return;
+  endHomeReorderPress(false);
+}
+
+function handleHomeReorderTouchStart(event) {
+  if (event.touches.length !== 1) return;
+  const block = homeBlockFromPressTarget(event.target);
+  if (!block) return;
+  const touch = event.touches[0];
+  beginHomeReorderPress(block, "touch", touch.identifier, touch.clientX, touch.clientY);
+}
+
+function handleHomeReorderTouchMove(event) {
+  if (homeReorderSession.inputType !== "touch") return;
+  const touch = Array.from(event.touches).find((item) => item.identifier === homeReorderSession.touchId);
+  if (!touch) return;
+  updateHomeReorderPress(touch.clientX, touch.clientY, event);
+}
+
+function handleHomeReorderTouchEnd(event) {
+  if (homeReorderSession.inputType !== "touch") return;
+  const ended = Array.from(event.changedTouches).some((item) => item.identifier === homeReorderSession.touchId);
+  if (ended) endHomeReorderPress();
+}
+
+function handleHomeReorderTouchCancel(event) {
+  if (homeReorderSession.inputType !== "touch") return;
+  const cancelled = Array.from(event.changedTouches).some((item) => item.identifier === homeReorderSession.touchId);
+  if (cancelled) endHomeReorderPress(false);
+}
+
+function handleHomeReorderContextMenu(event) {
+  if (!homeReorderSession.active) return;
+  event.preventDefault();
+}
+
+function homeBlockFromPressTarget(target) {
+  if (!(target instanceof Element)) return null;
+  if (target.closest("button, a, input, select, textarea")) return null;
+  const block = target.closest("[data-home-block]");
+  return block && els.overviewHome?.contains(block) ? block : null;
+}
+
+function beginHomeReorderPress(block, inputType, inputId, clientX, clientY) {
+  if (homeReorderSession.active) finishHomeReorder(false);
+  clearTimeout(homeReorderSession.timer);
+  homeReorderSession.inputType = inputType;
+  homeReorderSession.pointerId = inputType === "pointer" ? inputId : null;
+  homeReorderSession.touchId = inputType === "touch" ? inputId : null;
+  homeReorderSession.block = block;
+  homeReorderSession.startX = clientX;
+  homeReorderSession.startY = clientY;
+  homeReorderSession.moved = false;
+  homeReorderSession.timer = window.setTimeout(() => activateHomeReorder(block, clientX, clientY), 480);
+}
+
+function updateHomeReorderPress(clientX, clientY, event) {
+  if (!homeReorderSession.block) return;
+  const distance = Math.hypot(clientX - homeReorderSession.startX, clientY - homeReorderSession.startY);
+
+  if (!homeReorderSession.active) {
+    if (distance > 10) cancelHomeReorderPress();
+    return;
+  }
+
+  event.preventDefault();
+  moveDraggedHomeBlock(clientY);
+  homeReorderSession.moved = homeReorderSession.moved || distance > 4;
+}
+
+function handleHomeReorderClick(event) {
+  if (Date.now() < homeReorderSession.suppressClickUntil) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+}
+
+function activateHomeReorder(block, clientX, clientY) {
+  if (!block || homeReorderSession.block !== block) return;
+  const rect = block.getBoundingClientRect();
+  const placeholder = document.createElement("div");
+  placeholder.className = "home-reorder-placeholder";
+  placeholder.style.height = `${rect.height}px`;
+  placeholder.setAttribute("aria-hidden", "true");
+  block.before(placeholder);
+
+  homeReorderSession.timer = 0;
+  homeReorderSession.active = true;
+  homeReorderSession.moved = false;
+  homeReorderSession.placeholder = placeholder;
+  homeReorderSession.grabOffsetY = Math.max(0, Math.min(clientY - rect.top, rect.height));
+  homeReorderSession.dragHeight = rect.height;
+  homeReorderSession.originalStyle = block.getAttribute("style");
+  document.body.classList.add("home-reorder-active");
+  block.classList.add("is-reordering");
+  block.setAttribute("aria-grabbed", "true");
+  block.style.position = "fixed";
+  block.style.left = `${rect.left}px`;
+  block.style.top = `${rect.top}px`;
+  block.style.width = `${rect.width}px`;
+  block.style.height = `${rect.height}px`;
+  block.style.margin = "0";
+  navigator.vibrate?.(30);
+  showInfoToast("Zvarrite bllokun dhe lëshoje në pozicionin e ri.");
+}
+
+function moveDraggedHomeBlock(clientY) {
+  const { block, placeholder, grabOffsetY, dragHeight } = homeReorderSession;
+  if (!block || !placeholder || !els.overviewHome) return;
+
+  const maxTop = Math.max(window.innerHeight - dragHeight - 8, 8);
+  block.style.top = `${Math.max(8, Math.min(clientY - grabOffsetY, maxTop))}px`;
+
+  const candidates = currentHomeBlocks().filter((item) => item !== block);
+  const before = candidates.find((item) => {
+    const rect = item.getBoundingClientRect();
+    return clientY < rect.top + rect.height / 2;
+  });
+  if (before) els.overviewHome.insertBefore(placeholder, before);
+  else els.overviewHome.append(placeholder);
+
+  if (clientY < 88) window.scrollBy(0, -12);
+  else if (clientY > window.innerHeight - 110) window.scrollBy(0, 12);
+}
+
+function endHomeReorderPress(announce = true) {
+  clearTimeout(homeReorderSession.timer);
+  if (!homeReorderSession.active) {
+    cancelHomeReorderPress();
+    return;
+  }
+  homeReorderSession.suppressClickUntil = Date.now() + 500;
+  finishHomeReorder(announce);
+}
+
+function cancelHomeReorderPress() {
+  clearTimeout(homeReorderSession.timer);
+  homeReorderSession.timer = 0;
+  homeReorderSession.inputType = "";
+  homeReorderSession.pointerId = null;
+  homeReorderSession.touchId = null;
+  if (!homeReorderSession.active) {
+    homeReorderSession.block = null;
+    homeReorderSession.placeholder = null;
+  }
+}
+
+function finishHomeReorder(announce = false) {
+  clearTimeout(homeReorderSession.timer);
+  const { block, placeholder, originalStyle } = homeReorderSession;
+  if (homeReorderSession.active && block && placeholder) {
+    els.overviewHome?.insertBefore(block, placeholder);
+    if (block.dataset.homeBlock === "safe-spend" && els.homeSetupHint) {
+      els.overviewHome?.insertBefore(els.homeSetupHint, placeholder);
+    }
+    placeholder.remove();
+    if (originalStyle === null) block.removeAttribute("style");
+    else block.setAttribute("style", originalStyle);
+    block.classList.remove("is-reordering");
+    block.removeAttribute("aria-grabbed");
+    saveHomeOrder();
+  }
+  document.body.classList.remove("home-reorder-active");
+  const suppressClickUntil = homeReorderSession.suppressClickUntil;
+  homeReorderSession = {
+    timer: 0,
+    inputType: "",
+    pointerId: null,
+    touchId: null,
+    block: null,
+    placeholder: null,
+    startX: 0,
+    startY: 0,
+    grabOffsetY: 0,
+    dragHeight: 0,
+    originalStyle: null,
+    active: false,
+    moved: false,
+    suppressClickUntil,
+  };
+  if (announce) showInfoToast("Renditja e Home u ruajt.");
 }
 
 function openQuickAdd() {
@@ -4035,7 +4603,7 @@ async function imageFromFile(file) {
 function exportData() {
   const backup = {
     app: "financat-e-mia",
-    version: 10,
+    version: 11,
     exportedAt: new Date().toISOString(),
     entries: state.entries,
     banks: state.banks,
@@ -4047,6 +4615,7 @@ function exportData() {
     categories: normalizeCategoriesData(state.categories),
     exchangeRate: state.exchangeRate,
     setupComplete: state.setupComplete,
+    homeOrder: currentHomeOrder(),
   };
   const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
@@ -4193,6 +4762,7 @@ function normalizeImportedBackup(parsed) {
     "categories",
     "exchangeRate",
     "setupComplete",
+    "homeOrder",
   ];
   const hasSupportedData = isEntryList || supportedFields.some((key) => Object.prototype.hasOwnProperty.call(source, key));
 
@@ -4211,6 +4781,7 @@ function normalizeImportedBackup(parsed) {
     categories,
     exchangeRate,
     setupComplete: Object.prototype.hasOwnProperty.call(source, "setupComplete") ? Boolean(source.setupComplete) : true,
+    homeOrder: Array.isArray(source.homeOrder) ? normalizeHomeOrder(source.homeOrder) : null,
     referenceDate,
     dateRange: entryDateRange(entries),
     hasSupportedData,
@@ -4230,12 +4801,14 @@ function applyImportedBackup(imported) {
     state.categories = imported.categories;
     state.exchangeRate = imported.exchangeRate;
     state.setupComplete = imported.setupComplete;
+    if (Array.isArray(imported.homeOrder)) state.homeOrder = imported.homeOrder;
   } else {
     state.categories = learnCategoriesFromData(state.categories, state.entries, state.recurringExpenses);
   }
 
   ensureDefaultBanks();
   syncPrimarySavingsGoal();
+  applyHomeOrder(state.homeOrder);
 }
 
 function persistFinanceState() {
@@ -4249,6 +4822,7 @@ function persistFinanceState() {
   saveCategories();
   saveExchangeRate(state.exchangeRate);
   saveSetupComplete();
+  saveHomeOrder(state.homeOrder);
 }
 
 function closePanelsAfterImport() {
@@ -4848,6 +5422,7 @@ function createAutoBackup() {
       savingsGoal: state.savingsGoal,
       exchangeRate: state.exchangeRate,
       setupComplete: state.setupComplete,
+      homeOrder: currentHomeOrder(),
       savedAt: new Date().toISOString(),
     })
   );
@@ -4887,6 +5462,7 @@ function restoreAutoBackup() {
     syncPrimarySavingsGoal();
     state.exchangeRate = Number(backup.exchangeRate) > 0 ? Number(backup.exchangeRate) : state.exchangeRate;
     if (typeof backup.setupComplete === "boolean") state.setupComplete = backup.setupComplete;
+    if (Array.isArray(backup.homeOrder)) state.homeOrder = normalizeHomeOrder(backup.homeOrder);
     saveEntries();
     saveBanks();
     saveRecurringExpenses();
@@ -4897,6 +5473,8 @@ function restoreAutoBackup() {
     saveSavingsGoal();
     saveExchangeRate(state.exchangeRate);
     saveSetupComplete();
+    applyHomeOrder(state.homeOrder);
+    saveHomeOrder(state.homeOrder);
     els.eurToLekRateInput.value = formatRateInput(state.exchangeRate);
     syncTypeControls();
     render();
