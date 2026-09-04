@@ -3983,8 +3983,16 @@ function validateQuickAddResult(result) {
     : allowedCategories.find((item) => item.toLowerCase() === "tjetër") || allowedCategories[0];
 
   const suggestedBank = findBank(String(result.suggestedAccountId || "").trim());
-  const suggestedAccountId = suggestedBank && suggestedBank.currency === currency ? suggestedBank.id : "";
-  const suggestedAccountName = suggestedAccountId ? suggestedBank.name : "";
+  let suggestedAccountId = suggestedBank && suggestedBank.currency === currency ? suggestedBank.id : "";
+
+  if (!suggestedAccountId && type === "expense" && !["Biznes", "Abonime"].includes(category)) {
+    const personalBank = state.banks.find(
+      (bank) => bank.currency === currency && /personale/i.test(bank.name),
+    );
+    if (personalBank) suggestedAccountId = personalBank.id;
+  }
+
+  const suggestedAccountName = suggestedAccountId ? findBank(suggestedAccountId)?.name || "" : "";
   const confidence = Math.min(Math.max(Number(result.confidence) || 0, 0), 1);
   const warning = String(result.warning || "").trim().slice(0, 160);
 
