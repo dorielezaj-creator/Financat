@@ -14,7 +14,7 @@
     <link rel="manifest" href="manifest.webmanifest?v=20260821-1" />
     <link rel="icon" href="icon.svg?v=20260820-1" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="icon.svg?v=20260820-1" />
-    <link rel="stylesheet" href="styles.css?v=20260905-phase4-quickadd-1" />
+    <link rel="stylesheet" href="styles.css?v=20260905-phase5-voice-1" />
   </head>
   <body>
     <main class="app-shell">
@@ -211,9 +211,12 @@
             <label for="quickAddAiInput">Shkruaje siç do ta thoje</label>
             <div class="quick-add-ai-row">
               <textarea id="quickAddAiInput" rows="3" maxlength="220" placeholder="p.sh. Shto 2,400 lekë karburant sot nga llogaria personale."></textarea>
-              <button id="quickAddAiBtn" class="quick-add-ai-button" type="button">Kupto me AI</button>
+              <div class="quick-add-ai-actions">
+                <button id="quickAddVoiceBtn" class="quick-add-voice-button" type="button" aria-pressed="false">🎙 Fol</button>
+                <button id="quickAddAiBtn" class="quick-add-ai-button" type="button">Kupto me AI</button>
+              </div>
             </div>
-            <small id="quickAddAiStatus" aria-live="polite">AI do ta përgatisë zërin; ti e kontrollon para ruajtjes.</small>
+            <small id="quickAddAiStatus" aria-live="polite">Shkruaj ose fol; AI e përgatit zërin dhe ti e kontrollon para ruajtjes.</small>
           </div>
 
           <div class="quick-add-divider"><span>ose</span></div>
@@ -1068,6 +1071,6 @@
       </div>
     </template>
 
-    <script src="app.js?v=20260905-phase4-accountfix-2"></script>
+    <script src="app.js?v=20260905-phase5-voice-1"></script>
   </body>
 </html>

@@ -12,6 +12,11 @@ const THEME_KEY = "financat-e-mia:theme:v2";
 const RECEIPT_AI_ENDPOINT_KEY = "financat-e-mia:receipt-ai-endpoint:v1";
 const RECEIPT_AI_TOKEN_KEY = "financat-e-mia:receipt-ai-token:v1";
 const RECEIPT_AI_TIMEOUT_MS = 45000;
+const VOICE_MAX_RECORDING_MS = 30_000;
+let quickAddRecorder = null;
+let quickAddVoiceStream = null;
+let quickAddVoiceChunks = [];
+let quickAddVoiceTimer = null;
 const RECEIPT_AI_MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const NET_WORTH_HISTORY_KEY = "financat-e-mia:net-worth-history:v1";
 const SETUP_KEY = "financat-e-mia:setup-complete:v1";
@@ -465,6 +470,7 @@ const els = {
   closeQuickAddBtn: document.querySelector("#closeQuickAddBtn"),
   quickAddAiInput: document.querySelector("#quickAddAiInput"),
   quickAddAiBtn: document.querySelector("#quickAddAiBtn"),
+  quickAddVoiceBtn: document.querySelector("#quickAddVoiceBtn"),
   quickAddAiStatus: document.querySelector("#quickAddAiStatus"),
   quickAddExpenseBtn: document.querySelector("#quickAddExpenseBtn"),
   quickAddIncomeBtn: document.querySelector("#quickAddIncomeBtn"),
@@ -527,6 +533,7 @@ els.quickAddOverlay?.addEventListener("click", (event) => {
   if (event.target === els.quickAddOverlay) closeQuickAdd();
 });
 els.quickAddAiBtn?.addEventListener("click", handleQuickAddAi);
+els.quickAddVoiceBtn?.addEventListener("click", toggleQuickAddVoice);
 els.quickAddAiInput?.addEventListener("keydown", (event) => {
   if ((event.metaKey || event.ctrlKey) && event.key === "Enter") handleQuickAddAi();
 });
@@ -3878,9 +3885,166 @@ function openQuickAdd() {
 }
 
 function closeQuickAdd() {
+  stopQuickAddVoice({ discard: true });
   if (els.quickAddOverlay) els.quickAddOverlay.hidden = true;
   if (els.quickAddAiInput) els.quickAddAiInput.value = "";
-  setQuickAddAiStatus("AI do ta përgatisë zërin; ti e kontrollon para ruajtjes.");
+  setQuickAddAiStatus("Shkruaj ose fol; AI e përgatit zërin dhe ti e kontrollon para ruajtjes.");
+}
+
+async function toggleQuickAddVoice() {
+  if (quickAddRecorder?.state === "recording") {
+    stopQuickAddVoice();
+    return;
+  }
+
+  if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
+    setQuickAddAiStatus("Ky browser nuk mbështet regjistrimin e zërit. Përdor tekstin.");
+    return;
+  }
+
+  try {
+    quickAddVoiceStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    quickAddVoiceChunks = [];
+
+    const preferredTypes = [
+      "audio/webm;codecs=opus",
+      "audio/webm",
+      "audio/mp4",
+      "audio/ogg;codecs=opus",
+    ];
+    const mimeType = preferredTypes.find((type) => MediaRecorder.isTypeSupported?.(type)) || "";
+    quickAddRecorder = mimeType
+      ? new MediaRecorder(quickAddVoiceStream, { mimeType })
+      : new MediaRecorder(quickAddVoiceStream);
+
+    quickAddRecorder.addEventListener("dataavailable", (event) => {
+      if (event.data?.size) quickAddVoiceChunks.push(event.data);
+    });
+
+    quickAddRecorder.addEventListener("stop", async () => {
+      const chunks = quickAddVoiceChunks;
+      const recorderType = quickAddRecorder?.mimeType || "audio/webm";
+      cleanupQuickAddVoice();
+
+      if (!chunks.length) {
+        setQuickAddAiStatus("Nuk u regjistrua zë. Provoje përsëri.");
+        return;
+      }
+
+      const audio = new Blob(chunks, { type: recorderType });
+      await transcribeQuickAddVoice(audio);
+    });
+
+    quickAddRecorder.start();
+    els.quickAddVoiceBtn?.classList.add("is-recording");
+    els.quickAddVoiceBtn?.setAttribute("aria-pressed", "true");
+    if (els.quickAddVoiceBtn) els.quickAddVoiceBtn.textContent = "■ Ndal";
+    setQuickAddAiStatus("Po dëgjoj... Thuaje shpenzimin ose të ardhurën dhe shtyp Ndal.");
+
+    quickAddVoiceTimer = window.setTimeout(() => stopQuickAddVoice(), VOICE_MAX_RECORDING_MS);
+  } catch (error) {
+    cleanupQuickAddVoice();
+    const denied = error?.name === "NotAllowedError" || error?.name === "SecurityError";
+    setQuickAddAiStatus(
+      denied
+        ? "Mikrofoni nuk u lejua. Jep leje për mikrofonin në browser dhe provo përsëri."
+        : "Nuk u hap dot mikrofoni. Provoje përsëri.",
+    );
+  }
+}
+
+function stopQuickAddVoice({ discard = false } = {}) {
+  if (quickAddVoiceTimer) {
+    window.clearTimeout(quickAddVoiceTimer);
+    quickAddVoiceTimer = null;
+  }
+
+  if (quickAddRecorder?.state === "recording") {
+    if (discard) {
+      quickAddVoiceChunks = [];
+      quickAddRecorder.ondataavailable = null;
+    }
+    quickAddRecorder.stop();
+    return;
+  }
+
+  cleanupQuickAddVoice();
+}
+
+function cleanupQuickAddVoice() {
+  if (quickAddVoiceTimer) {
+    window.clearTimeout(quickAddVoiceTimer);
+    quickAddVoiceTimer = null;
+  }
+  quickAddVoiceStream?.getTracks?.().forEach((track) => track.stop());
+  quickAddVoiceStream = null;
+  quickAddRecorder = null;
+  if (els.quickAddVoiceBtn) {
+    els.quickAddVoiceBtn.classList.remove("is-recording");
+    els.quickAddVoiceBtn.setAttribute("aria-pressed", "false");
+    els.quickAddVoiceBtn.textContent = "🎙 Fol";
+  }
+}
+
+async function transcribeQuickAddVoice(audioBlob) {
+  setQuickAddAiBusy(true);
+  if (els.quickAddVoiceBtn) els.quickAddVoiceBtn.disabled = true;
+  setQuickAddAiStatus("Po kthehet zëri në tekst...");
+
+  try {
+    const endpoint = transcribeAiEndpoint();
+    let token = receiptAiToken();
+    let response = await sendTranscriptionRequest(endpoint, token, audioBlob);
+    let result = await response.json().catch(() => ({}));
+
+    if (response.status === 401) {
+      localStorage.removeItem(RECEIPT_AI_TOKEN_KEY);
+      token = prompt("Ky backend kërkon kod aksesi. Vendose kodin që krijove në Cloudflare.")?.trim() || "";
+      if (!token) throw new Error("U anulua vendosja e kodit të aksesit.");
+      localStorage.setItem(RECEIPT_AI_TOKEN_KEY, token);
+      response = await sendTranscriptionRequest(endpoint, token, audioBlob);
+      result = await response.json().catch(() => ({}));
+    }
+
+    if (!response.ok) throw new Error(result.error || "Zëri nuk u kthye në tekst.");
+
+    const transcript = String(result.text || "").trim().slice(0, 220);
+    if (!transcript) throw new Error("Nuk u dëgjua tekst i qartë.");
+
+    if (els.quickAddAiInput) els.quickAddAiInput.value = transcript;
+    setQuickAddAiStatus(`U dëgjua: “${transcript}” — po e kuptoj me AI...`);
+    await handleQuickAddAi();
+  } catch (error) {
+    setQuickAddAiStatus(error?.message || "Zëri nuk u përpunua.");
+  } finally {
+    setQuickAddAiBusy(false);
+    if (els.quickAddVoiceBtn) els.quickAddVoiceBtn.disabled = false;
+  }
+}
+
+async function sendTranscriptionRequest(endpoint, token, audioBlob) {
+  const formData = new FormData();
+  const extension = audioBlob.type.includes("mp4") ? "m4a" : audioBlob.type.includes("ogg") ? "ogg" : "webm";
+  formData.append("audio", audioBlob, `voice.${extension}`);
+
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), RECEIPT_AI_TIMEOUT_MS);
+  try {
+    return await fetch(endpoint, {
+      method: "POST",
+      headers: token ? { "X-Receipt-Token": token } : {},
+      body: formData,
+      signal: controller.signal,
+    });
+  } finally {
+    window.clearTimeout(timeout);
+  }
+}
+
+function transcribeAiEndpoint() {
+  const url = new URL(receiptAiEndpoint());
+  url.pathname = "/api/transcribe";
+  return url.toString();
 }
 
 async function handleQuickAddAi() {
@@ -4029,6 +4193,7 @@ function setQuickAddAiStatus(text) {
 function setQuickAddAiBusy(isBusy) {
   if (els.quickAddAiBtn) els.quickAddAiBtn.disabled = isBusy;
   if (els.quickAddAiInput) els.quickAddAiInput.disabled = isBusy;
+  if (els.quickAddVoiceBtn && quickAddRecorder?.state !== "recording") els.quickAddVoiceBtn.disabled = isBusy;
 }
 
 function chooseQuickAddType(type) {
