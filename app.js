@@ -463,6 +463,9 @@ const els = {
   restoreBackupBtn: document.querySelector("#restoreBackupBtn"),
   quickAddOverlay: document.querySelector("#quickAddOverlay"),
   closeQuickAddBtn: document.querySelector("#closeQuickAddBtn"),
+  quickAddAiInput: document.querySelector("#quickAddAiInput"),
+  quickAddAiBtn: document.querySelector("#quickAddAiBtn"),
+  quickAddAiStatus: document.querySelector("#quickAddAiStatus"),
   quickAddExpenseBtn: document.querySelector("#quickAddExpenseBtn"),
   quickAddIncomeBtn: document.querySelector("#quickAddIncomeBtn"),
   undoToast: document.querySelector("#undoToast"),
@@ -522,6 +525,10 @@ els.overviewHome?.addEventListener("click", handleHomeReorderClick, true);
 els.closeQuickAddBtn?.addEventListener("click", closeQuickAdd);
 els.quickAddOverlay?.addEventListener("click", (event) => {
   if (event.target === els.quickAddOverlay) closeQuickAdd();
+});
+els.quickAddAiBtn?.addEventListener("click", handleQuickAddAi);
+els.quickAddAiInput?.addEventListener("keydown", (event) => {
+  if ((event.metaKey || event.ctrlKey) && event.key === "Enter") handleQuickAddAi();
 });
 els.quickAddExpenseBtn?.addEventListener("click", () => chooseQuickAddType("expense"));
 els.quickAddIncomeBtn?.addEventListener("click", () => chooseQuickAddType("income"));
@@ -3866,11 +3873,154 @@ function openQuickAdd() {
     return;
   }
   els.quickAddOverlay.hidden = false;
-  window.setTimeout(() => els.quickAddExpenseBtn?.focus(), 40);
+  setQuickAddAiStatus("AI do ta përgatisë zërin; ti e kontrollon para ruajtjes.");
+  window.setTimeout(() => els.quickAddAiInput?.focus(), 40);
 }
 
 function closeQuickAdd() {
   if (els.quickAddOverlay) els.quickAddOverlay.hidden = true;
+  if (els.quickAddAiInput) els.quickAddAiInput.value = "";
+  setQuickAddAiStatus("AI do ta përgatisë zërin; ti e kontrollon para ruajtjes.");
+}
+
+async function handleQuickAddAi() {
+  const text = String(els.quickAddAiInput?.value || "").trim();
+  if (!text) {
+    setQuickAddAiStatus("Shkruaj një fjali, p.sh. “2400 lekë karburant sot”.");
+    els.quickAddAiInput?.focus();
+    return;
+  }
+
+  setQuickAddAiBusy(true);
+  setQuickAddAiStatus("Po përgatitet zëri...");
+
+  try {
+    const endpoint = quickAddAiEndpoint();
+    let token = receiptAiToken();
+    let response = await sendQuickAddRequest(endpoint, token, text);
+    let result = await response.json().catch(() => ({}));
+
+    if (response.status === 401) {
+      localStorage.removeItem(RECEIPT_AI_TOKEN_KEY);
+      token = prompt("Ky backend kërkon kod aksesi. Vendose kodin që krijove në Cloudflare.")?.trim() || "";
+      if (!token) throw new Error("U anulua vendosja e kodit të aksesit.");
+      localStorage.setItem(RECEIPT_AI_TOKEN_KEY, token);
+      setQuickAddAiStatus("Po provohet me kodin e ri...");
+      response = await sendQuickAddRequest(endpoint, token, text);
+      result = await response.json().catch(() => ({}));
+    }
+
+    if (!response.ok) throw new Error(result.error || "AI nuk e kuptoi zërin.");
+
+    const parsed = validateQuickAddResult(result);
+    closeQuickAdd();
+    openEntryEditor(parsed.type);
+    applyQuickAddResult(parsed);
+
+    const accountNote = parsed.suggestedAccountName ? ` Llogaria: ${parsed.suggestedAccountName}.` : "";
+    const confidenceNote = parsed.confidence < 0.7 ? " Kontrolloje me kujdes." : "";
+    const warningNote = parsed.warning ? ` ${parsed.warning}` : "";
+    setReceiptAiStatus(`U përgatit nga teksti.${accountNote}${confidenceNote}${warningNote}`);
+  } catch (error) {
+    const message = error?.name === "AbortError" ? "AI po vonon. Provoje përsëri." : error?.message;
+    setQuickAddAiStatus(message || "AI nuk e kuptoi zërin.");
+  } finally {
+    setQuickAddAiBusy(false);
+  }
+}
+
+async function sendQuickAddRequest(endpoint, token, text) {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), RECEIPT_AI_TIMEOUT_MS);
+  try {
+    return await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { "X-Receipt-Token": token } : {}),
+      },
+      body: JSON.stringify({
+        text,
+        today: todayIso(),
+        expenseCategories: getCategories("expense"),
+        incomeCategories: getCategories("income"),
+        accounts: state.banks.map((bank) => ({
+          id: bank.id,
+          name: bank.name,
+          currency: bank.currency,
+        })),
+      }),
+      signal: controller.signal,
+    });
+  } finally {
+    window.clearTimeout(timeout);
+  }
+}
+
+function quickAddAiEndpoint() {
+  const url = new URL(receiptAiEndpoint());
+  url.pathname = "/api/quick-add";
+  return url.toString();
+}
+
+function validateQuickAddResult(result) {
+  if (!result || typeof result !== "object") throw new Error("Përgjigjja e AI nuk është e vlefshme.");
+
+  const type = result.type === "income" ? "income" : result.type === "expense" ? "expense" : "";
+  if (!type) throw new Error("Nuk u kuptua nëse është shpenzim apo e ardhur.");
+
+  const amount = Number(result.amount);
+  if (!Number.isFinite(amount) || amount <= 0) throw new Error("Nuk u kuptua një vlerë e vlefshme.");
+
+  if (!isRecognizedCurrency(result.currency)) throw new Error("Nuk u kuptua monedha.");
+  const currency = normalizeCurrency(result.currency);
+
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(String(result.date || "")) ? String(result.date) : todayIso();
+  const description = String(result.description || "Zë").trim().slice(0, 60) || "Zë";
+  const allowedCategories = getCategories(type);
+  const category = categoryExists(type, result.category)
+    ? allowedCategories.find((item) => item.toLowerCase() === normalizeCategoryName(result.category).toLowerCase())
+    : allowedCategories.find((item) => item.toLowerCase() === "tjetër") || allowedCategories[0];
+
+  const suggestedBank = findBank(String(result.suggestedAccountId || "").trim());
+  const suggestedAccountId = suggestedBank && suggestedBank.currency === currency ? suggestedBank.id : "";
+  const suggestedAccountName = suggestedAccountId ? suggestedBank.name : "";
+  const confidence = Math.min(Math.max(Number(result.confidence) || 0, 0), 1);
+  const warning = String(result.warning || "").trim().slice(0, 160);
+
+  return {
+    type,
+    amount,
+    currency,
+    date,
+    description,
+    category,
+    suggestedAccountId,
+    suggestedAccountName,
+    confidence,
+    warning,
+  };
+}
+
+function applyQuickAddResult(result) {
+  state.type = result.type;
+  syncTypeControls();
+  els.currencyInput.value = result.currency;
+  renderBankOptions();
+  if (result.suggestedAccountId) els.bankInput.value = result.suggestedAccountId;
+  els.amountInput.value = String(result.amount);
+  els.noteInput.value = result.description;
+  els.categoryInput.value = result.category;
+  els.dateInput.value = result.date;
+}
+
+function setQuickAddAiStatus(text) {
+  if (els.quickAddAiStatus) els.quickAddAiStatus.textContent = text;
+}
+
+function setQuickAddAiBusy(isBusy) {
+  if (els.quickAddAiBtn) els.quickAddAiBtn.disabled = isBusy;
+  if (els.quickAddAiInput) els.quickAddAiInput.disabled = isBusy;
 }
 
 function chooseQuickAddType(type) {

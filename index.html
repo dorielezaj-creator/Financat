@@ -14,7 +14,7 @@
     <link rel="manifest" href="manifest.webmanifest?v=20260821-1" />
     <link rel="icon" href="icon.svg?v=20260820-1" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="icon.svg?v=20260820-1" />
-    <link rel="stylesheet" href="styles.css?v=20260904-2" />
+    <link rel="stylesheet" href="styles.css?v=20260905-phase4-quickadd-1" />
   </head>
   <body>
     <main class="app-shell">
@@ -206,6 +206,18 @@
           <button id="closeQuickAddBtn" class="icon-button small quick-add-close" type="button" aria-label="Mbyll">×</button>
           <span class="dialog-eyebrow">Zë i ri</span>
           <h2 id="quickAddTitle">Çfarë do të shtosh?</h2>
+
+          <div class="quick-add-ai">
+            <label for="quickAddAiInput">Shkruaje siç do ta thoje</label>
+            <div class="quick-add-ai-row">
+              <textarea id="quickAddAiInput" rows="3" maxlength="220" placeholder="p.sh. Shto 2,400 lekë karburant sot nga llogaria personale."></textarea>
+              <button id="quickAddAiBtn" class="quick-add-ai-button" type="button">Kupto me AI</button>
+            </div>
+            <small id="quickAddAiStatus" aria-live="polite">AI do ta përgatisë zërin; ti e kontrollon para ruajtjes.</small>
+          </div>
+
+          <div class="quick-add-divider"><span>ose</span></div>
+
           <div class="quick-add-actions">
             <button id="quickAddExpenseBtn" class="quick-add-choice is-expense" type="button">
               <span>−</span><strong>Shpenzim</strong><small>Para që dalin nga një llogari</small>
@@ -1056,6 +1068,6 @@
       </div>
     </template>
 
-    <script src="app.js?v=20260905-phase3-category-2"></script>
+    <script src="app.js?v=20260905-phase4-quickadd-1"></script>
   </body>
 </html>
