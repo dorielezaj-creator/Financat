@@ -5741,3 +5741,13 @@ button.summary-progress {
     font-size: 18px;
   }
 }
+
+
+/* Composer controls: photo safely separated on the left */
+.quick-add-composer-actions {
+  justify-content: flex-start;
+}
+
+.quick-add-composer-actions label[for="receiptImageInput"] {
+  margin-right: auto;
+}
