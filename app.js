@@ -4512,8 +4512,9 @@ async function handleReceiptImage(event) {
     const receipt = validateReceiptResult(result);
     applyReceiptResult(receipt);
     const confidenceNote = receipt.confidence < 0.7 ? " Leximi nuk është plotësisht i sigurt." : "";
+    const accountNote = receipt.suggestedAccountName ? ` Llogaria e propozuar: ${receipt.suggestedAccountName}.` : "";
     const warningNote = receipt.warning ? ` ${receipt.warning}` : "";
-    setReceiptAiStatus(`U mbush nga fatura. Kontrolloje para se ta ruash.${confidenceNote}${warningNote}`);
+    setReceiptAiStatus(`U mbush nga fatura. Kontrolloje para se ta ruash.${accountNote}${confidenceNote}${warningNote}`);
   } catch (error) {
     const message = error?.name === "AbortError" ? "Leximi zgjati shumë. Provoje përsëri." : error?.message;
     setReceiptAiStatus(message || "Fatura nuk u lexua.");
@@ -4528,6 +4529,13 @@ async function sendReceiptRequest(endpoint, token, image) {
   formData.append("receipt", image, image.name || "receipt.jpg");
   formData.append("categories", JSON.stringify(getCategories("expense")));
   formData.append("today", todayIso());
+  formData.append("accounts", JSON.stringify(
+    state.banks.map((bank) => ({
+      id: bank.id,
+      name: bank.name,
+      currency: bank.currency,
+    })),
+  ));
   const headers = token ? { "X-Receipt-Token": token } : {};
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), RECEIPT_AI_TIMEOUT_MS);
@@ -4590,13 +4598,27 @@ function validateReceiptResult(result) {
     : expenseCategories.find((item) => item.toLowerCase() === "tjetër") || expenseCategories[0];
   const confidence = Math.min(Math.max(Number(result.confidence) || 0, 0), 1);
   const warning = String(result.warning || "").trim().slice(0, 160);
+  const suggestedBank = findBank(String(result.suggestedAccountId || "").trim());
+  const suggestedAccountId = suggestedBank && suggestedBank.currency === currency ? suggestedBank.id : "";
+  const suggestedAccountName = suggestedAccountId ? suggestedBank.name : "";
 
-  return { amount, currency, date, description, category, confidence, warning };
+  return {
+    amount,
+    currency,
+    date,
+    description,
+    category,
+    confidence,
+    warning,
+    suggestedAccountId,
+    suggestedAccountName,
+  };
 }
 
 function applyReceiptResult(result) {
   els.currencyInput.value = result.currency;
   renderBankOptions();
+  if (result.suggestedAccountId) els.bankInput.value = result.suggestedAccountId;
   els.amountInput.value = String(result.amount);
   els.categoryInput.value = result.category;
   els.noteInput.value = result.description;
