@@ -33,7 +33,7 @@ const DEFAULT_SAVINGS_GOAL = {
   months: 12,
 };
 const DEFAULT_CATEGORIES = {
-  expense: ["Ushqim", "Transport", "Shtëpi", "Fatura", "Argëtim", "Shëndet", "Tjetër"],
+  expense: ["Ushqim", "Transport", "Shtëpi", "Fatura", "Argëtim", "Shëndet", "Biznes", "Abonime", "Tjetër"],
   income: ["Rrogë", "Punë ekstra", "Biznes", "Dhuratë", "Tjetër"],
 };
 const BANK_OF_ALBANIA_RATE_URL = "https://www.bankofalbania.org/Markets/Official_exchange_rate/";
