@@ -2669,6 +2669,12 @@ form,
   color: var(--green);
 }
 
+.receipt-ai-tools.is-loading .receipt-upload-button,
+.receipt-ai-tools.is-loading .receipt-reset-button {
+  cursor: wait;
+  opacity: 0.55;
+}
+
 .receipt-upload-button input {
   position: absolute;
   width: 1px;

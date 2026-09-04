@@ -11,10 +11,13 @@ const RECURRING_KEY = "financat-e-mia:recurring:v1";
 const THEME_KEY = "financat-e-mia:theme:v2";
 const RECEIPT_AI_ENDPOINT_KEY = "financat-e-mia:receipt-ai-endpoint:v1";
 const RECEIPT_AI_TOKEN_KEY = "financat-e-mia:receipt-ai-token:v1";
+const RECEIPT_AI_TIMEOUT_MS = 45000;
+const RECEIPT_AI_MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const NET_WORTH_HISTORY_KEY = "financat-e-mia:net-worth-history:v1";
 const SETUP_KEY = "financat-e-mia:setup-complete:v1";
 const HOME_ORDER_KEY = "financat-e-mia:home-order:v1";
 const LEGACY_STORAGE_KEYS = ["financat-e-mia:v1"];
+const BACKUP_SCHEMA_VERSION = 12;
 const DEFAULT_LIMITS = {
   expenseALL: 150000,
   expenseEUR: 1000,
@@ -1070,6 +1073,7 @@ function renderHomeGoals() {
 
 function renderQuickMetrics(now, spentToday, spentMonthToDate, accountTotals, incomeMonth) {
   const budget = monthlyBudgetInsight(now, spentToday, spentMonthToDate, incomeMonth);
+  const netSavingsLek = totalsToLek(incomeMonth) - totalsToLek(spentMonthToDate);
 
   renderSafeSpendCard(budget);
   renderHomeSetupHint(incomeMonth);
@@ -1084,9 +1088,9 @@ function renderQuickMetrics(now, spentToday, spentMonthToDate, accountTotals, in
   setText(els.quickAverageNote, "fund-muaji");
   setText(els.quickAverageLek, moneyLekShort(budget.projectedSpendLek));
   setText(els.quickAverageEuro, `≈${moneyEuroCompact(budget.projectedSpendLek / state.exchangeRate)}`);
-  setText(els.quickSavingsLek, moneyLekShort(budget.savedToDateLek));
-  setText(els.quickSavingsEuro, moneyEuroCompact(budget.savedToDateLek / state.exchangeRate));
-  renderHomeSummaryBars(budget, spentMonthToDate, incomeMonth);
+  setText(els.quickSavingsLek, moneyLekShort(netSavingsLek));
+  setText(els.quickSavingsEuro, moneyEuroCompact(netSavingsLek / state.exchangeRate));
+  renderHomeSummaryBars(budget, spentMonthToDate, incomeMonth, netSavingsLek);
   renderBalanceComparison(accountTotals);
 }
 
@@ -1110,7 +1114,7 @@ function renderHomeSetupHint(incomeMonth) {
   els.homeSetupHint.textContent = "";
 }
 
-function renderHomeSummaryBars(budget, spentMonthToDate, incomeMonth) {
+function renderHomeSummaryBars(budget, spentMonthToDate, incomeMonth, netSavingsLek) {
   const spent = Math.max(totalsToLek(spentMonthToDate), 0);
   const income = Math.max(totalsToLek(incomeMonth), 0);
   const available = Math.max(budget.remainingLek, 0);
@@ -1156,11 +1160,11 @@ function renderHomeSummaryBars(budget, spentMonthToDate, incomeMonth) {
   }
 
   if (els.savingsDirectionBar) {
-    const target = Math.max(budget.monthlyTargetLek, Math.abs(budget.savedToDateLek), 1);
-    const magnitude = Math.min(Math.abs(budget.savedToDateLek) / target * 50, 50);
+    const target = Math.max(budget.monthlyTargetLek, Math.abs(netSavingsLek), 1);
+    const magnitude = Math.min(Math.abs(netSavingsLek) / target * 50, 50);
     els.savingsDirectionBar.style.setProperty("--saving-width", `${magnitude}%`);
-    els.savingsDirectionBar.classList.toggle("is-negative", budget.savedToDateLek < 0);
-    els.savingsDirectionBar.classList.toggle("is-positive", budget.savedToDateLek >= 0);
+    els.savingsDirectionBar.classList.toggle("is-negative", netSavingsLek < 0);
+    els.savingsDirectionBar.classList.toggle("is-positive", netSavingsLek >= 0);
   }
   if (els.forecastProgress) {
     const ratio = budget.monthlyBudgetLek > 0 ? Math.min(budget.projectedSpendLek / budget.monthlyBudgetLek, 1) : 0;
@@ -1173,7 +1177,7 @@ function renderBalanceComparison(accountTotals) {
   const currentLek = totalsToLek(accountTotals);
   const previousMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const previousKey = `${previousMonth.getFullYear()}-${String(previousMonth.getMonth() + 1).padStart(2, "0")}`;
-  const history = normalizeNetWorthHistory(state.netWorthHistory).filter((item) => String(item.date || "").startsWith(previousKey));
+  const history = normalizeNetWorthHistory(state.netWorthHistory, state.exchangeRate).filter((item) => String(item.date || "").startsWith(previousKey));
   const previous = history.length ? history[history.length - 1].totalLek : currentLek;
   const deltaLek = currentLek - previous;
   const signedLek = `${deltaLek > 0 ? "+" : ""}${moneyLekShort(deltaLek)}`;
@@ -1305,7 +1309,7 @@ function currentBudgetContext() {
 }
 
 function formulaContent(topic) {
-  const { spentToday, spentMonth, budget, accountTotals } = currentBudgetContext();
+  const { spentToday, spentMonth, incomeMonth, budget, accountTotals } = currentBudgetContext();
 
   if (topic === "expense") {
     return {
@@ -1337,18 +1341,19 @@ function formulaContent(topic) {
   }
 
   if (topic === "savings") {
-    const saved = budget.savedToDateLek;
+    const incomeLek = totalsToLek(incomeMonth);
+    const saved = incomeLek - budget.spentMonthLek;
     return {
       eyebrow: "Kursime",
       title: "Kursyer deri tani",
-      summary: "Krahasohet buxheti që duhet të kishe shpenzuar deri sot me shpenzimet reale.",
+      summary: "Kjo është diferenca reale mes të ardhurave dhe shpenzimeve të regjistruara këtë muaj.",
       steps: [
-        formulaStep("Buxheti i lejuar deri sot", moneyLekShort(budget.spendBudgetToDateLek)),
+        formulaStep("Të ardhura deri sot", moneyLekShort(incomeLek)),
         formulaStep("Shpenzuar deri sot", `- ${moneyLekShort(budget.spentMonthLek)}`),
         formulaStep(
           "Kursyer deri tani",
           `${saved < 0 ? "-" : ""}${moneyLekShort(Math.abs(saved))} / ${saved < 0 ? "-" : ""}${moneyEuroCompact(Math.abs(saved) / state.exchangeRate)}`,
-          "Pozitive kur shpenzon më pak se plani. Në Home, shiriti i zi lëviz djathtas kur kursimi është pozitiv dhe majtas kur është negativ.",
+          "Pozitive kur të ardhurat janë më të larta se shpenzimet. Shiriti lëviz djathtas kur rezultati është pozitiv dhe majtas kur është negativ.",
           saved >= 0 ? "positive" : "warning"
         ),
         formulaStep("Objektivi mujor", `${moneyLekShort(budget.monthlyTargetLek)} / ${moneyEuroCompact(budget.monthlyTargetLek / state.exchangeRate)}`),
@@ -1785,7 +1790,7 @@ function renderNetWorthTrend() {
   const currentYear = String(now.getFullYear());
   const currentMonthIndex = now.getMonth();
   const latestByMonth = new Map();
-  normalizeNetWorthHistory(state.netWorthHistory)
+  normalizeNetWorthHistory(state.netWorthHistory, state.exchangeRate)
     .filter((item) => String(item.date || "").startsWith(currentYear))
     .forEach((item) => latestByMonth.set(String(item.date).slice(5, 7), item));
   const monthlyPoints = Array.from({ length: 12 }, (_, index) => {
@@ -1833,13 +1838,13 @@ function netWorthSnapshot(now = new Date(), totals = bankTotals(), manual = fals
 
 function recordNetWorthSnapshot(now = new Date(), totals = bankTotals()) {
   if (!state.banks.length) return;
-  state.netWorthHistory = mergeNetWorthHistory(state.netWorthHistory, [netWorthSnapshot(now, totals, false)]);
+  state.netWorthHistory = mergeNetWorthHistory(state.netWorthHistory, [netWorthSnapshot(now, totals, false)], state.exchangeRate);
   saveNetWorthHistory();
 }
 
 function saveNetWorthSnapshot(now = new Date(), manual = true) {
   const snapshot = snapshotFinanceState();
-  state.netWorthHistory = mergeNetWorthHistory(state.netWorthHistory, [netWorthSnapshot(now, bankTotals(), manual)]);
+  state.netWorthHistory = mergeNetWorthHistory(state.netWorthHistory, [netWorthSnapshot(now, bankTotals(), manual)], state.exchangeRate);
   saveNetWorthHistory();
   renderNetWorth();
   showUndoToast("Pika e pasurisë u ruajt.", () => restoreFinanceSnapshot(snapshot));
@@ -2088,19 +2093,12 @@ function savingsPerformanceForMonth(year, monthIndex, now = new Date()) {
   const isFutureMonth = year > currentYear || (year === currentYear && monthIndex > currentMonthIndex);
   if (isFutureMonth) return { totals: emptyMoneyTotals(), hasValue: false };
 
-  const monthStart = new Date(year, monthIndex, 1);
-  const key = monthKey(monthStart);
+  const key = monthKey(new Date(year, monthIndex, 1));
   const isCurrentMonth = year === currentYear && monthIndex === currentMonthIndex;
-  const monthDays = daysInMonth(monthStart);
-  const elapsedDays = isCurrentMonth ? Math.max(now.getDate(), 1) : monthDays;
-  const monthEntries = state.entries.filter((entry) => entry.date.startsWith(key));
+  const monthEntries = state.entries.filter((entry) => entry.date.startsWith(key) && (!isCurrentMonth || entry.date <= currentDay));
   const incomeTotals = monthEntries.filter((entry) => entry.type === "income").reduce(sumMoneyTotals, emptyMoneyTotals());
-  const spentTotals = monthEntries
-    .filter((entry) => entry.type === "expense" && (!isCurrentMonth || entry.date <= currentDay))
-    .reduce(sumMoneyTotals, emptyMoneyTotals());
-  const plan = savingsGoalPlan(monthStart, incomeTotals);
-  const budgetToDateLek = plan.dailySpendBudgetLek * elapsedDays;
-  const valueLek = budgetToDateLek - totalsToLek(spentTotals);
+  const spentTotals = monthEntries.filter((entry) => entry.type === "expense").reduce(sumMoneyTotals, emptyMoneyTotals());
+  const valueLek = totalsToLek(incomeTotals) - totalsToLek(spentTotals);
 
   return {
     totals: { ALL: valueLek, EUR: 0 },
@@ -2190,12 +2188,12 @@ function restoreFinanceSnapshot(snapshot) {
   state.entries = Array.isArray(snapshot.entries) ? snapshot.entries.map((entry) => ({ ...entry })) : [];
   state.banks = Array.isArray(snapshot.banks) ? snapshot.banks.map((bank) => ({ ...bank })) : state.banks;
   state.recurringExpenses = normalizeRecurringExpenses(snapshot.recurringExpenses || []);
-  if (Array.isArray(snapshot.netWorthHistory)) state.netWorthHistory = normalizeNetWorthHistory(snapshot.netWorthHistory);
+  state.exchangeRate = Number(snapshot.exchangeRate) > 0 ? Number(snapshot.exchangeRate) : state.exchangeRate;
+  if (Array.isArray(snapshot.netWorthHistory)) state.netWorthHistory = normalizeNetWorthHistory(snapshot.netWorthHistory, state.exchangeRate);
   state.goals = normalizeGoals(snapshot.goals || state.goals);
   state.categories = normalizeCategoriesData(snapshot.categories || state.categories);
   state.limits = snapshot.limits ? { ...snapshot.limits } : state.limits;
   state.savingsGoal = snapshot.savingsGoal ? { ...snapshot.savingsGoal } : state.savingsGoal;
-  state.exchangeRate = Number(snapshot.exchangeRate) > 0 ? Number(snapshot.exchangeRate) : state.exchangeRate;
   if (typeof snapshot.setupComplete === "boolean") state.setupComplete = snapshot.setupComplete;
   if (Array.isArray(snapshot.homeOrder)) state.homeOrder = normalizeHomeOrder(snapshot.homeOrder);
   syncPrimarySavingsGoal();
@@ -3349,26 +3347,26 @@ function savingsDetailData(range, now = new Date()) {
 
 function savingsTodayDetail(now) {
   const anchors = [0, 6, 12, 15, 18, 24];
-  const incomeMonth = monthlyTotalsByType(now.getFullYear(), "income")[now.getMonth()];
-  const plan = savingsGoalPlan(now, incomeMonth);
-  const spentTodayLek = totalsToLek(expensesForDate(toLocalIso(now)));
+  const today = toLocalIso(now);
+  const todayEntries = state.entries.filter((entry) => entry.date === today);
   const currentHour = now.getHours() + now.getMinutes() / 60;
-  const elapsedHour = Math.max(currentHour, 0.25);
-  const totalLek = plan.dailySpendBudgetLek - spentTodayLek;
+  const totalLek = todayEntries.reduce((sum, entry) => sum + signedEntryValueLek(entry), 0);
 
   return {
     range: "today",
     title: "Sot",
     totalLek,
-    note: "Sot ndahet sipas orëve. Shpenzimet pa orë shpërndahen deri në momentin aktual.",
+    note: "Çdo shtyllë tregon bilancin neto të regjistruar deri në atë orë: të ardhura minus shpenzime.",
     points: anchors.map((hour, index) => {
-      const budgetToHour = plan.dailySpendBudgetLek * (hour / 24);
-      const spentToHour = spentTodayLek * Math.min(hour / elapsedHour, 1);
+      const effectiveHour = Math.min(hour, currentHour);
+      const value = todayEntries
+        .filter((entry) => entryHour(entry) <= effectiveHour)
+        .reduce((sum, entry) => sum + signedEntryValueLek(entry), 0);
       return {
         label: String(hour).padStart(2, "0"),
         detailLabel: `Ora ${String(hour).padStart(2, "0")}:00`,
-        value: budgetToHour - spentToHour,
-        muted: hour > currentHour && hour !== 24,
+        value,
+        muted: hour > currentHour,
         current: index === hourBucketIndex(currentHour, anchors),
       };
     }),
@@ -3395,7 +3393,7 @@ function savingsWeekDetail(now) {
     range: "week",
     title: "Kjo javë",
     totalLek: sumPointValues(points),
-    note: "Çdo shtyllë tregon kursimin ditor të javës.",
+    note: "Çdo shtyllë tregon të ardhurat minus shpenzimet e asaj dite.",
     points,
   };
 }
@@ -3420,7 +3418,7 @@ function savingsMonthDetail(now) {
     range: "month",
     title: capitalizeFirst(monthNames[now.getMonth()]),
     totalLek: sumPointValues(points),
-    note: "Çdo shtyllë tregon kursimin për një ditë të muajit aktual.",
+    note: "Çdo shtyllë tregon të ardhurat minus shpenzimet e asaj dite.",
     points,
   };
 }
@@ -3442,7 +3440,7 @@ function savingsYearDetail(now) {
     range: "year",
     title: String(now.getFullYear()),
     totalLek: sumPointValues(points),
-    note: "Çdo shtyllë tregon kursimin e muajit përkatës.",
+    note: "Çdo shtyllë tregon të ardhurat minus shpenzimet e muajit përkatës.",
     points,
   };
 }
@@ -3459,7 +3457,7 @@ function renderSavingsDetailBars(points) {
       const label = point.detailLabel || point.label || "Periudha";
       setText(els.savingsDetailTotalLek, moneyLekShort(value));
       setText(els.savingsDetailTotalEuro, moneyEuroCompact(value / state.exchangeRate));
-      setText(els.savingsDetailNote, `${label} · ${value >= 0 ? "kursim" : "mbi buxhet"} ${moneyLekShort(value)}`);
+      setText(els.savingsDetailNote, `${label} · ${value >= 0 ? "kursim neto" : "bilanc neto negativ"} ${moneyLekShort(value)}`);
     },
   });
 }
@@ -3506,9 +3504,15 @@ function renderDetailBarChart({ container, axisContainer, points, chartType, val
 }
 
 function savingsForDate(date) {
-  const incomeMonth = monthlyTotalsByType(date.getFullYear(), "income")[date.getMonth()];
-  const plan = savingsGoalPlan(date, incomeMonth);
-  return plan.dailySpendBudgetLek - totalsToLek(expensesForDate(toLocalIso(date)));
+  const isoDate = toLocalIso(date);
+  return totalsToLek(incomesForDate(isoDate)) - totalsToLek(expensesForDate(isoDate));
+}
+
+function signedEntryValueLek(entry) {
+  const value = normalizeCurrency(entry.currency) === "EUR"
+    ? (Number(entry.amount) || 0) * state.exchangeRate
+    : Number(entry.amount) || 0;
+  return entry.type === "income" ? value : -value;
 }
 
 function expensesForDate(isoDate) {
@@ -4478,21 +4482,26 @@ async function handleReceiptImage(event) {
       return;
     }
 
-    const token = receiptAiToken();
     state.type = "expense";
     syncTypeControls();
     setReceiptAiStatus("Po lexohet fatura...");
+    setReceiptAiBusy(true);
 
     const image = await resizeReceiptImage(file);
+    if (image.size > RECEIPT_AI_MAX_IMAGE_BYTES) {
+      throw new Error("Fotoja është shumë e madhe. Provo një foto tjetër.");
+    }
+
+    let token = receiptAiToken();
     let response = await sendReceiptRequest(endpoint, token, image);
     let result = await response.json().catch(() => ({}));
     if (response.status === 401) {
       localStorage.removeItem(RECEIPT_AI_TOKEN_KEY);
-      const retryToken = prompt("Kodi sekret nuk është i saktë. Vendose përsëri.");
-      if (!retryToken) throw new Error("Kodi sekret nuk është i saktë.");
-      localStorage.setItem(RECEIPT_AI_TOKEN_KEY, retryToken.trim());
+      token = prompt("Ky backend kërkon kod aksesi. Vendose kodin që krijove në Cloudflare.")?.trim() || "";
+      if (!token) throw new Error("Nevojitet kodi i aksesit për AI.");
+      localStorage.setItem(RECEIPT_AI_TOKEN_KEY, token);
       setReceiptAiStatus("Po provohet me kodin e ri...");
-      response = await sendReceiptRequest(endpoint, retryToken.trim(), image);
+      response = await sendReceiptRequest(endpoint, token, image);
       result = await response.json().catch(() => ({}));
     }
 
@@ -4500,65 +4509,117 @@ async function handleReceiptImage(event) {
       throw new Error(result.error || "Fatura nuk u lexua.");
     }
 
-    applyReceiptResult(result);
-    setReceiptAiStatus("U mbush nga fatura. Kontrolloje para se ta ruash.");
+    const receipt = validateReceiptResult(result);
+    applyReceiptResult(receipt);
+    const confidenceNote = receipt.confidence < 0.7 ? " Leximi nuk është plotësisht i sigurt." : "";
+    const warningNote = receipt.warning ? ` ${receipt.warning}` : "";
+    setReceiptAiStatus(`U mbush nga fatura. Kontrolloje para se ta ruash.${confidenceNote}${warningNote}`);
   } catch (error) {
-    setReceiptAiStatus(error.message || "Fatura nuk u lexua.");
+    const message = error?.name === "AbortError" ? "Leximi zgjati shumë. Provoje përsëri." : error?.message;
+    setReceiptAiStatus(message || "Fatura nuk u lexua.");
   } finally {
+    setReceiptAiBusy(false);
     event.target.value = "";
   }
 }
 
-function sendReceiptRequest(endpoint, token, image) {
+async function sendReceiptRequest(endpoint, token, image) {
   const formData = new FormData();
   formData.append("receipt", image, image.name || "receipt.jpg");
+  formData.append("categories", JSON.stringify(getCategories("expense")));
+  formData.append("today", todayIso());
   const headers = token ? { "X-Receipt-Token": token } : {};
-  return fetch(endpoint, { method: "POST", headers, body: formData });
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), RECEIPT_AI_TIMEOUT_MS);
+  try {
+    return await fetch(endpoint, { method: "POST", headers, body: formData, signal: controller.signal });
+  } finally {
+    window.clearTimeout(timeout);
+  }
 }
 
 function resetReceiptAiConnection() {
   localStorage.removeItem(RECEIPT_AI_ENDPOINT_KEY);
   localStorage.removeItem(RECEIPT_AI_TOKEN_KEY);
-  setReceiptAiStatus("AI u rivendos. Kliko Foto fature dhe vendose përsëri.");
+  setReceiptAiStatus("Lidhja AI u rivendos. Kliko Foto fature për ta konfiguruar.");
 }
 
 function receiptAiEndpoint() {
-  const saved = localStorage.getItem(RECEIPT_AI_ENDPOINT_KEY);
-  if (saved) return saved;
+  const configured = document.querySelector('meta[name="receipt-ai-endpoint"]')?.content?.trim();
+  const saved = configured || localStorage.getItem(RECEIPT_AI_ENDPOINT_KEY);
+  if (saved) return normalizeReceiptAiEndpoint(saved);
 
-  const endpoint = prompt("Vendos linkun e AI backend për faturat.");
+  const endpoint = prompt("Vendos adresën e Cloudflare Worker për faturat.");
   if (!endpoint) return "";
-  localStorage.setItem(RECEIPT_AI_ENDPOINT_KEY, endpoint.trim());
-  return endpoint.trim();
+  const normalized = normalizeReceiptAiEndpoint(endpoint);
+  localStorage.setItem(RECEIPT_AI_ENDPOINT_KEY, normalized);
+  return normalized;
 }
 
 function receiptAiToken() {
-  const saved = localStorage.getItem(RECEIPT_AI_TOKEN_KEY);
-  if (saved) return saved;
+  return localStorage.getItem(RECEIPT_AI_TOKEN_KEY)?.trim() || "";
+}
 
-  const token = prompt("Vendos kodin sekret të AI backend.");
-  if (!token) return "";
-  localStorage.setItem(RECEIPT_AI_TOKEN_KEY, token.trim());
-  return token.trim();
+function normalizeReceiptAiEndpoint(value) {
+  let url;
+  try {
+    url = new URL(String(value).trim());
+  } catch {
+    throw new Error("Adresa e AI backend nuk është e vlefshme.");
+  }
+
+  const localDevelopment = ["localhost", "127.0.0.1"].includes(url.hostname);
+  if (url.protocol !== "https:" && !(localDevelopment && url.protocol === "http:")) {
+    throw new Error("AI backend duhet të përdorë HTTPS.");
+  }
+  if (url.pathname === "/" || url.pathname === "") url.pathname = "/api/receipt";
+  url.search = "";
+  url.hash = "";
+  return url.toString();
+}
+
+function validateReceiptResult(result) {
+  if (!result || typeof result !== "object") throw new Error("Përgjigjja e AI nuk është e vlefshme.");
+  if (result.isReceipt === false) throw new Error(result.warning || "Fotoja nuk duket si faturë.");
+
+  const amount = Number(result.amount);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    throw new Error("Nuk u gjet një total i vlefshëm në faturë.");
+  }
+
+  if (!isRecognizedCurrency(result.currency)) throw new Error("Nuk u dallua monedha e faturës.");
+  const currency = normalizeCurrency(result.currency);
+
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(String(result.date || "")) ? String(result.date) : todayIso();
+  const description = String(result.description || result.merchant || "Faturë").trim().slice(0, 60) || "Faturë";
+  const expenseCategories = getCategories("expense");
+  const category = categoryExists("expense", result.category)
+    ? expenseCategories.find((item) => item.toLowerCase() === normalizeCategoryName(result.category).toLowerCase())
+    : expenseCategories.find((item) => item.toLowerCase() === "tjetër") || expenseCategories[0];
+  const confidence = Math.min(Math.max(Number(result.confidence) || 0, 0), 1);
+  const warning = String(result.warning || "").trim().slice(0, 160);
+
+  return { amount, currency, date, description, category, confidence, warning };
 }
 
 function applyReceiptResult(result) {
-  const currency = normalizeCurrency(result.currency);
-  const category = categoryExists("expense", result.category) ? normalizeCategoryName(result.category) : "Tjetër";
-  const amount = Number(result.amount) || 0;
-  const date = /^\d{4}-\d{2}-\d{2}$/.test(result.date || "") ? result.date : todayIso();
-  const description = String(result.description || result.merchant || "Faturë").trim().slice(0, 60);
-
-  els.currencyInput.value = currency;
+  els.currencyInput.value = result.currency;
   renderBankOptions();
-  els.amountInput.value = amount ? String(amount) : "";
-  els.categoryInput.value = category;
-  els.noteInput.value = description || category;
-  els.dateInput.value = date;
+  els.amountInput.value = String(result.amount);
+  els.categoryInput.value = result.category;
+  els.noteInput.value = result.description;
+  els.dateInput.value = result.date;
 }
 
 function setReceiptAiStatus(text) {
   els.receiptAiStatus.textContent = text;
+}
+
+function setReceiptAiBusy(isBusy) {
+  els.receiptAiTools?.classList.toggle("is-loading", isBusy);
+  if (els.receiptImageInput) els.receiptImageInput.disabled = isBusy;
+  if (els.resetReceiptAiBtn) els.resetReceiptAiBtn.disabled = isBusy;
+  els.receiptAiTools?.setAttribute("aria-busy", String(isBusy));
 }
 
 async function resizeReceiptImage(file) {
@@ -4603,7 +4664,7 @@ async function imageFromFile(file) {
 function exportData() {
   const backup = {
     app: "financat-e-mia",
-    version: 11,
+    version: BACKUP_SCHEMA_VERSION,
     exportedAt: new Date().toISOString(),
     entries: state.entries,
     banks: state.banks,
@@ -4710,7 +4771,7 @@ function confirmPendingImport() {
     render();
     window.scrollTo({ top: 0, behavior: "smooth" });
   });
-  showUndoToast(`Importi u krye: ${imported.entries.length} zëra, ${imported.banks.length} llogari, ${imported.goals.length} objektiva.`, () => restoreFinanceSnapshot(snapshot));
+  showUndoToast(importSummaryText(imported), () => restoreFinanceSnapshot(snapshot));
 }
 
 function normalizeImportedBackup(parsed) {
@@ -4722,13 +4783,20 @@ function normalizeImportedBackup(parsed) {
   const source = isEntryList ? { entries: parsed } : parsed;
   const rawEntries = Array.isArray(source.entries) ? source.entries : [];
   const validEntries = rawEntries.filter(isValidEntry).map(normalizeEntryForImport);
+  if (rawEntries.length && !validEntries.length) {
+    throw new Error("Backup-i ka zëra, por asnjë prej tyre nuk ka vlerë dhe datë të vlefshme.");
+  }
   const entries = mergeEntries([], validEntries);
   const rawBanks = Array.isArray(source.banks) ? source.banks : [];
   const banks = rawBanks.length
     ? normalizeBanks(rawBanks.filter(isValidBank))
     : legacySavingsToBanks(normalizeMoneyTotals(source.savings));
+  if (rawBanks.length && !banks.length) {
+    throw new Error("Backup-i ka llogari, por asnjë prej tyre nuk është e vlefshme.");
+  }
   const recurringExpenses = normalizeRecurringExpenses(source.recurringExpenses || []);
-  const exchangeRate = Number(source.exchangeRate) > 0 ? Number(source.exchangeRate) : DEFAULT_EUR_TO_ALL_RATE;
+  const importedRate = Number(source.exchangeRate);
+  const exchangeRate = Number.isFinite(importedRate) && importedRate > 0 ? importedRate : DEFAULT_EUR_TO_ALL_RATE;
   const limits = source.limits ? normalizeLimits(source.limits) : { ...DEFAULT_LIMITS };
   const hasSavingsGoal = Boolean(source.savingsGoal && typeof source.savingsGoal === "object");
   let savingsGoal = hasSavingsGoal
@@ -4744,7 +4812,7 @@ function normalizeImportedBackup(parsed) {
   const categorySeed = source.categories ? normalizeCategoriesData(source.categories) : cloneDefaultCategories();
   const categories = learnCategoriesFromData(categorySeed, entries, recurringExpenses);
   const referenceDate = importedReferenceDate(source, entries);
-  let netWorthHistory = normalizeNetWorthHistory(source.netWorthHistory || source.netWorth || []);
+  let netWorthHistory = normalizeNetWorthHistory(source.netWorthHistory || source.netWorth || [], exchangeRate);
   if (!netWorthHistory.length && banks.length) {
     netWorthHistory = [netWorthSnapshotFromBanks(banks, exchangeRate, referenceDate)];
   }
@@ -4765,9 +4833,23 @@ function normalizeImportedBackup(parsed) {
     "homeOrder",
   ];
   const hasSupportedData = isEntryList || supportedFields.some((key) => Object.prototype.hasOwnProperty.call(source, key));
+  const hasFullBackupFields = [
+    "banks",
+    "savings",
+    "recurringExpenses",
+    "netWorthHistory",
+    "netWorth",
+    "limits",
+    "savingsGoal",
+    "goals",
+    "categories",
+    "exchangeRate",
+    "setupComplete",
+    "homeOrder",
+  ].some((key) => Object.prototype.hasOwnProperty.call(source, key));
 
   return {
-    isCompleteBackup: !isEntryList,
+    isCompleteBackup: !isEntryList && (source.app === "financat-e-mia" || hasFullBackupFields),
     version: Number(source.version) || 1,
     entries,
     invalidEntryCount: Math.max(rawEntries.length - validEntries.length, 0),
@@ -4789,10 +4871,9 @@ function normalizeImportedBackup(parsed) {
 }
 
 function applyImportedBackup(imported) {
-  state.entries = imported.entries;
-
   if (imported.isCompleteBackup) {
     state.banks = imported.banks;
+    state.entries = reconcileEntryBankReferences(imported.entries, state.banks);
     state.recurringExpenses = imported.recurringExpenses;
     state.netWorthHistory = imported.netWorthHistory;
     state.limits = imported.limits;
@@ -4803,12 +4884,21 @@ function applyImportedBackup(imported) {
     state.setupComplete = imported.setupComplete;
     if (Array.isArray(imported.homeOrder)) state.homeOrder = imported.homeOrder;
   } else {
+    state.entries = mergeEntries(state.entries, reconcileEntryBankReferences(imported.entries, state.banks));
     state.categories = learnCategoriesFromData(state.categories, state.entries, state.recurringExpenses);
   }
 
   ensureDefaultBanks();
   syncPrimarySavingsGoal();
   applyHomeOrder(state.homeOrder);
+}
+
+function reconcileEntryBankReferences(entries, banks) {
+  const bankIds = new Set((Array.isArray(banks) ? banks : []).map((bank) => bank.id));
+  return entries.map((entry) => ({
+    ...entry,
+    bankId: entry.bankId && bankIds.has(entry.bankId) ? entry.bankId : "",
+  }));
 }
 
 function persistFinanceState() {
@@ -4979,33 +5069,34 @@ function saveBanks() {
 
 function loadNetWorthHistory() {
   try {
-    return normalizeNetWorthHistory(JSON.parse(localStorage.getItem(NET_WORTH_HISTORY_KEY)));
+    return normalizeNetWorthHistory(JSON.parse(localStorage.getItem(NET_WORTH_HISTORY_KEY)), loadExchangeRate());
   } catch {
     return [];
   }
 }
 
 function saveNetWorthHistory() {
-  localStorage.setItem(NET_WORTH_HISTORY_KEY, JSON.stringify(normalizeNetWorthHistory(state.netWorthHistory)));
+  localStorage.setItem(NET_WORTH_HISTORY_KEY, JSON.stringify(normalizeNetWorthHistory(state.netWorthHistory, state.exchangeRate)));
 }
 
-function normalizeNetWorthHistory(items) {
+function normalizeNetWorthHistory(items, exchangeRate = DEFAULT_EUR_TO_ALL_RATE) {
   if (!Array.isArray(items)) return [];
+  const safeRate = Number(exchangeRate) > 0 ? Number(exchangeRate) : DEFAULT_EUR_TO_ALL_RATE;
 
   return items
     .map((item) => {
       const rawDate = String(item?.date || item?.savedAt || item?.updatedAt || "").slice(0, 10);
-      const date = /^\d{4}-\d{2}-\d{2}$/.test(rawDate) ? rawDate : todayIso();
+      const date = normalizeImportedDate(rawDate) || todayIso();
       const accountsLek = Number(item?.accountsLek ?? item?.ALL) || 0;
       const accountsEuro = Number(item?.accountsEuro ?? item?.EUR) || 0;
       const totalLekValue = Number(item?.totalLek);
-      const totalLek = Number.isFinite(totalLekValue) ? totalLekValue : accountsLek + accountsEuro * DEFAULT_EUR_TO_ALL_RATE;
+      const totalLek = Number.isFinite(totalLekValue) ? totalLekValue : accountsLek + accountsEuro * safeRate;
       const totalEuroValue = Number(item?.totalEuro);
 
       return {
         date,
         totalLek,
-        totalEuro: Number.isFinite(totalEuroValue) ? totalEuroValue : totalLek / DEFAULT_EUR_TO_ALL_RATE,
+        totalEuro: Number.isFinite(totalEuroValue) ? totalEuroValue : totalLek / safeRate,
         accountsLek,
         accountsEuro,
         manual: Boolean(item?.manual),
@@ -5016,10 +5107,10 @@ function normalizeNetWorthHistory(items) {
     .sort((a, b) => a.date.localeCompare(b.date));
 }
 
-function mergeNetWorthHistory(current = [], imported = []) {
+function mergeNetWorthHistory(current = [], imported = [], exchangeRate = DEFAULT_EUR_TO_ALL_RATE) {
   const byDate = new Map();
 
-  [...normalizeNetWorthHistory(current), ...normalizeNetWorthHistory(imported)].forEach((item) => {
+  [...normalizeNetWorthHistory(current, exchangeRate), ...normalizeNetWorthHistory(imported, exchangeRate)].forEach((item) => {
     const existing = byDate.get(item.date);
     const itemTime = Date.parse(item.updatedAt) || 0;
     const existingTime = existing ? Date.parse(existing.updatedAt) || 0 : 0;
@@ -5327,7 +5418,7 @@ function upsertPrimaryGoalFromSavingsGoal(goal) {
 
 function loadExchangeRate() {
   const saved = Number(localStorage.getItem(EXCHANGE_RATE_KEY));
-  return saved > 0 ? saved : DEFAULT_EUR_TO_ALL_RATE;
+  return Number.isFinite(saved) && saved > 0 ? saved : DEFAULT_EUR_TO_ALL_RATE;
 }
 
 function saveExchangeRate(rate) {
@@ -5412,6 +5503,8 @@ function createAutoBackup() {
   localStorage.setItem(
     BACKUP_KEY,
     JSON.stringify({
+      app: "financat-e-mia",
+      version: BACKUP_SCHEMA_VERSION,
       entries: state.entries,
       banks: state.banks,
       recurringExpenses: state.recurringExpenses,
@@ -5452,7 +5545,8 @@ function restoreAutoBackup() {
     state.entries = Array.isArray(backup.entries) ? backup.entries.filter(isValidEntry).map(normalizeEntryForImport) : [];
     state.banks = normalizeBanks(Array.isArray(backup.banks) ? backup.banks.filter(isValidBank) : loadBanks());
     state.recurringExpenses = normalizeRecurringExpenses(backup.recurringExpenses || []);
-    if (Array.isArray(backup.netWorthHistory)) state.netWorthHistory = normalizeNetWorthHistory(backup.netWorthHistory);
+    state.exchangeRate = Number(backup.exchangeRate) > 0 ? Number(backup.exchangeRate) : state.exchangeRate;
+    if (Array.isArray(backup.netWorthHistory)) state.netWorthHistory = normalizeNetWorthHistory(backup.netWorthHistory, state.exchangeRate);
     if (Array.isArray(backup.goals)) state.goals = normalizeGoals(backup.goals);
     state.categories = backup.categories
       ? normalizeCategoriesData(backup.categories)
@@ -5460,7 +5554,6 @@ function restoreAutoBackup() {
     state.limits = backup.limits ? normalizeLimits(backup.limits) : state.limits;
     state.savingsGoal = backup.savingsGoal ? normalizeSavingsGoal(backup.savingsGoal) : state.savingsGoal;
     syncPrimarySavingsGoal();
-    state.exchangeRate = Number(backup.exchangeRate) > 0 ? Number(backup.exchangeRate) : state.exchangeRate;
     if (typeof backup.setupComplete === "boolean") state.setupComplete = backup.setupComplete;
     if (Array.isArray(backup.homeOrder)) state.homeOrder = normalizeHomeOrder(backup.homeOrder);
     saveEntries();
@@ -5654,11 +5747,12 @@ function mergeBanks(currentBanks, importedBanks) {
 }
 
 function normalizeBankRecord(bank) {
+  const rawBalance = Number(bank.balance);
   return {
     id: bank.id || crypto.randomUUID(),
     name: String(bank.name || "Llogari").trim(),
     currency: normalizeCurrency(bank.currency),
-    balance: Number(bank.balance) || 0,
+    balance: Number.isFinite(rawBalance) ? rawBalance : 0,
     isDefault: Boolean(bank.isDefault),
     createdAt: bank.createdAt || new Date().toISOString(),
   };
@@ -5669,16 +5763,20 @@ function bankIdentity(bank) {
 }
 
 function isValidEntry(entry) {
+  const amount = Number(entry?.amount);
   return (
     entry &&
     ["income", "expense"].includes(normalizeEntryType(entry.type)) &&
-    Number(entry.amount) > 0 &&
+    Number.isFinite(amount) &&
+    amount > 0 &&
+    isRecognizedCurrency(entry.currency) &&
     Boolean(normalizeImportedDate(entry.date))
   );
 }
 
 function isValidBank(bank) {
-  return bank && bank.name && ["ALL", "EUR"].includes(normalizeCurrency(bank.currency));
+  const balance = Number(bank?.balance);
+  return bank && bank.name && Number.isFinite(balance) && isRecognizedCurrency(bank.currency);
 }
 
 function normalizeEntryForImport(entry) {
@@ -5767,7 +5865,21 @@ function multiplyMoneyTotals(totals, multiplier) {
 }
 
 function normalizeCurrency(currency) {
-  return currency === "EUR" ? "EUR" : "ALL";
+  const value = String(currency || "")
+    .trim()
+    .toUpperCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  return ["EUR", "EURO", "€"].includes(value) ? "EUR" : "ALL";
+}
+
+function isRecognizedCurrency(currency) {
+  const value = String(currency || "")
+    .trim()
+    .toUpperCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  return ["ALL", "LEK", "LEKE", "EUR", "EURO", "€"].includes(value);
 }
 
 function setExactValues(mainEl, altEl, totals) {
@@ -5920,7 +6032,7 @@ function daysInMonth(date) {
 
 function positiveNumber(value, fallback) {
   const number = Number(value);
-  return number >= 0 ? number : fallback;
+  return Number.isFinite(number) && number >= 0 ? number : fallback;
 }
 
 function monthKey(date) {
