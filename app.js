@@ -3938,8 +3938,11 @@ async function toggleQuickAddVoice() {
     quickAddRecorder.start();
     els.quickAddVoiceBtn?.classList.add("is-recording");
     els.quickAddVoiceBtn?.setAttribute("aria-pressed", "true");
-    if (els.quickAddVoiceBtn) els.quickAddVoiceBtn.textContent = "■ Ndal";
-    setQuickAddAiStatus("Po dëgjoj... Thuaje shpenzimin ose të ardhurën dhe shtyp Ndal.");
+    if (els.quickAddVoiceBtn) {
+      els.quickAddVoiceBtn.setAttribute("aria-label", "Ndal regjistrimin");
+      els.quickAddVoiceBtn.setAttribute("title", "Ndal regjistrimin");
+    }
+    setQuickAddAiStatus("Po dëgjoj... Thuaje shpenzimin ose të ardhurën dhe shtyp përsëri mikrofonin.");
 
     quickAddVoiceTimer = window.setTimeout(() => stopQuickAddVoice(), VOICE_MAX_RECORDING_MS);
   } catch (error) {
@@ -3982,7 +3985,8 @@ function cleanupQuickAddVoice() {
   if (els.quickAddVoiceBtn) {
     els.quickAddVoiceBtn.classList.remove("is-recording");
     els.quickAddVoiceBtn.setAttribute("aria-pressed", "false");
-    els.quickAddVoiceBtn.textContent = "🎙 Fol";
+    els.quickAddVoiceBtn.setAttribute("aria-label", "Fol");
+    els.quickAddVoiceBtn.setAttribute("title", "Fol");
   }
 }
 
@@ -4833,6 +4837,12 @@ async function handleReceiptImage(event) {
     }
 
     const receipt = validateReceiptResult(result);
+
+    if (els.quickAddOverlay && !els.quickAddOverlay.hidden) {
+      closeQuickAdd();
+      openEntryEditor("expense");
+    }
+
     applyReceiptResult(receipt);
     const confidenceNote = receipt.confidence < 0.7 ? " Leximi nuk është plotësisht i sigurt." : "";
     const accountNote = receipt.suggestedAccountName ? ` Llogaria e propozuar: ${receipt.suggestedAccountName}.` : "";

@@ -5574,3 +5574,170 @@ button.summary-progress {
     white-space: normal;
   }
 }
+
+
+/* Quick Add — ChatGPT-like composer */
+.quick-add-sheet {
+  gap: 16px;
+}
+
+.quick-add-ai {
+  display: grid;
+  gap: 8px;
+}
+
+.quick-add-composer {
+  position: relative;
+  display: grid;
+  gap: 8px;
+  padding: 12px 12px 10px;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: var(--card);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
+}
+
+.quick-add-composer:focus-within {
+  border-color: color-mix(in srgb, var(--green) 62%, var(--line));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 12%, transparent);
+}
+
+.quick-add-composer textarea {
+  width: 100%;
+  min-height: 58px;
+  max-height: 120px;
+  resize: none;
+  padding: 2px 4px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 1.4;
+  outline: none;
+}
+
+.quick-add-composer textarea:focus {
+  border-color: transparent;
+}
+
+.quick-add-composer textarea::placeholder {
+  color: var(--muted);
+  opacity: .9;
+}
+
+.quick-add-composer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.quick-add-icon-button,
+.quick-add-send-button {
+  width: 38px;
+  height: 38px;
+  min-height: 38px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.quick-add-icon-button {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+}
+
+.quick-add-icon-button:hover,
+.quick-add-icon-button:focus-visible {
+  background: color-mix(in srgb, var(--text) 7%, transparent);
+}
+
+.quick-add-send-button {
+  border: 0;
+  background: var(--green);
+  color: #000;
+}
+
+.quick-add-icon-button svg,
+.quick-add-send-button svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.quick-add-voice-button {
+  min-height: 38px;
+  border-radius: 50%;
+  background: transparent;
+  font-size: 0;
+}
+
+.quick-add-voice-button.is-recording {
+  border-color: var(--coral);
+  background: color-mix(in srgb, var(--coral) 15%, transparent);
+  color: var(--coral);
+}
+
+.quick-add-ai-button {
+  min-height: 38px;
+  border-radius: 50%;
+}
+
+.quick-add-ai small {
+  padding: 0 4px;
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+.quick-add-divider {
+  margin: 1px 0;
+}
+
+.quick-add-actions {
+  gap: 10px;
+}
+
+.quick-add-choice {
+  min-height: 122px;
+  padding: 17px;
+  border-radius: 22px;
+}
+
+.quick-add-choice > span {
+  font-size: 31px;
+}
+
+.quick-add-choice strong {
+  font-size: 19px;
+}
+
+.quick-add-choice small {
+  font-size: 11px;
+}
+
+@media (max-width: 420px) {
+  .quick-add-sheet {
+    gap: 14px;
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .quick-add-choice {
+    min-height: 112px;
+    padding: 15px;
+  }
+
+  .quick-add-choice strong {
+    font-size: 18px;
+  }
+}
