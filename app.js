@@ -4539,21 +4539,13 @@ async function sendReceiptRequest(endpoint, token, image) {
 }
 
 function resetReceiptAiConnection() {
-  localStorage.removeItem(RECEIPT_AI_ENDPOINT_KEY);
   localStorage.removeItem(RECEIPT_AI_TOKEN_KEY);
-  setReceiptAiStatus("Lidhja AI u rivendos. Kliko Foto fature për ta konfiguruar.");
+  setReceiptAiStatus("Kodi i AI u rivendos. Kliko Foto fature për ta vendosur përsëri.");
 }
 
 function receiptAiEndpoint() {
-  const configured = document.querySelector('meta[name="receipt-ai-endpoint"]')?.content?.trim();
-  const saved = configured || localStorage.getItem(RECEIPT_AI_ENDPOINT_KEY);
-  if (saved) return normalizeReceiptAiEndpoint(saved);
-
-  const endpoint = prompt("Vendos adresën e Cloudflare Worker për faturat.");
-  if (!endpoint) return "";
-  const normalized = normalizeReceiptAiEndpoint(endpoint);
-  localStorage.setItem(RECEIPT_AI_ENDPOINT_KEY, normalized);
-  return normalized;
+  // Backend-i i këtij aplikacioni është fiks dhe nuk i kërkohet më përdoruesit.
+  return normalizeReceiptAiEndpoint("https://financat-e-mia-ai.dorielezaj.workers.dev");
 }
 
 function receiptAiToken() {
