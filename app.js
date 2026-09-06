@@ -9,7 +9,6 @@ const GOALS_KEY = "financat-e-mia:goals:v1";
 const CATEGORIES_KEY = "financat-e-mia:categories:v1";
 const RECURRING_KEY = "financat-e-mia:recurring:v1";
 const THEME_KEY = "financat-e-mia:theme:v2";
-const RECEIPT_AI_ENDPOINT_KEY = "financat-e-mia:receipt-ai-endpoint:v1";
 const RECEIPT_AI_TOKEN_KEY = "financat-e-mia:receipt-ai-token:v1";
 const RECEIPT_AI_TIMEOUT_MS = 45000;
 const VOICE_MAX_RECORDING_MS = 30_000;
@@ -17,6 +16,9 @@ let quickAddRecorder = null;
 let quickAddVoiceStream = null;
 let quickAddVoiceChunks = [];
 let quickAddVoiceTimer = null;
+let quickAddVoiceDiscard = false;
+let quickAddVoiceSession = 0;
+let quickAddAiController = null;
 const RECEIPT_AI_MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const NET_WORTH_HISTORY_KEY = "financat-e-mia:net-worth-history:v1";
 const SETUP_KEY = "financat-e-mia:setup-complete:v1";
@@ -3885,6 +3887,7 @@ function openQuickAdd() {
 }
 
 function closeQuickAdd() {
+  cancelQuickAddAiRequest();
   stopQuickAddVoice({ discard: true });
   if (els.quickAddOverlay) els.quickAddOverlay.hidden = true;
   if (els.quickAddAiInput) els.quickAddAiInput.value = "";
@@ -3903,8 +3906,16 @@ async function toggleQuickAddVoice() {
   }
 
   try {
-    quickAddVoiceStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const sessionId = ++quickAddVoiceSession;
+    const voiceStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    if (sessionId !== quickAddVoiceSession || els.quickAddOverlay?.hidden) {
+      voiceStream.getTracks().forEach((track) => track.stop());
+      return;
+    }
+
+    quickAddVoiceStream = voiceStream;
     quickAddVoiceChunks = [];
+    quickAddVoiceDiscard = false;
 
     const preferredTypes = [
       "audio/webm;codecs=opus",
@@ -3913,18 +3924,32 @@ async function toggleQuickAddVoice() {
       "audio/ogg;codecs=opus",
     ];
     const mimeType = preferredTypes.find((type) => MediaRecorder.isTypeSupported?.(type)) || "";
-    quickAddRecorder = mimeType
-      ? new MediaRecorder(quickAddVoiceStream, { mimeType })
-      : new MediaRecorder(quickAddVoiceStream);
+    const recorder = mimeType
+      ? new MediaRecorder(voiceStream, { mimeType })
+      : new MediaRecorder(voiceStream);
+    quickAddRecorder = recorder;
 
-    quickAddRecorder.addEventListener("dataavailable", (event) => {
-      if (event.data?.size) quickAddVoiceChunks.push(event.data);
+    recorder.addEventListener("dataavailable", (event) => {
+      if (
+        sessionId === quickAddVoiceSession
+        && !quickAddVoiceDiscard
+        && event.data?.size
+      ) {
+        quickAddVoiceChunks.push(event.data);
+      }
     });
 
-    quickAddRecorder.addEventListener("stop", async () => {
-      const chunks = quickAddVoiceChunks;
-      const recorderType = quickAddRecorder?.mimeType || "audio/webm";
-      cleanupQuickAddVoice();
+    recorder.addEventListener("stop", async () => {
+      const discarded = quickAddVoiceDiscard
+        || sessionId !== quickAddVoiceSession
+        || Boolean(els.quickAddOverlay?.hidden);
+      const chunks = discarded ? [] : [...quickAddVoiceChunks];
+      const recorderType = recorder.mimeType || "audio/webm";
+
+      if (quickAddRecorder === recorder) cleanupQuickAddVoice();
+      else voiceStream.getTracks().forEach((track) => track.stop());
+
+      if (discarded) return;
 
       if (!chunks.length) {
         setQuickAddAiStatus("Nuk u regjistrua zë. Provoje përsëri.");
@@ -3935,7 +3960,7 @@ async function toggleQuickAddVoice() {
       await transcribeQuickAddVoice(audio);
     });
 
-    quickAddRecorder.start();
+    recorder.start();
     els.quickAddVoiceBtn?.classList.add("is-recording");
     els.quickAddVoiceBtn?.setAttribute("aria-pressed", "true");
     if (els.quickAddVoiceBtn) {
@@ -3962,11 +3987,13 @@ function stopQuickAddVoice({ discard = false } = {}) {
     quickAddVoiceTimer = null;
   }
 
+  if (discard) {
+    quickAddVoiceDiscard = true;
+    quickAddVoiceSession += 1;
+    quickAddVoiceChunks = [];
+  }
+
   if (quickAddRecorder?.state === "recording") {
-    if (discard) {
-      quickAddVoiceChunks = [];
-      quickAddRecorder.ondataavailable = null;
-    }
     quickAddRecorder.stop();
     return;
   }
@@ -3982,6 +4009,7 @@ function cleanupQuickAddVoice() {
   quickAddVoiceStream?.getTracks?.().forEach((track) => track.stop());
   quickAddVoiceStream = null;
   quickAddRecorder = null;
+  quickAddVoiceDiscard = false;
   if (els.quickAddVoiceBtn) {
     els.quickAddVoiceBtn.classList.remove("is-recording");
     els.quickAddVoiceBtn.setAttribute("aria-pressed", "false");
@@ -4031,7 +4059,9 @@ async function sendTranscriptionRequest(endpoint, token, audioBlob) {
   const extension = audioBlob.type.includes("mp4") ? "m4a" : audioBlob.type.includes("ogg") ? "ogg" : "webm";
   formData.append("audio", audioBlob, `voice.${extension}`);
 
+  cancelQuickAddAiRequest();
   const controller = new AbortController();
+  quickAddAiController = controller;
   const timeout = window.setTimeout(() => controller.abort(), RECEIPT_AI_TIMEOUT_MS);
   try {
     return await fetch(endpoint, {
@@ -4042,7 +4072,13 @@ async function sendTranscriptionRequest(endpoint, token, audioBlob) {
     });
   } finally {
     window.clearTimeout(timeout);
+    if (quickAddAiController === controller) quickAddAiController = null;
   }
+}
+
+function cancelQuickAddAiRequest() {
+  quickAddAiController?.abort();
+  quickAddAiController = null;
 }
 
 function transcribeAiEndpoint() {
@@ -4098,7 +4134,9 @@ async function handleQuickAddAi() {
 }
 
 async function sendQuickAddRequest(endpoint, token, text) {
+  cancelQuickAddAiRequest();
   const controller = new AbortController();
+  quickAddAiController = controller;
   const timeout = window.setTimeout(() => controller.abort(), RECEIPT_AI_TIMEOUT_MS);
   try {
     return await fetch(endpoint, {
@@ -4122,6 +4160,7 @@ async function sendQuickAddRequest(endpoint, token, text) {
     });
   } finally {
     window.clearTimeout(timeout);
+    if (quickAddAiController === controller) quickAddAiController = null;
   }
 }
 
