@@ -19,6 +19,7 @@ let quickAddVoiceTimer = null;
 let quickAddVoiceDiscard = false;
 let quickAddVoiceSession = 0;
 let quickAddAiController = null;
+let financialAssistantController = null;
 const RECEIPT_AI_MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const NET_WORTH_HISTORY_KEY = "financat-e-mia:net-worth-history:v1";
 const SETUP_KEY = "financat-e-mia:setup-complete:v1";
@@ -441,6 +442,17 @@ const els = {
   insightsDaysRemaining: document.querySelector("#insightsDaysRemaining"),
   insightsSafeProgress: document.querySelector("#insightsSafeProgress"),
   insightsList: document.querySelector("#insightsList"),
+  financialAssistantForm: document.querySelector("#financialAssistantForm"),
+  financialAssistantInput: document.querySelector("#financialAssistantInput"),
+  financialAssistantSubmit: document.querySelector("#financialAssistantSubmit"),
+  financialAssistantSuggestions: document.querySelector("#financialAssistantSuggestions"),
+  financialAssistantStatus: document.querySelector("#financialAssistantStatus"),
+  financialAssistantAnswer: document.querySelector("#financialAssistantAnswer"),
+  financialAssistantAnswerTitle: document.querySelector("#financialAssistantAnswerTitle"),
+  financialAssistantAnswerText: document.querySelector("#financialAssistantAnswerText"),
+  financialAssistantHighlights: document.querySelector("#financialAssistantHighlights"),
+  financialAssistantDisclaimer: document.querySelector("#financialAssistantDisclaimer"),
+  financialAssistantFollowUps: document.querySelector("#financialAssistantFollowUps"),
   homeSetupHint: document.querySelector("#homeSetupHint"),
   formulaOverlay: document.querySelector("#formulaOverlay"),
   formulaTitle: document.querySelector("#formulaTitle"),
@@ -781,6 +793,9 @@ els.insightsOverlay?.addEventListener("click", (event) => {
   if (event.target === els.insightsOverlay) closeInsightsWindow();
 });
 els.insightsList?.addEventListener("click", handleInsightAction);
+els.financialAssistantForm?.addEventListener("submit", handleFinancialAssistantSubmit);
+els.financialAssistantSuggestions?.addEventListener("click", handleFinancialAssistantQuestionClick);
+els.financialAssistantFollowUps?.addEventListener("click", handleFinancialAssistantQuestionClick);
 els.expenseArchiveSearch?.addEventListener("input", (event) => updateArchiveSearch("expense", event.target.value));
 els.incomeArchiveSearch?.addEventListener("input", (event) => updateArchiveSearch("income", event.target.value));
 els.expenseArchiveSearchClear?.addEventListener("click", () => clearArchiveSearch("expense"));
@@ -1679,6 +1694,7 @@ function openInsightsWindow() {
 }
 
 function closeInsightsWindow() {
+  cancelFinancialAssistantRequest();
   if (els.insightsOverlay) els.insightsOverlay.hidden = true;
   if (state.activeZone === "insights") state.activeZone = "home";
   syncZoneNav();
@@ -1946,6 +1962,292 @@ function renderInsights() {
       `;
     })
     .join("");
+}
+
+function handleFinancialAssistantSubmit(event) {
+  event.preventDefault();
+  askFinancialAssistant(els.financialAssistantInput?.value || "");
+}
+
+function handleFinancialAssistantQuestionClick(event) {
+  const button = event.target.closest("[data-assistant-question]");
+  if (!button) return;
+  const question = String(button.dataset.assistantQuestion || "").trim();
+  if (!question) return;
+  if (els.financialAssistantInput) els.financialAssistantInput.value = question;
+  askFinancialAssistant(question);
+}
+
+async function askFinancialAssistant(rawQuestion) {
+  const question = String(rawQuestion || "").trim().slice(0, 300);
+  if (!question) {
+    setFinancialAssistantStatus("Shkruaj një pyetje për financat e tua.", "error");
+    els.financialAssistantInput?.focus();
+    return;
+  }
+
+  if (els.financialAssistantInput) els.financialAssistantInput.value = question;
+  setFinancialAssistantBusy(true);
+  setFinancialAssistantStatus("Po analizoj përmbledhjen e financave të tua…", "loading");
+
+  try {
+    const endpoint = financialAssistantEndpoint();
+    const snapshot = buildFinancialAssistantSnapshot();
+    let token = receiptAiToken();
+    let response = await sendFinancialAssistantRequest(endpoint, token, question, snapshot);
+    let result = await response.json().catch(() => ({}));
+
+    if (response.status === 401) {
+      localStorage.removeItem(RECEIPT_AI_TOKEN_KEY);
+      token = prompt("Ky backend kërkon kod aksesi. Vendose kodin që krijove në Cloudflare.")?.trim() || "";
+      if (!token) throw new Error("U anulua vendosja e kodit të aksesit.");
+      localStorage.setItem(RECEIPT_AI_TOKEN_KEY, token);
+      setFinancialAssistantStatus("Po provohet me kodin e ri…", "loading");
+      response = await sendFinancialAssistantRequest(endpoint, token, question, snapshot);
+      result = await response.json().catch(() => ({}));
+    }
+
+    if (!response.ok) throw new Error(result.error || "Asistenti nuk u përgjigj dot.");
+    renderFinancialAssistantAnswer(validateFinancialAssistantResult(result));
+    setFinancialAssistantStatus("Analiza u përditësua nga të dhënat aktuale të aplikacionit.", "success");
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      if (!els.insightsOverlay?.hidden) setFinancialAssistantStatus("Kërkesa u anulua.", "error");
+    } else {
+      setFinancialAssistantStatus(error?.message || "Asistenti nuk u përgjigj dot.", "error");
+    }
+  } finally {
+    setFinancialAssistantBusy(false);
+  }
+}
+
+async function sendFinancialAssistantRequest(endpoint, token, question, snapshot) {
+  cancelFinancialAssistantRequest();
+  const controller = new AbortController();
+  financialAssistantController = controller;
+  const timeout = window.setTimeout(() => controller.abort(), RECEIPT_AI_TIMEOUT_MS);
+  try {
+    return await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { "X-Receipt-Token": token } : {}),
+      },
+      body: JSON.stringify({ question, snapshot }),
+      signal: controller.signal,
+    });
+  } finally {
+    window.clearTimeout(timeout);
+    if (financialAssistantController === controller) financialAssistantController = null;
+  }
+}
+
+function cancelFinancialAssistantRequest() {
+  financialAssistantController?.abort();
+  financialAssistantController = null;
+}
+
+function financialAssistantEndpoint() {
+  const url = new URL(receiptAiEndpoint());
+  url.pathname = "/api/assistant";
+  return url.toString();
+}
+
+function buildFinancialAssistantSnapshot(now = new Date()) {
+  const today = toLocalIso(now);
+  const currentMonth = monthKey(now);
+  const monthEntries = state.entries.filter((entry) => entry.date.startsWith(currentMonth) && entry.date <= today);
+  const spentToday = monthEntries
+    .filter((entry) => entry.type === "expense" && entry.date === today)
+    .reduce(sumMoneyTotals, emptyMoneyTotals());
+  const expenses = monthEntries
+    .filter((entry) => entry.type === "expense")
+    .reduce(sumMoneyTotals, emptyMoneyTotals());
+  const income = monthEntries
+    .filter((entry) => entry.type === "income")
+    .reduce(sumMoneyTotals, emptyMoneyTotals());
+  const budget = monthlyBudgetInsight(now, spentToday, expenses, income);
+  const balances = bankTotals();
+  const remainingRecurring = recurringRemainingExpenses(now);
+  const recurringTotalsValue = recurringTotals(remainingRecurring);
+
+  const categoryMap = new Map();
+  monthEntries
+    .filter((entry) => entry.type === "expense")
+    .forEach((entry) => {
+      const category = normalizeCategoryName(entry.category) || "Tjetër";
+      const totals = categoryMap.get(category) || emptyMoneyTotals();
+      addEntryAmount(totals, entry);
+      categoryMap.set(category, totals);
+    });
+  const expenseTotalLek = Math.max(totalsToLek(expenses), 0);
+  const topExpenseCategories = Array.from(categoryMap, ([category, totals]) => ({
+    category,
+    ...assistantMoneyTotals(totals),
+    sharePercent: expenseTotalLek > 0 ? assistantNumber(totalsToLek(totals) / expenseTotalLek * 100) : 0,
+  }))
+    .sort((a, b) => b.totalLek - a.totalLek)
+    .slice(0, 12);
+
+  const recurringByCategory = new Map();
+  remainingRecurring.forEach((item) => {
+    const category = normalizeCategoryName(item.category) || "Tjetër";
+    const current = recurringByCategory.get(category) || { count: 0, totals: emptyMoneyTotals() };
+    current.count += 1;
+    current.totals[normalizeCurrency(item.currency)] += Number(item.amount) || 0;
+    recurringByCategory.set(category, current);
+  });
+
+  const goals = normalizeGoals(state.goals)
+    .filter((goal) => goal.active !== false)
+    .slice(0, 12)
+    .map((goal) => {
+      const target = Math.max(Number(goal.amount) || 0, 0);
+      const saved = Math.max(Number(goalSavedAmount(goal, now)) || 0, 0);
+      return {
+        name: String(goal.name || "Objektiv").slice(0, 60),
+        currency: normalizeCurrency(goal.currency),
+        target: assistantNumber(target),
+        saved: assistantNumber(saved),
+        progressPercent: target > 0 ? assistantNumber(Math.min(saved / target * 100, 100)) : 0,
+        months: Math.max(1, Math.round(Number(goal.months) || 1)),
+        monthlyTargetLek: assistantNumber(singleSavingsGoalMonthlyTargetLek(goal)),
+      };
+    });
+
+  const monthlyHistory = Array.from({ length: 12 }, (_, index) => {
+    const date = new Date(now.getFullYear(), now.getMonth() - (11 - index), 1);
+    const key = monthKey(date);
+    const entries = state.entries.filter((entry) => entry.date.startsWith(key) && (key !== currentMonth || entry.date <= today));
+    const monthIncome = entries.filter((entry) => entry.type === "income").reduce(sumMoneyTotals, emptyMoneyTotals());
+    const monthExpenses = entries.filter((entry) => entry.type === "expense").reduce(sumMoneyTotals, emptyMoneyTotals());
+    const incomeLek = totalsToLek(monthIncome);
+    const expenseLek = totalsToLek(monthExpenses);
+    return {
+      month: key,
+      incomeLek: assistantNumber(incomeLek),
+      expenseLek: assistantNumber(expenseLek),
+      savingsLek: assistantNumber(incomeLek - expenseLek),
+    };
+  });
+
+  const validDates = state.entries.map((entry) => entry.date).filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(String(date))).sort();
+  return {
+    today,
+    currentMonth,
+    exchangeRate: assistantNumber(state.exchangeRate),
+    dataCoverage: {
+      transactionCount: state.entries.length,
+      firstDate: validDates[0] || null,
+      lastDate: validDates[validDates.length - 1] || null,
+    },
+    currentMonthTotals: {
+      income: assistantMoneyTotals(income),
+      expenses: assistantMoneyTotals(expenses),
+      netSavingsLek: assistantNumber(totalsToLek(income) - totalsToLek(expenses)),
+    },
+    balances: {
+      ...assistantMoneyTotals(balances),
+      accountCount: state.banks.length,
+    },
+    budget: {
+      dailySafeLek: assistantNumber(budget.dailySafeLek),
+      remainingLek: assistantNumber(budget.remainingLek),
+      daysRemaining: budget.daysRemaining,
+      monthlyBudgetLek: assistantNumber(budget.monthlyBudgetLek),
+      monthlyIncomeLek: assistantNumber(budget.monthlyIncomeLek),
+      monthlySavingsTargetLek: assistantNumber(budget.monthlyTargetLek),
+      projectedSpendLek: assistantNumber(budget.projectedSpendLek),
+      forecastDeltaLek: assistantNumber(budget.forecastDeltaLek),
+      fixedRemainingLek: assistantNumber(budget.fixedRemainingLek),
+    },
+    topExpenseCategories,
+    goals,
+    recurring: {
+      remainingCount: remainingRecurring.length,
+      remainingTotals: assistantMoneyTotals(recurringTotalsValue),
+      categories: Array.from(recurringByCategory, ([category, item]) => ({
+        category,
+        count: item.count,
+        ...assistantMoneyTotals(item.totals),
+      })).slice(0, 12),
+    },
+    monthlyHistory,
+  };
+}
+
+function assistantMoneyTotals(totals) {
+  return {
+    ALL: assistantNumber(totals?.ALL),
+    EUR: assistantNumber(totals?.EUR),
+    totalLek: assistantNumber(totalsToLek(totals || emptyMoneyTotals())),
+  };
+}
+
+function assistantNumber(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.round(number * 100) / 100 : 0;
+}
+
+function validateFinancialAssistantResult(result) {
+  if (!result || typeof result !== "object") throw new Error("Përgjigjja e asistentit nuk është e vlefshme.");
+  const title = String(result.title || "Analiza jote").trim().slice(0, 80) || "Analiza jote";
+  const answer = String(result.answer || "").trim().slice(0, 1200);
+  if (!answer) throw new Error("Asistenti nuk ktheu një përgjigje të plotë.");
+  const highlights = (Array.isArray(result.highlights) ? result.highlights : [])
+    .map((item) => ({
+      label: String(item?.label || "").trim().slice(0, 40),
+      value: String(item?.value || "").trim().slice(0, 60),
+      tone: ["positive", "warning", "neutral"].includes(item?.tone) ? item.tone : "neutral",
+    }))
+    .filter((item) => item.label && item.value)
+    .slice(0, 3);
+  const followUps = (Array.isArray(result.followUps) ? result.followUps : [])
+    .map((item) => String(item || "").trim().slice(0, 100))
+    .filter(Boolean)
+    .slice(0, 3);
+  const disclaimer = String(result.disclaimer || "").trim().slice(0, 220);
+  return { title, answer, highlights, followUps, disclaimer };
+}
+
+function renderFinancialAssistantAnswer(result) {
+  if (!els.financialAssistantAnswer) return;
+  setText(els.financialAssistantAnswerTitle, result.title);
+  setText(els.financialAssistantAnswerText, result.answer);
+  els.financialAssistantHighlights.innerHTML = result.highlights
+    .map((item) => `
+      <div class="financial-assistant-highlight is-${item.tone}">
+        <span>${escapeHtml(item.label)}</span>
+        <strong>${escapeHtml(item.value)}</strong>
+      </div>
+    `)
+    .join("");
+  els.financialAssistantHighlights.hidden = !result.highlights.length;
+  setText(els.financialAssistantDisclaimer, result.disclaimer);
+  els.financialAssistantDisclaimer.hidden = !result.disclaimer;
+  els.financialAssistantFollowUps.innerHTML = result.followUps
+    .map((question) => `<button type="button" data-assistant-question="${escapeHtml(question)}">${escapeHtml(question)}</button>`)
+    .join("");
+  els.financialAssistantFollowUps.hidden = !result.followUps.length;
+  els.financialAssistantAnswer.hidden = false;
+  requestAnimationFrame(() => els.financialAssistantAnswer?.scrollIntoView({ behavior: "smooth", block: "nearest" }));
+}
+
+function setFinancialAssistantStatus(message, tone = "neutral") {
+  if (!els.financialAssistantStatus) return;
+  els.financialAssistantStatus.textContent = message;
+  els.financialAssistantStatus.dataset.tone = tone;
+}
+
+function setFinancialAssistantBusy(isBusy) {
+  if (els.financialAssistantSubmit) {
+    els.financialAssistantSubmit.disabled = isBusy;
+    els.financialAssistantSubmit.textContent = isBusy ? "Po analizoj…" : "Pyet AI";
+  }
+  if (els.financialAssistantInput) els.financialAssistantInput.disabled = isBusy;
+  [els.financialAssistantSuggestions, els.financialAssistantFollowUps].forEach((container) => {
+    container?.querySelectorAll("button").forEach((button) => { button.disabled = isBusy; });
+  });
 }
 
 function handleInsightAction(event) {

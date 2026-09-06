@@ -14,7 +14,7 @@
     <link rel="manifest" href="manifest.webmanifest?v=20260821-1" />
     <link rel="icon" href="icon.svg?v=20260820-1" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="icon.svg?v=20260820-1" />
-    <link rel="stylesheet" href="styles.css?v=20260905-chatgpt-composer-1" />
+    <link rel="stylesheet" href="styles.css?v=20260907-ai-assistant-1" />
   </head>
   <body>
     <main class="app-shell">
@@ -625,6 +625,38 @@
             <div class="insight-safe-progress" aria-hidden="true"><i id="insightsSafeProgress"></i></div>
           </article>
 
+          <section class="financial-assistant" aria-labelledby="financialAssistantTitle">
+            <div class="financial-assistant-heading">
+              <div>
+                <span class="financial-assistant-kicker">AI · vetëm lexim</span>
+                <h3 id="financialAssistantTitle">Asistenti financiar</h3>
+              </div>
+              <span class="financial-assistant-mark" aria-hidden="true">✦</span>
+            </div>
+            <p>Pyet mbi të dhënat e tua. Asistenti analizon përmbledhjet, por nuk ndryshon asgjë.</p>
+
+            <div id="financialAssistantSuggestions" class="financial-assistant-suggestions" aria-label="Pyetje të sugjeruara">
+              <button type="button" data-assistant-question="Sa mund të shpenzoj këtë javë?">Sa mund të shpenzoj këtë javë?</button>
+              <button type="button" data-assistant-question="Ku po më ikin paratë këtë muaj?">Ku po më ikin paratë?</button>
+              <button type="button" data-assistant-question="A jam brenda buxhetit këtë muaj?">A jam brenda buxhetit?</button>
+            </div>
+
+            <form id="financialAssistantForm" class="financial-assistant-form">
+              <label class="sr-only" for="financialAssistantInput">Pyet asistentin financiar</label>
+              <textarea id="financialAssistantInput" maxlength="300" rows="2" placeholder="P.sh. Si po shkon buxheti im këtë muaj?"></textarea>
+              <button id="financialAssistantSubmit" type="submit">Pyet AI</button>
+            </form>
+            <small id="financialAssistantStatus" class="financial-assistant-status" aria-live="polite">Kur pyet, dërgohet te AI vetëm një përmbledhje e agreguar; asnjë transaksion nuk ndryshohet.</small>
+
+            <article id="financialAssistantAnswer" class="financial-assistant-answer" hidden aria-live="polite">
+              <span id="financialAssistantAnswerTitle"></span>
+              <p id="financialAssistantAnswerText"></p>
+              <div id="financialAssistantHighlights" class="financial-assistant-highlights"></div>
+              <small id="financialAssistantDisclaimer" class="financial-assistant-disclaimer" hidden></small>
+              <div id="financialAssistantFollowUps" class="financial-assistant-followups" aria-label="Pyetje pasuese"></div>
+            </article>
+          </section>
+
           <div id="insightsList" class="insights-list"></div>
         </div>
       </section>
@@ -1085,6 +1117,6 @@
       </div>
     </template>
 
-    <script src="app.js?v=20260905-chatgpt-composer-1"></script>
+    <script src="app.js?v=20260907-ai-assistant-1"></script>
   </body>
 </html>

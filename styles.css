@@ -5751,3 +5751,274 @@ button.summary-progress {
 .quick-add-composer-actions label[for="receiptImageInput"] {
   margin-right: auto;
 }
+
+/* Phase 5 — read-only financial assistant */
+.financial-assistant {
+  display: grid;
+  gap: 14px;
+  margin: 0 0 10px;
+  padding: 18px;
+  border: 1px solid color-mix(in srgb, var(--green) 34%, transparent);
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--green) 9%, var(--home-card));
+  color: var(--home-text);
+}
+
+.financial-assistant-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.financial-assistant-heading > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.financial-assistant-kicker {
+  color: var(--green);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.financial-assistant h3 {
+  margin: 0;
+  color: var(--home-text);
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+  line-height: 1.05;
+}
+
+.financial-assistant > p {
+  color: var(--home-subtext);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.financial-assistant-mark {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--green);
+  color: #07140b;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.financial-assistant-suggestions,
+.financial-assistant-followups {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 0 0 2px;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+}
+
+.financial-assistant-suggestions::-webkit-scrollbar,
+.financial-assistant-followups::-webkit-scrollbar {
+  display: none;
+}
+
+.financial-assistant-suggestions button,
+.financial-assistant-followups button {
+  min-height: 38px;
+  flex: 0 0 auto;
+  padding: 0 13px;
+  border: 1px solid var(--home-track);
+  border-radius: 999px;
+  background: var(--home-control);
+  color: var(--home-text);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  scroll-snap-align: start;
+  white-space: nowrap;
+}
+
+.financial-assistant-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 8px;
+}
+
+.financial-assistant-form textarea {
+  width: 100%;
+  min-height: 54px;
+  max-height: 126px;
+  resize: vertical;
+  padding: 14px 15px;
+  border: 1px solid var(--home-track);
+  border-radius: 17px;
+  outline: 0;
+  background: var(--home-control);
+  color: var(--home-text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.financial-assistant-form textarea::placeholder {
+  color: var(--home-muted);
+}
+
+.financial-assistant-form textarea:focus {
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 18%, transparent);
+}
+
+.financial-assistant-form > button {
+  min-height: 54px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 17px;
+  background: var(--home-text);
+  color: var(--bg);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+:root[data-theme="dark"] .financial-assistant-form > button {
+  color: #050506;
+}
+
+.financial-assistant button:disabled,
+.financial-assistant textarea:disabled {
+  cursor: wait;
+  opacity: 0.58;
+}
+
+.financial-assistant-status {
+  color: var(--home-muted);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.financial-assistant-status[data-tone="error"] {
+  color: var(--expense);
+}
+
+.financial-assistant-status[data-tone="success"] {
+  color: color-mix(in srgb, var(--green) 82%, var(--home-text));
+}
+
+.financial-assistant-answer {
+  display: grid;
+  gap: 11px;
+  padding: 15px;
+  border-radius: 17px;
+  background: var(--home-control);
+  color: var(--home-text);
+}
+
+.financial-assistant-answer > span {
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.financial-assistant-answer > p {
+  color: var(--home-text);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.45;
+  white-space: pre-line;
+}
+
+.financial-assistant-highlights {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.financial-assistant-highlight {
+  min-width: 0;
+  display: grid;
+  align-content: space-between;
+  gap: 7px;
+  min-height: 72px;
+  padding: 10px;
+  border-radius: 13px;
+  background: var(--home-card);
+}
+
+.financial-assistant-highlight span {
+  overflow: hidden;
+  color: var(--home-muted);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.financial-assistant-highlight strong {
+  overflow: hidden;
+  color: var(--home-text);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  line-height: 1.05;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.financial-assistant-highlight.is-positive strong {
+  color: var(--green);
+}
+
+.financial-assistant-highlight.is-warning strong {
+  color: var(--expense);
+}
+
+.financial-assistant-disclaimer {
+  padding-top: 2px;
+  color: var(--home-muted);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.financial-assistant-followups {
+  padding-top: 2px;
+}
+
+.financial-assistant-followups button {
+  border-color: color-mix(in srgb, var(--green) 36%, var(--home-track));
+}
+
+.financial-assistant button:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+
+@media (max-width: 370px) {
+  .financial-assistant-form {
+    grid-template-columns: 1fr;
+  }
+
+  .financial-assistant-form > button {
+    width: 100%;
+  }
+
+  .financial-assistant-highlights {
+    grid-template-columns: 1fr;
+  }
+
+  .financial-assistant-highlight {
+    min-height: 58px;
+  }
+}
