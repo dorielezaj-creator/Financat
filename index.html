@@ -14,7 +14,7 @@
     <link rel="manifest" href="manifest.webmanifest?v=20260821-1" />
     <link rel="icon" href="icon.svg?v=20260820-1" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="icon.svg?v=20260820-1" />
-    <link rel="stylesheet" href="styles.css?v=20260907-ai-assistant-1" />
+    <link rel="stylesheet" href="styles.css?v=20260907-real-insights-1" />
   </head>
   <body>
     <main class="app-shell">
@@ -625,6 +625,26 @@
             <div class="insight-safe-progress" aria-hidden="true"><i id="insightsSafeProgress"></i></div>
           </article>
 
+          <section class="real-insights" aria-labelledby="realInsightsTitle">
+            <div class="real-insights-heading">
+              <div>
+                <span class="real-insights-kicker">Llogaritje të verifikuara</span>
+                <h3 id="realInsightsTitle">Analiza e muajit</h3>
+              </div>
+              <button id="monthlyInsightsAiBtn" class="real-insights-ai-button" type="button">Shpjego me AI</button>
+            </div>
+            <p>Shifrat llogariten në telefon. AI merr vetëm këto përmbledhje dhe i shpjegon.</p>
+            <div id="monthlyInsightFacts" class="real-insights-grid" aria-live="polite"></div>
+            <small id="monthlyInsightsStatus" class="real-insights-status" aria-live="polite">Analiza lokale është gati edhe pa AI.</small>
+            <article id="monthlyInsightsAiAnswer" class="real-insights-answer" hidden aria-live="polite">
+              <span id="monthlyInsightsAiTitle">Përmbledhja e muajit</span>
+              <p id="monthlyInsightsAiOverview"></p>
+              <div id="monthlyInsightsAiSections" class="real-insights-explanations"></div>
+              <strong id="monthlyInsightsAiAction" class="real-insights-closing-action"></strong>
+              <small id="monthlyInsightsAiDisclaimer" class="real-insights-disclaimer" hidden></small>
+            </article>
+          </section>
+
           <section class="financial-assistant" aria-labelledby="financialAssistantTitle">
             <div class="financial-assistant-heading">
               <div>
@@ -1117,6 +1137,6 @@
       </div>
     </template>
 
-    <script src="app.js?v=20260907-ai-assistant-1"></script>
+    <script src="app.js?v=20260907-real-insights-1"></script>
   </body>
 </html>

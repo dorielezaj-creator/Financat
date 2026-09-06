@@ -6022,3 +6022,253 @@ button.summary-progress {
     min-height: 58px;
   }
 }
+
+/* Phase 6 — deterministic monthly insights explained by AI */
+.real-insights {
+  display: grid;
+  gap: 14px;
+  margin: 0 0 10px;
+  padding: 18px;
+  border-radius: 20px;
+  background: var(--home-card);
+  color: var(--home-text);
+}
+
+.real-insights-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.real-insights-heading > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.real-insights-kicker {
+  color: var(--green);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.real-insights h3 {
+  margin: 0;
+  color: var(--home-text);
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+  line-height: 1.05;
+}
+
+.real-insights > p {
+  margin: 0;
+  color: var(--home-subtext);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.real-insights-ai-button {
+  min-height: 40px;
+  flex: 0 0 auto;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--home-text);
+  color: var(--bg);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+:root[data-theme="dark"] .real-insights-ai-button {
+  color: #050506;
+}
+
+.real-insights-ai-button:disabled {
+  cursor: wait;
+  opacity: 0.58;
+}
+
+.real-insights-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.real-insight-fact {
+  min-width: 0;
+  min-height: 112px;
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  padding: 13px;
+  border-radius: 16px;
+  background: var(--home-control);
+}
+
+.real-insight-fact.is-wide {
+  grid-column: 1 / -1;
+  min-height: 92px;
+}
+
+.real-insight-fact > span {
+  color: var(--home-muted);
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+.real-insight-fact > strong {
+  overflow-wrap: anywhere;
+  color: var(--home-text);
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+  line-height: 1.08;
+}
+
+.real-insight-fact > small {
+  color: var(--home-subtext);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.real-insight-fact.is-positive > strong {
+  color: var(--green);
+}
+
+.real-insight-fact.is-warning > strong {
+  color: var(--expense);
+}
+
+.real-insight-fact.is-action {
+  border: 1px solid color-mix(in srgb, var(--green) 34%, transparent);
+  background: color-mix(in srgb, var(--green) 9%, var(--home-control));
+}
+
+.real-insights-status {
+  color: var(--home-muted);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.real-insights-status[data-tone="error"] {
+  color: var(--expense);
+}
+
+.real-insights-status[data-tone="success"] {
+  color: color-mix(in srgb, var(--green) 82%, var(--home-text));
+}
+
+.real-insights-answer {
+  display: grid;
+  gap: 11px;
+  padding: 15px;
+  border: 1px solid color-mix(in srgb, var(--green) 30%, transparent);
+  border-radius: 17px;
+  background: color-mix(in srgb, var(--green) 8%, var(--home-control));
+}
+
+.real-insights-answer > span {
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.real-insights-answer > p {
+  margin: 0;
+  color: var(--home-text);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.real-insights-explanations {
+  display: grid;
+  gap: 7px;
+}
+
+.real-insights-explanation {
+  display: grid;
+  gap: 3px;
+  padding: 11px 12px;
+  border-radius: 13px;
+  background: var(--home-card);
+}
+
+.real-insights-explanation strong {
+  color: var(--home-text);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.real-insights-explanation p {
+  margin: 0;
+  color: var(--home-subtext);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.38;
+}
+
+.real-insights-explanation.is-positive strong {
+  color: var(--green);
+}
+
+.real-insights-explanation.is-warning strong {
+  color: var(--expense);
+}
+
+.real-insights-closing-action {
+  padding: 11px 12px;
+  border-radius: 13px;
+  background: var(--home-text);
+  color: var(--bg);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+:root[data-theme="dark"] .real-insights-closing-action {
+  color: #050506;
+}
+
+.real-insights-disclaimer {
+  color: var(--home-muted);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.real-insights button:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+
+@media (max-width: 410px) {
+  .real-insights-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .real-insights-ai-button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 350px) {
+  .real-insights-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .real-insight-fact.is-wide {
+    grid-column: auto;
+  }
+}

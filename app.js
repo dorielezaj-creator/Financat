@@ -20,6 +20,7 @@ let quickAddVoiceDiscard = false;
 let quickAddVoiceSession = 0;
 let quickAddAiController = null;
 let financialAssistantController = null;
+let monthlyInsightsController = null;
 const RECEIPT_AI_MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const NET_WORTH_HISTORY_KEY = "financat-e-mia:net-worth-history:v1";
 const SETUP_KEY = "financat-e-mia:setup-complete:v1";
@@ -442,6 +443,15 @@ const els = {
   insightsDaysRemaining: document.querySelector("#insightsDaysRemaining"),
   insightsSafeProgress: document.querySelector("#insightsSafeProgress"),
   insightsList: document.querySelector("#insightsList"),
+  monthlyInsightsAiBtn: document.querySelector("#monthlyInsightsAiBtn"),
+  monthlyInsightFacts: document.querySelector("#monthlyInsightFacts"),
+  monthlyInsightsStatus: document.querySelector("#monthlyInsightsStatus"),
+  monthlyInsightsAiAnswer: document.querySelector("#monthlyInsightsAiAnswer"),
+  monthlyInsightsAiTitle: document.querySelector("#monthlyInsightsAiTitle"),
+  monthlyInsightsAiOverview: document.querySelector("#monthlyInsightsAiOverview"),
+  monthlyInsightsAiSections: document.querySelector("#monthlyInsightsAiSections"),
+  monthlyInsightsAiAction: document.querySelector("#monthlyInsightsAiAction"),
+  monthlyInsightsAiDisclaimer: document.querySelector("#monthlyInsightsAiDisclaimer"),
   financialAssistantForm: document.querySelector("#financialAssistantForm"),
   financialAssistantInput: document.querySelector("#financialAssistantInput"),
   financialAssistantSubmit: document.querySelector("#financialAssistantSubmit"),
@@ -793,6 +803,7 @@ els.insightsOverlay?.addEventListener("click", (event) => {
   if (event.target === els.insightsOverlay) closeInsightsWindow();
 });
 els.insightsList?.addEventListener("click", handleInsightAction);
+els.monthlyInsightsAiBtn?.addEventListener("click", generateMonthlyInsightsExplanation);
 els.financialAssistantForm?.addEventListener("submit", handleFinancialAssistantSubmit);
 els.financialAssistantSuggestions?.addEventListener("click", handleFinancialAssistantQuestionClick);
 els.financialAssistantFollowUps?.addEventListener("click", handleFinancialAssistantQuestionClick);
@@ -1695,6 +1706,7 @@ function openInsightsWindow() {
 
 function closeInsightsWindow() {
   cancelFinancialAssistantRequest();
+  cancelMonthlyInsightsRequest();
   if (els.insightsOverlay) els.insightsOverlay.hidden = true;
   if (state.activeZone === "insights") state.activeZone = "home";
   syncZoneNav();
@@ -1962,6 +1974,491 @@ function renderInsights() {
       `;
     })
     .join("");
+
+  renderMonthlyInsightFacts(buildMonthlyInsightsSummary(now));
+}
+
+function buildMonthlyInsightsSummary(now = new Date()) {
+  const today = toLocalIso(now);
+  const currentMonth = monthKey(now);
+  const previousDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const previousMonth = monthKey(previousDate);
+  const comparisonDay = Math.min(now.getDate(), daysInMonth(previousDate));
+  const previousCutoff = `${previousMonth}-${String(comparisonDay).padStart(2, "0")}`;
+  const currentComparisonCutoff = `${currentMonth}-${String(comparisonDay).padStart(2, "0")}`;
+  const currentEntries = state.entries.filter((entry) => entry.date.startsWith(currentMonth) && entry.date <= today);
+  const currentComparisonEntries = currentEntries.filter((entry) => entry.date <= currentComparisonCutoff);
+  const previousEntries = state.entries.filter((entry) => entry.date.startsWith(previousMonth) && entry.date <= previousCutoff);
+  const currentExpenses = currentEntries.filter((entry) => entry.type === "expense").reduce(sumMoneyTotals, emptyMoneyTotals());
+  const currentIncome = currentEntries.filter((entry) => entry.type === "income").reduce(sumMoneyTotals, emptyMoneyTotals());
+  const currentComparisonExpenses = currentComparisonEntries.filter((entry) => entry.type === "expense").reduce(sumMoneyTotals, emptyMoneyTotals());
+  const currentComparisonIncome = currentComparisonEntries.filter((entry) => entry.type === "income").reduce(sumMoneyTotals, emptyMoneyTotals());
+  const previousExpenses = previousEntries.filter((entry) => entry.type === "expense").reduce(sumMoneyTotals, emptyMoneyTotals());
+  const previousIncome = previousEntries.filter((entry) => entry.type === "income").reduce(sumMoneyTotals, emptyMoneyTotals());
+  const currentExpenseLek = totalsToLek(currentComparisonExpenses);
+  const currentIncomeLek = totalsToLek(currentComparisonIncome);
+  const previousExpenseLek = totalsToLek(previousExpenses);
+  const previousIncomeLek = totalsToLek(previousIncome);
+  const currentSavingsLek = currentIncomeLek - currentExpenseLek;
+  const previousSavingsLek = previousIncomeLek - previousExpenseLek;
+  const spentToday = currentEntries
+    .filter((entry) => entry.type === "expense" && entry.date === today)
+    .reduce(sumMoneyTotals, emptyMoneyTotals());
+  const budget = monthlyBudgetInsight(now, spentToday, currentExpenses, currentIncome);
+  const changeAvailable = previousEntries.length > 0;
+  const categoryAverage = buildCategoryAverageInsight(currentEntries, now);
+  const goal = buildGoalPlanInsight(now);
+  const budgetInsight = {
+    available: budget.monthlyBudgetLek > 0,
+    status: budget.monthlyBudgetLek <= 0
+      ? "missing_income"
+      : budget.forecastDeltaLek < 0
+        ? "at_risk"
+        : budget.forecastDeltaLek < budget.monthlyBudgetLek * 0.1
+          ? "watch"
+          : "safe",
+    monthlyBudgetLek: assistantNumber(budget.monthlyBudgetLek),
+    spentMonthLek: assistantNumber(budget.spentMonthLek),
+    fixedRemainingLek: assistantNumber(budget.fixedRemainingLek),
+    projectedSpendLek: assistantNumber(budget.projectedSpendLek),
+    forecastDeltaLek: assistantNumber(budget.forecastDeltaLek),
+    dailySafeLek: assistantNumber(budget.dailySafeLek),
+    daysRemaining: budget.daysRemaining,
+  };
+  const action = buildRealisticMonthlyAction({ budget: budgetInsight, average: categoryAverage, goal });
+  const validDates = state.entries
+    .map((entry) => String(entry.date || ""))
+    .filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date))
+    .sort();
+
+  return {
+    today,
+    currentMonth,
+    exchangeRate: assistantNumber(state.exchangeRate),
+    dataCoverage: {
+      transactionCount: state.entries.length,
+      firstDate: validDates[0] || null,
+      lastDate: validDates[validDates.length - 1] || null,
+    },
+    change: {
+      available: changeAvailable,
+      comparedMonth: previousMonth,
+      comparisonDays: comparisonDay,
+      expensesCurrentLek: assistantNumber(currentExpenseLek),
+      expensesPreviousLek: assistantNumber(previousExpenseLek),
+      expenseDeltaLek: assistantNumber(currentExpenseLek - previousExpenseLek),
+      expensePercentAvailable: Math.abs(previousExpenseLek) >= 0.01,
+      expenseDeltaPercent: comparablePercentChange(currentExpenseLek, previousExpenseLek),
+      incomeCurrentLek: assistantNumber(currentIncomeLek),
+      incomePreviousLek: assistantNumber(previousIncomeLek),
+      incomeDeltaLek: assistantNumber(currentIncomeLek - previousIncomeLek),
+      incomePercentAvailable: Math.abs(previousIncomeLek) >= 0.01,
+      incomeDeltaPercent: comparablePercentChange(currentIncomeLek, previousIncomeLek),
+      savingsCurrentLek: assistantNumber(currentSavingsLek),
+      savingsPreviousLek: assistantNumber(previousSavingsLek),
+      savingsDeltaLek: assistantNumber(currentSavingsLek - previousSavingsLek),
+    },
+    average: categoryAverage,
+    budget: budgetInsight,
+    goal,
+    action,
+  };
+}
+
+function comparablePercentChange(current, previous) {
+  const currentValue = Number(current) || 0;
+  const previousValue = Number(previous) || 0;
+  if (Math.abs(previousValue) < 0.01) return 0;
+  return assistantNumber((currentValue - previousValue) / Math.abs(previousValue) * 100);
+}
+
+function buildCategoryAverageInsight(currentEntries, now = new Date()) {
+  const baselineMonths = Array.from({ length: 3 }, (_, index) => {
+    const date = new Date(now.getFullYear(), now.getMonth() - (index + 1), 1);
+    const key = monthKey(date);
+    const entries = state.entries.filter((entry) => entry.type === "expense" && entry.date.startsWith(key));
+    return { key, entries };
+  }).filter((month) => month.entries.length > 0);
+
+  if (!baselineMonths.length) {
+    return {
+      available: false,
+      baselineMonths: 0,
+      category: "",
+      currentMonthLek: 0,
+      projectedMonthLek: 0,
+      averageMonthlyLek: 0,
+      excessLek: 0,
+      excessPercent: 0,
+    };
+  }
+
+  const currentByCategory = categoryTotalsMap(currentEntries.filter((entry) => entry.type === "expense"));
+  const baselineByCategory = new Map();
+  baselineMonths.forEach((month) => {
+    const monthMap = categoryTotalsMap(month.entries);
+    const categories = new Set([...baselineByCategory.keys(), ...monthMap.keys()]);
+    categories.forEach((category) => {
+      baselineByCategory.set(category, (baselineByCategory.get(category) || 0) + (monthMap.get(category) || 0));
+    });
+  });
+
+  const daysElapsed = Math.max(now.getDate(), 1);
+  const monthDays = daysInMonth(now);
+  const candidates = Array.from(currentByCategory, ([category, currentMonthLek]) => {
+    const averageMonthlyLek = (baselineByCategory.get(category) || 0) / baselineMonths.length;
+    const projectedMonthLek = currentMonthLek / daysElapsed * monthDays;
+    const excessLek = projectedMonthLek - averageMonthlyLek;
+    return {
+      category,
+      currentMonthLek,
+      projectedMonthLek,
+      averageMonthlyLek,
+      excessLek,
+      excessPercent: averageMonthlyLek > 0 ? excessLek / averageMonthlyLek * 100 : 0,
+    };
+  })
+    .filter((item) => item.averageMonthlyLek > 0 && item.excessLek > 0)
+    .sort((a, b) => b.excessLek - a.excessLek);
+
+  const top = candidates[0];
+  if (!top) {
+    return {
+      available: true,
+      baselineMonths: baselineMonths.length,
+      category: "",
+      currentMonthLek: 0,
+      projectedMonthLek: 0,
+      averageMonthlyLek: 0,
+      excessLek: 0,
+      excessPercent: 0,
+    };
+  }
+
+  return {
+    available: true,
+    baselineMonths: baselineMonths.length,
+    category: String(top.category || "Tjetër").slice(0, 40),
+    currentMonthLek: assistantNumber(top.currentMonthLek),
+    projectedMonthLek: assistantNumber(top.projectedMonthLek),
+    averageMonthlyLek: assistantNumber(top.averageMonthlyLek),
+    excessLek: assistantNumber(top.excessLek),
+    excessPercent: assistantNumber(top.excessPercent),
+  };
+}
+
+function categoryTotalsMap(entries) {
+  const totals = new Map();
+  entries.forEach((entry) => {
+    const category = normalizeCategoryName(entry.category) || "Tjetër";
+    const amountLek = normalizeCurrency(entry.currency) === "EUR"
+      ? (Number(entry.amount) || 0) * state.exchangeRate
+      : Number(entry.amount) || 0;
+    totals.set(category, (totals.get(category) || 0) + amountLek);
+  });
+  return totals;
+}
+
+function buildGoalPlanInsight(now = new Date()) {
+  const activeGoals = normalizeGoals(state.goals).filter((item) => item.active !== false && Number(item.amount) > 0);
+  if (!activeGoals.length) {
+    return {
+      available: false,
+      name: "",
+      currency: "ALL",
+      target: 0,
+      saved: 0,
+      actualProgressPercent: 0,
+      expectedProgressPercent: 0,
+      gapPercent: 0,
+      status: "missing",
+    };
+  }
+
+  const dayMs = 24 * 60 * 60 * 1000;
+  const evaluated = activeGoals.map((item) => {
+    const target = Math.max(Number(item.amount) || 0, 0);
+    const saved = Math.max(Number(goalSavedAmount(item, now)) || 0, 0);
+    const actualProgressPercent = target > 0 ? Math.min(saved / target * 100, 100) : 0;
+    const created = new Date(item.createdAt);
+    const elapsedDays = Number.isNaN(created.getTime()) ? 0 : Math.max((now.getTime() - created.getTime()) / dayMs, 0);
+    const plannedDays = Math.max((Number(item.months) || 1) * 30.4375, 1);
+    const expectedProgressPercent = Math.min(elapsedDays / plannedDays * 100, 100);
+    return {
+      item,
+      target,
+      saved,
+      actualProgressPercent,
+      expectedProgressPercent,
+      gapPercent: expectedProgressPercent - actualProgressPercent,
+    };
+  }).sort((a, b) => b.gapPercent - a.gapPercent);
+
+  const selected = evaluated[0];
+  const status = selected.gapPercent > 2 ? "behind" : selected.gapPercent < -2 ? "ahead" : "on_track";
+  return {
+    available: true,
+    name: String(selected.item.name || "Objektiv").slice(0, 60),
+    currency: normalizeCurrency(selected.item.currency),
+    target: assistantNumber(selected.target),
+    saved: assistantNumber(selected.saved),
+    actualProgressPercent: assistantNumber(selected.actualProgressPercent),
+    expectedProgressPercent: assistantNumber(selected.expectedProgressPercent),
+    gapPercent: assistantNumber(Math.max(selected.gapPercent, 0)),
+    status,
+  };
+}
+
+function buildRealisticMonthlyAction({ budget, average, goal }) {
+  if (!budget.available) {
+    return {
+      type: "add_income",
+      title: "Regjistro të ardhurat e muajit",
+      detail: "Kjo aktivizon buxhetin, parashikimin dhe kufirin ditor.",
+      amountLek: 0,
+    };
+  }
+
+  if (budget.status === "at_risk") {
+    const dailyReduction = Math.ceil(Math.abs(budget.forecastDeltaLek) / Math.max(budget.daysRemaining, 1) / 100) * 100;
+    return {
+      type: "reduce_daily_spend",
+      title: `Ule ritmin me ${moneyLekShort(dailyReduction)} në ditë`,
+      detail: `Për ${budget.daysRemaining} ditët e mbetura që parashikimi të kthehet brenda buxhetit.`,
+      amountLek: dailyReduction,
+    };
+  }
+
+  if (goal.available && goal.status === "behind") {
+    const targetLek = goal.currency === "EUR" ? goal.target * state.exchangeRate : goal.target;
+    const catchUpLek = Math.ceil(targetLek * goal.gapPercent / 100 / 100) * 100;
+    return {
+      type: "catch_up_goal",
+      title: `Shto ${moneyLekShort(catchUpLek)} te “${goal.name}”`,
+      detail: "Ky është hendeku i llogaritur ndaj ritmit të planifikuar deri sot.",
+      amountLek: catchUpLek,
+    };
+  }
+
+  if (average.available && average.category) {
+    const dailyReduction = Math.ceil(average.excessLek / Math.max(budget.daysRemaining, 1) / 100) * 100;
+    return {
+      type: "slow_category",
+      title: `Ule “${average.category}” me ${moneyLekShort(dailyReduction)} në ditë`,
+      detail: "Kjo afron ritmin mujor me mesataren e tre muajve të fundit.",
+      amountLek: dailyReduction,
+    };
+  }
+
+  return {
+    type: "keep_daily_limit",
+    title: `Mbaj kufirin ditor te ${moneyLekShort(budget.dailySafeLek)}`,
+    detail: "Me ritmin aktual, buxheti mbetet i kontrolluar deri në fund të muajit.",
+    amountLek: assistantNumber(budget.dailySafeLek),
+  };
+}
+
+function renderMonthlyInsightFacts(summary) {
+  if (!els.monthlyInsightFacts) return;
+  const change = summary.change;
+  const average = summary.average;
+  const budget = summary.budget;
+  const goal = summary.goal;
+  const changeTone = change.available
+    ? change.expenseDeltaLek > 0 ? "warning" : change.expenseDeltaLek < 0 ? "positive" : "neutral"
+    : "neutral";
+  const changeValue = change.available
+    ? change.expensePercentAvailable
+      ? `${signedPercent(change.expenseDeltaPercent)} shpenzime`
+      : change.expensesCurrentLek > 0 ? "Shpenzime të reja" : "Pa ndryshim"
+    : "Duhet një muaj tjetër";
+  const changeDetail = change.available
+    ? `${signedLek(change.expenseDeltaLek)} ndaj të njëjtave ${change.comparisonDays} ditë të ${monthLabel(change.comparedMonth)}.`
+    : "Nuk ka ende të dhëna të krahasueshme nga muaji i kaluar.";
+  const averageValue = !average.available
+    ? "Pa histori të mjaftueshme"
+    : average.category || "Asnjë tejkalim";
+  const averageDetail = !average.available
+    ? "Duhen të dhëna nga të paktën një muaj i plotë."
+    : average.category
+      ? `Ritmi i parashikuar është ${Math.round(Math.max(average.excessPercent, 0))}% mbi mesataren e ${average.baselineMonths} muajve.`
+      : `Kategoritë janë brenda mesatares së ${average.baselineMonths} muajve me të dhëna.`;
+  const budgetValue = !budget.available
+    ? "Buxheti joaktiv"
+    : budget.status === "at_risk"
+      ? `${moneyLekShort(Math.abs(budget.forecastDeltaLek))} mbi buxhet`
+      : budget.status === "watch"
+        ? "Rezervë e ulët"
+        : "Brenda buxhetit";
+  const budgetDetail = !budget.available
+    ? "Regjistro të ardhurat që të llogaritet rreziku."
+    : `Parashikimi: ${moneyLekShort(budget.projectedSpendLek)} shpenzime + ${moneyLekShort(budget.fixedRemainingLek)} detyrime.`;
+  const goalValue = !goal.available
+    ? "Asnjë objektiv aktiv"
+    : goal.status === "behind"
+      ? goal.name
+      : goal.status === "ahead" ? "Përpara planit" : "Në plan";
+  const goalDetail = !goal.available
+    ? "Shto një objektiv që të ndiqet ritmi i kursimit."
+    : goal.status === "behind"
+      ? `${Math.round(goal.gapPercent)} pikë % prapa ritmit të planifikuar.`
+      : `${Math.round(goal.actualProgressPercent)}% realizuar ndaj ${Math.round(goal.expectedProgressPercent)}% të planifikuar.`;
+  const cards = [
+    { label: "Çfarë ndryshoi", value: changeValue, detail: changeDetail, tone: changeTone },
+    { label: "Mbi mesataren", value: averageValue, detail: averageDetail, tone: average.category ? "warning" : "positive" },
+    { label: "Rreziku i buxhetit", value: budgetValue, detail: budgetDetail, tone: budget.status === "at_risk" ? "warning" : budget.available ? "positive" : "neutral" },
+    { label: "Objektivi", value: goalValue, detail: goalDetail, tone: goal.status === "behind" ? "warning" : goal.available ? "positive" : "neutral" },
+    { label: "Veprimi realist për muajin", value: summary.action.title, detail: summary.action.detail, tone: "action", wide: true },
+  ];
+
+  els.monthlyInsightFacts.innerHTML = cards.map((item) => `
+    <article class="real-insight-fact is-${item.tone}${item.wide ? " is-wide" : ""}">
+      <span>${escapeHtml(item.label)}</span>
+      <strong>${escapeHtml(item.value)}</strong>
+      <small>${escapeHtml(item.detail)}</small>
+    </article>
+  `).join("");
+}
+
+function signedPercent(value) {
+  const number = Math.round(Number(value) || 0);
+  return `${number > 0 ? "+" : ""}${number}%`;
+}
+
+function signedLek(value) {
+  const number = Number(value) || 0;
+  return `${number > 0 ? "+" : number < 0 ? "−" : ""}${moneyLekShort(Math.abs(number))}`;
+}
+
+async function generateMonthlyInsightsExplanation() {
+  const summary = buildMonthlyInsightsSummary();
+  renderMonthlyInsightFacts(summary);
+  setMonthlyInsightsBusy(true);
+  setMonthlyInsightsStatus("AI po shpjegon pesë gjetjet e llogaritura…", "loading");
+
+  try {
+    const endpoint = monthlyInsightsEndpoint();
+    let token = receiptAiToken();
+    let response = await sendMonthlyInsightsRequest(endpoint, token, summary);
+    let result = await response.json().catch(() => ({}));
+
+    if (response.status === 401) {
+      localStorage.removeItem(RECEIPT_AI_TOKEN_KEY);
+      token = prompt("Ky backend kërkon kod aksesi. Vendose kodin që krijove në Cloudflare.")?.trim() || "";
+      if (!token) throw new Error("U anulua vendosja e kodit të aksesit.");
+      localStorage.setItem(RECEIPT_AI_TOKEN_KEY, token);
+      setMonthlyInsightsStatus("Po provohet me kodin e ri…", "loading");
+      response = await sendMonthlyInsightsRequest(endpoint, token, summary);
+      result = await response.json().catch(() => ({}));
+    }
+
+    if (!response.ok) throw new Error(result.error || "AI nuk e shpjegoi dot analizën.");
+    renderMonthlyInsightsAiAnswer(validateMonthlyInsightsResult(result));
+    setMonthlyInsightsStatus("Shpjegimi u përditësua nga të dhënat aktuale.", "success");
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      if (!els.insightsOverlay?.hidden) setMonthlyInsightsStatus("Kërkesa u anulua. Llogaritjet lokale mbeten aktive.", "error");
+    } else {
+      setMonthlyInsightsStatus(`${error?.message || "AI nuk u përgjigj."} Llogaritjet lokale mbeten aktive.`, "error");
+    }
+  } finally {
+    setMonthlyInsightsBusy(false);
+  }
+}
+
+async function sendMonthlyInsightsRequest(endpoint, token, summary) {
+  cancelMonthlyInsightsRequest();
+  const controller = new AbortController();
+  monthlyInsightsController = controller;
+  const timeout = window.setTimeout(() => controller.abort(), RECEIPT_AI_TIMEOUT_MS);
+  try {
+    return await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { "X-Receipt-Token": token } : {}),
+      },
+      body: JSON.stringify({ summary }),
+      signal: controller.signal,
+    });
+  } finally {
+    window.clearTimeout(timeout);
+    if (monthlyInsightsController === controller) monthlyInsightsController = null;
+  }
+}
+
+function monthlyInsightsEndpoint() {
+  const url = new URL(receiptAiEndpoint());
+  url.pathname = "/api/insights";
+  return url.toString();
+}
+
+function cancelMonthlyInsightsRequest() {
+  monthlyInsightsController?.abort();
+  monthlyInsightsController = null;
+}
+
+function validateMonthlyInsightsResult(result) {
+  if (!result || typeof result !== "object") throw new Error("Shpjegimi i AI nuk është i vlefshëm.");
+  const keys = ["change", "average", "budget", "goal", "action"];
+  const sections = {};
+  keys.forEach((key) => {
+    const item = result.sections?.[key] || {};
+    sections[key] = {
+      title: String(item.title || "Analizë").trim().slice(0, 60),
+      text: String(item.text || "Nuk ka të dhëna të mjaftueshme.").trim().slice(0, 500),
+      tone: ["positive", "warning", "neutral"].includes(item.tone) ? item.tone : "neutral",
+    };
+  });
+  return {
+    title: String(result.title || "Përmbledhja e muajit").trim().slice(0, 80),
+    overview: String(result.overview || "").trim().slice(0, 800),
+    sections,
+    closingAction: String(result.closingAction || "").trim().slice(0, 300),
+    disclaimer: String(result.disclaimer || "").trim().slice(0, 220),
+  };
+}
+
+function renderMonthlyInsightsAiAnswer(result) {
+  if (!els.monthlyInsightsAiAnswer) return;
+  setText(els.monthlyInsightsAiTitle, result.title);
+  setText(els.monthlyInsightsAiOverview, result.overview);
+  const labels = {
+    change: "Çfarë ndryshoi",
+    average: "Mbi mesataren",
+    budget: "Rreziku i buxhetit",
+    goal: "Objektivi",
+    action: "Veprimi realist",
+  };
+  els.monthlyInsightsAiSections.innerHTML = ["change", "average", "budget", "goal", "action"]
+    .map((key) => {
+      const item = result.sections[key];
+      return `
+        <div class="real-insights-explanation is-${item.tone}">
+          <strong>${escapeHtml(item.title || labels[key])}</strong>
+          <p>${escapeHtml(item.text)}</p>
+        </div>
+      `;
+    })
+    .join("");
+  setText(els.monthlyInsightsAiAction, result.closingAction);
+  els.monthlyInsightsAiAction.hidden = !result.closingAction;
+  setText(els.monthlyInsightsAiDisclaimer, result.disclaimer);
+  els.monthlyInsightsAiDisclaimer.hidden = !result.disclaimer;
+  els.monthlyInsightsAiAnswer.hidden = false;
+  requestAnimationFrame(() => els.monthlyInsightsAiAnswer?.scrollIntoView({ behavior: "smooth", block: "nearest" }));
+}
+
+function setMonthlyInsightsStatus(message, tone = "neutral") {
+  if (!els.monthlyInsightsStatus) return;
+  els.monthlyInsightsStatus.textContent = message;
+  els.monthlyInsightsStatus.dataset.tone = tone;
+}
+
+function setMonthlyInsightsBusy(isBusy) {
+  if (!els.monthlyInsightsAiBtn) return;
+  els.monthlyInsightsAiBtn.disabled = isBusy;
+  els.monthlyInsightsAiBtn.textContent = isBusy ? "Po shpjegoj…" : "Shpjego me AI";
 }
 
 function handleFinancialAssistantSubmit(event) {
