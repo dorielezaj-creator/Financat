@@ -7,6 +7,8 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Financat" />
     <meta name="receipt-ai-endpoint" content="https://financat-e-mia-ai.dorielezaj.workers.dev" />
+    <meta name="referrer" content="no-referrer" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' https://financat-e-mia-ai.dorielezaj.workers.dev https://www.bankofalbania.org; form-action 'self'; upgrade-insecure-requests" />
     <title>Financat e Mia</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -14,7 +16,7 @@
     <link rel="manifest" href="manifest.webmanifest?v=20260821-1" />
     <link rel="icon" href="icon.svg?v=20260820-1" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="icon.svg?v=20260820-1" />
-    <link rel="stylesheet" href="styles.css?v=20260907-real-insights-1" />
+    <link rel="stylesheet" href="styles.css?v=20260907-security-1" />
   </head>
   <body>
     <main class="app-shell">
@@ -176,12 +178,13 @@
           <span></span>
         </button>
         <div class="backup-actions" id="backupActions" hidden>
-          <button class="backup-button export-button" id="exportBtn" type="button">Eksporto JSON</button>
+          <button class="backup-button export-button" id="exportBtn" type="button">Eksporto të enkriptuar</button>
           <label class="backup-button">
-            Importo JSON
+            Importo backup
             <input id="importInput" type="file" accept=".json,application/json,text/json" />
           </label>
           <button class="backup-button" id="restoreBackupBtn" type="button">Rikthe backup</button>
+          <small id="backupSecurityStatus" class="backup-security-status">Aktivizo Sigurinë që backup-i të mbrohet me kod.</small>
         </div>
       </section>
 
@@ -195,6 +198,54 @@
           <div class="editor-actions split">
             <button id="cancelImportBtn" class="secondary-button" type="button">Anulo</button>
             <button id="confirmImportBtn" class="primary-button" type="button">Importo të dhënat</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="aiConsentOverlay" class="editor-overlay consent-overlay" hidden>
+        <div class="consent-sheet" role="dialog" aria-modal="true" aria-labelledby="aiConsentTitle">
+          <span class="consent-mark" aria-hidden="true">AI</span>
+          <span class="dialog-eyebrow">Para se të dërgohet</span>
+          <h2 id="aiConsentTitle">Konfirmo përdorimin e AI</h2>
+          <p id="aiConsentDescription"></p>
+          <div class="consent-route" aria-label="Rruga e të dhënave">
+            <span>Telefoni</span><b>→</b><span>Cloudflare</span><b>→</b><span>OpenAI</span>
+          </div>
+          <label class="consent-remember">
+            <input id="aiConsentRemember" type="checkbox" />
+            Mos ma trego përsëri për këtë lloj të dhëne
+          </label>
+          <div class="editor-actions split">
+            <button id="aiConsentCancelBtn" class="secondary-button" type="button">Anulo</button>
+            <button id="aiConsentContinueBtn" class="primary-button" type="button">Vazhdo me AI</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="securityOverlay" class="editor-overlay security-overlay" hidden>
+        <div class="security-sheet" role="dialog" aria-modal="true" aria-labelledby="securityTitle">
+          <button id="closeSecurityBtn" class="icon-button small security-close" type="button" aria-label="Mbyll">×</button>
+          <span class="security-lock" aria-hidden="true">⌁</span>
+          <span class="dialog-eyebrow">Mbrojtja e të dhënave</span>
+          <h2 id="securityTitle">Siguria</h2>
+          <p id="securityDescription">Enkripto të gjitha financat dhe backup-et me një kod që e di vetëm ti.</p>
+          <div id="securityState" class="security-state" aria-live="polite"></div>
+          <form id="securityForm" class="security-form" autocomplete="off">
+            <label>
+              <span id="securityPinLabel">Kodi personal</span>
+              <input id="securityPinInput" type="password" minlength="8" maxlength="128" autocomplete="new-password" required />
+            </label>
+            <label id="securityPinConfirmLabel">
+              Përsërit kodin
+              <input id="securityPinConfirmInput" type="password" minlength="8" maxlength="128" autocomplete="new-password" required />
+            </label>
+            <small id="securityWarning">Përdor të paktën 8 shenja. Nëse e harron kodin, të dhënat nuk mund të rikuperohen.</small>
+            <button id="securitySubmitBtn" class="primary-button" type="submit">Aktivizo enkriptimin</button>
+          </form>
+          <div id="securityUnlockedActions" class="security-unlocked-actions" hidden>
+            <button id="changeSecurityPinBtn" class="secondary-button" type="button">Ndrysho kodin</button>
+            <button id="lockSecurityBtn" class="secondary-button" type="button">Blloko tani</button>
+            <button id="resetAiConsentsBtn" class="secondary-button" type="button">Rivendos paralajmërimet AI</button>
           </div>
         </div>
       </section>
@@ -518,6 +569,10 @@
             <button id="profileRecurringBtn" type="button">Shpenzime fikse</button>
             <button id="profileIncomeBtn" type="button">Të ardhurat</button>
             <button id="profileSetupBtn" type="button">Setup fillestar</button>
+            <button id="profileSecurityBtn" type="button">
+              <span>Siguria</span>
+              <strong id="profileSecurityState">Joaktive</strong>
+            </button>
             <button id="profileThemeBtn" type="button">
               <span>Dark mode</span>
               <strong id="profileThemeState">Off</strong>
@@ -1137,6 +1192,6 @@
       </div>
     </template>
 
-    <script src="app.js?v=20260907-real-insights-1"></script>
+    <script src="app.js?v=20260907-security-1"></script>
   </body>
 </html>

@@ -10,6 +10,12 @@ const CATEGORIES_KEY = "financat-e-mia:categories:v1";
 const RECURRING_KEY = "financat-e-mia:recurring:v1";
 const THEME_KEY = "financat-e-mia:theme:v2";
 const RECEIPT_AI_TOKEN_KEY = "financat-e-mia:receipt-ai-token:v1";
+const SECURE_VAULT_KEY = "financat-e-mia:secure-vault:v1";
+const SECURE_VAULT_BACKUP_KEY = "financat-e-mia:secure-vault-backup:v1";
+const AI_CONSENT_KEY = "financat-e-mia:ai-consent:v1";
+const SECURE_VAULT_FORMAT = "financat-e-mia-encrypted";
+const SECURE_VAULT_VERSION = 1;
+const SECURE_VAULT_ITERATIONS = 310000;
 const RECEIPT_AI_TIMEOUT_MS = 45000;
 const VOICE_MAX_RECORDING_MS = 30_000;
 let quickAddRecorder = null;
@@ -21,11 +27,36 @@ let quickAddVoiceSession = 0;
 let quickAddAiController = null;
 let financialAssistantController = null;
 let monthlyInsightsController = null;
+let secureVaultKey = null;
+let secureVaultUnlocked = false;
+let secureVaultSaveTimer = 0;
+let secureVaultWriteChain = Promise.resolve();
+let receiptAiTokenMemory = localStorage.getItem(RECEIPT_AI_TOKEN_KEY)?.trim() || "";
+let pendingAiConsent = null;
+let pendingSecurityPasscodeRequest = null;
+let pendingEncryptedImportPasscode = "";
+let secureImportInProgress = false;
 const RECEIPT_AI_MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const NET_WORTH_HISTORY_KEY = "financat-e-mia:net-worth-history:v1";
 const SETUP_KEY = "financat-e-mia:setup-complete:v1";
 const HOME_ORDER_KEY = "financat-e-mia:home-order:v1";
 const LEGACY_STORAGE_KEYS = ["financat-e-mia:v1"];
+const SENSITIVE_STORAGE_KEYS = [
+  STORAGE_KEY,
+  BANKS_KEY,
+  LEGACY_SAVINGS_KEY,
+  BACKUP_KEY,
+  EXCHANGE_RATE_KEY,
+  LIMITS_KEY,
+  SAVINGS_GOAL_KEY,
+  GOALS_KEY,
+  CATEGORIES_KEY,
+  RECURRING_KEY,
+  RECEIPT_AI_TOKEN_KEY,
+  NET_WORTH_HISTORY_KEY,
+  SETUP_KEY,
+  ...LEGACY_STORAGE_KEYS,
+];
 const BACKUP_SCHEMA_VERSION = 12;
 const DEFAULT_LIMITS = {
   expenseALL: 150000,
@@ -348,6 +379,7 @@ const els = {
   backupToggle: document.querySelector("#backupToggle"),
   backupActions: document.querySelector("#backupActions"),
   exportBtn: document.querySelector("#exportBtn"),
+  backupSecurityStatus: document.querySelector("#backupSecurityStatus"),
   themeToggle: document.querySelector("#themeToggle"),
   profileMenuOverlay: document.querySelector("#profileMenuOverlay"),
   profilePersonalBtn: document.querySelector("#profilePersonalBtn"),
@@ -482,6 +514,8 @@ const els = {
   profileTransactionsBtn: document.querySelector("#profileTransactionsBtn"),
   profileNetWorthBtn: document.querySelector("#profileNetWorthBtn"),
   profileInsightsBtn: document.querySelector("#profileInsightsBtn"),
+  profileSecurityBtn: document.querySelector("#profileSecurityBtn"),
+  profileSecurityState: document.querySelector("#profileSecurityState"),
   importInput: document.querySelector("#importInput"),
   importPreviewOverlay: document.querySelector("#importPreviewOverlay"),
   importPreviewSummary: document.querySelector("#importPreviewSummary"),
@@ -490,6 +524,27 @@ const els = {
   cancelImportBtn: document.querySelector("#cancelImportBtn"),
   confirmImportBtn: document.querySelector("#confirmImportBtn"),
   restoreBackupBtn: document.querySelector("#restoreBackupBtn"),
+  securityOverlay: document.querySelector("#securityOverlay"),
+  securityTitle: document.querySelector("#securityTitle"),
+  securityDescription: document.querySelector("#securityDescription"),
+  securityState: document.querySelector("#securityState"),
+  securityForm: document.querySelector("#securityForm"),
+  securityPinLabel: document.querySelector("#securityPinLabel"),
+  securityPinInput: document.querySelector("#securityPinInput"),
+  securityPinConfirmLabel: document.querySelector("#securityPinConfirmLabel"),
+  securityPinConfirmInput: document.querySelector("#securityPinConfirmInput"),
+  securitySubmitBtn: document.querySelector("#securitySubmitBtn"),
+  securityUnlockedActions: document.querySelector("#securityUnlockedActions"),
+  closeSecurityBtn: document.querySelector("#closeSecurityBtn"),
+  changeSecurityPinBtn: document.querySelector("#changeSecurityPinBtn"),
+  lockSecurityBtn: document.querySelector("#lockSecurityBtn"),
+  resetAiConsentsBtn: document.querySelector("#resetAiConsentsBtn"),
+  aiConsentOverlay: document.querySelector("#aiConsentOverlay"),
+  aiConsentTitle: document.querySelector("#aiConsentTitle"),
+  aiConsentDescription: document.querySelector("#aiConsentDescription"),
+  aiConsentRemember: document.querySelector("#aiConsentRemember"),
+  aiConsentCancelBtn: document.querySelector("#aiConsentCancelBtn"),
+  aiConsentContinueBtn: document.querySelector("#aiConsentContinueBtn"),
   quickAddOverlay: document.querySelector("#quickAddOverlay"),
   closeQuickAddBtn: document.querySelector("#closeQuickAddBtn"),
   quickAddAiInput: document.querySelector("#quickAddAiInput"),
@@ -505,13 +560,16 @@ const els = {
   emptyTemplate: document.querySelector("#emptyTemplate"),
 };
 
-state.categories = learnCategoriesFromData(state.categories, state.entries, state.recurringExpenses);
-if (!state.goals.length && localStorage.getItem(GOALS_KEY) === null && Number(state.savingsGoal?.amount) > 0) {
-  state.goals = [goalFromSavingsGoal(state.savingsGoal, { name: "Objektivi kryesor" })];
+const secureVaultPresentAtBoot = hasSecureVault();
+if (!secureVaultPresentAtBoot) {
+  state.categories = learnCategoriesFromData(state.categories, state.entries, state.recurringExpenses);
+  if (!state.goals.length && localStorage.getItem(GOALS_KEY) === null && Number(state.savingsGoal?.amount) > 0) {
+    state.goals = [goalFromSavingsGoal(state.savingsGoal, { name: "Objektivi kryesor" })];
+  }
+  syncPrimarySavingsGoal();
+  saveCategories();
+  saveGoals();
 }
-syncPrimarySavingsGoal();
-saveCategories();
-saveGoals();
 
 els.dateInput.value = todayIso();
 els.eurToLekRateInput.value = formatRateInput(state.exchangeRate);
@@ -519,7 +577,9 @@ applyTheme();
 syncTypeControls();
 render();
 applyHomeOrder();
-maybeOpenSetup();
+syncSecurityIndicators();
+if (secureVaultPresentAtBoot) openSecurityOverlay("unlock", { required: true });
+else openSecurityOverlay("setup", { required: true });
 
 document.querySelectorAll("[data-type]").forEach((button) => {
   button.addEventListener("click", () => {
@@ -883,6 +943,16 @@ document.querySelectorAll("[data-daily-currency]").forEach((button) => {
   });
 });
 els.exportBtn.addEventListener("click", exportData);
+els.securityForm?.addEventListener("submit", handleSecuritySubmit);
+els.closeSecurityBtn?.addEventListener("click", closeSecurityOverlay);
+els.securityOverlay?.addEventListener("click", (event) => {
+  if (event.target === els.securityOverlay && !document.body.classList.contains("secure-vault-locked")) closeSecurityOverlay();
+});
+els.changeSecurityPinBtn?.addEventListener("click", () => openSecurityOverlay("change"));
+els.lockSecurityBtn?.addEventListener("click", lockSecureVault);
+els.resetAiConsentsBtn?.addEventListener("click", resetAiConsents);
+els.aiConsentCancelBtn?.addEventListener("click", () => resolveAiConsent(false));
+els.aiConsentContinueBtn?.addEventListener("click", () => resolveAiConsent(true));
 els.undoToastBtn?.addEventListener("click", undoLastAction);
 els.undoToastClose?.addEventListener("click", hideUndoToast);
 els.backupToggle.addEventListener("click", () => {
@@ -896,6 +966,10 @@ els.backupToggle.addEventListener("click", () => {
 els.themeToggle.addEventListener("click", openProfileMenu);
 els.profileMenuOverlay?.addEventListener("click", (event) => {
   if (event.target === els.profileMenuOverlay) closeProfileMenu();
+});
+els.profileSecurityBtn?.addEventListener("click", () => {
+  closeProfileMenu();
+  openSecurityOverlay(hasSecureVault() && secureVaultUnlocked ? "status" : hasSecureVault() ? "unlock" : "setup");
 });
 els.profilePersonalBtn?.addEventListener("click", () => {
   closeProfileMenu();
@@ -2333,6 +2407,10 @@ function signedLek(value) {
 async function generateMonthlyInsightsExplanation() {
   const summary = buildMonthlyInsightsSummary();
   renderMonthlyInsightFacts(summary);
+  if (!(await requestAiConsent("summary"))) {
+    setMonthlyInsightsStatus("Dërgimi te AI u anulua. Llogaritjet lokale mbeten aktive.", "neutral");
+    return;
+  }
   setMonthlyInsightsBusy(true);
   setMonthlyInsightsStatus("AI po shpjegon pesë gjetjet e llogaritura…", "loading");
 
@@ -2343,10 +2421,10 @@ async function generateMonthlyInsightsExplanation() {
     let result = await response.json().catch(() => ({}));
 
     if (response.status === 401) {
-      localStorage.removeItem(RECEIPT_AI_TOKEN_KEY);
+      setReceiptAiToken("");
       token = prompt("Ky backend kërkon kod aksesi. Vendose kodin që krijove në Cloudflare.")?.trim() || "";
       if (!token) throw new Error("U anulua vendosja e kodit të aksesit.");
-      localStorage.setItem(RECEIPT_AI_TOKEN_KEY, token);
+      setReceiptAiToken(token);
       setMonthlyInsightsStatus("Po provohet me kodin e ri…", "loading");
       response = await sendMonthlyInsightsRequest(endpoint, token, summary);
       result = await response.json().catch(() => ({}));
@@ -2483,6 +2561,11 @@ async function askFinancialAssistant(rawQuestion) {
     return;
   }
 
+  if (!(await requestAiConsent("summary"))) {
+    setFinancialAssistantStatus("Dërgimi te AI u anulua.", "neutral");
+    return;
+  }
+
   if (els.financialAssistantInput) els.financialAssistantInput.value = question;
   setFinancialAssistantBusy(true);
   setFinancialAssistantStatus("Po analizoj përmbledhjen e financave të tua…", "loading");
@@ -2495,10 +2578,10 @@ async function askFinancialAssistant(rawQuestion) {
     let result = await response.json().catch(() => ({}));
 
     if (response.status === 401) {
-      localStorage.removeItem(RECEIPT_AI_TOKEN_KEY);
+      setReceiptAiToken("");
       token = prompt("Ky backend kërkon kod aksesi. Vendose kodin që krijove në Cloudflare.")?.trim() || "";
       if (!token) throw new Error("U anulua vendosja e kodit të aksesit.");
-      localStorage.setItem(RECEIPT_AI_TOKEN_KEY, token);
+      setReceiptAiToken(token);
       setFinancialAssistantStatus("Po provohet me kodin e ri…", "loading");
       response = await sendFinancialAssistantRequest(endpoint, token, question, snapshot);
       result = await response.json().catch(() => ({}));
@@ -4704,6 +4787,11 @@ async function toggleQuickAddVoice() {
     return;
   }
 
+  if (!(await requestAiConsent("voice"))) {
+    setQuickAddAiStatus("Dërgimi i audios te AI u anulua.");
+    return;
+  }
+
   try {
     const sessionId = ++quickAddVoiceSession;
     const voiceStream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -4829,10 +4917,10 @@ async function transcribeQuickAddVoice(audioBlob) {
     let result = await response.json().catch(() => ({}));
 
     if (response.status === 401) {
-      localStorage.removeItem(RECEIPT_AI_TOKEN_KEY);
+      setReceiptAiToken("");
       token = prompt("Ky backend kërkon kod aksesi. Vendose kodin që krijove në Cloudflare.")?.trim() || "";
       if (!token) throw new Error("U anulua vendosja e kodit të aksesit.");
-      localStorage.setItem(RECEIPT_AI_TOKEN_KEY, token);
+      setReceiptAiToken(token);
       response = await sendTranscriptionRequest(endpoint, token, audioBlob);
       result = await response.json().catch(() => ({}));
     }
@@ -4844,7 +4932,7 @@ async function transcribeQuickAddVoice(audioBlob) {
 
     if (els.quickAddAiInput) els.quickAddAiInput.value = transcript;
     setQuickAddAiStatus(`U dëgjua: “${transcript}” — po e kuptoj me AI...`);
-    await handleQuickAddAi();
+    await handleQuickAddAi({ consentGranted: true });
   } catch (error) {
     setQuickAddAiStatus(error?.message || "Zëri nuk u përpunua.");
   } finally {
@@ -4886,11 +4974,16 @@ function transcribeAiEndpoint() {
   return url.toString();
 }
 
-async function handleQuickAddAi() {
+async function handleQuickAddAi(options = {}) {
   const text = String(els.quickAddAiInput?.value || "").trim();
   if (!text) {
     setQuickAddAiStatus("Shkruaj një fjali, p.sh. “2400 lekë karburant sot”.");
     els.quickAddAiInput?.focus();
+    return;
+  }
+
+  if (!options?.consentGranted && !(await requestAiConsent("text"))) {
+    setQuickAddAiStatus("Dërgimi i tekstit te AI u anulua.");
     return;
   }
 
@@ -4904,10 +4997,10 @@ async function handleQuickAddAi() {
     let result = await response.json().catch(() => ({}));
 
     if (response.status === 401) {
-      localStorage.removeItem(RECEIPT_AI_TOKEN_KEY);
+      setReceiptAiToken("");
       token = prompt("Ky backend kërkon kod aksesi. Vendose kodin që krijove në Cloudflare.")?.trim() || "";
       if (!token) throw new Error("U anulua vendosja e kodit të aksesit.");
-      localStorage.setItem(RECEIPT_AI_TOKEN_KEY, token);
+      setReceiptAiToken(token);
       setQuickAddAiStatus("Po provohet me kodin e ri...");
       response = await sendQuickAddRequest(endpoint, token, text);
       result = await response.json().catch(() => ({}));
@@ -5640,6 +5733,12 @@ async function handleReceiptImage(event) {
   const [file] = event.target.files;
   if (!file) return;
 
+  if (!(await requestAiConsent("receipt"))) {
+    setReceiptAiStatus("Dërgimi i faturës te AI u anulua.");
+    event.target.value = "";
+    return;
+  }
+
   try {
     const endpoint = receiptAiEndpoint();
     if (!endpoint) {
@@ -5661,10 +5760,10 @@ async function handleReceiptImage(event) {
     let response = await sendReceiptRequest(endpoint, token, image);
     let result = await response.json().catch(() => ({}));
     if (response.status === 401) {
-      localStorage.removeItem(RECEIPT_AI_TOKEN_KEY);
+      setReceiptAiToken("");
       token = prompt("Ky backend kërkon kod aksesi. Vendose kodin që krijove në Cloudflare.")?.trim() || "";
       if (!token) throw new Error("Nevojitet kodi i aksesit për AI.");
-      localStorage.setItem(RECEIPT_AI_TOKEN_KEY, token);
+      setReceiptAiToken(token);
       setReceiptAiStatus("Po provohet me kodin e ri...");
       response = await sendReceiptRequest(endpoint, token, image);
       result = await response.json().catch(() => ({}));
@@ -5718,7 +5817,7 @@ async function sendReceiptRequest(endpoint, token, image) {
 }
 
 function resetReceiptAiConnection() {
-  localStorage.removeItem(RECEIPT_AI_TOKEN_KEY);
+  setReceiptAiToken("");
   setReceiptAiStatus("Kodi i AI u rivendos. Kliko Foto fature për ta vendosur përsëri.");
 }
 
@@ -5728,7 +5827,7 @@ function receiptAiEndpoint() {
 }
 
 function receiptAiToken() {
-  return localStorage.getItem(RECEIPT_AI_TOKEN_KEY)?.trim() || "";
+  return receiptAiTokenMemory;
 }
 
 function normalizeReceiptAiEndpoint(value) {
@@ -5846,8 +5945,8 @@ async function imageFromFile(file) {
   });
 }
 
-function exportData() {
-  const backup = {
+function buildFinanceBackup() {
+  return {
     app: "financat-e-mia",
     version: BACKUP_SCHEMA_VERSION,
     exportedAt: new Date().toISOString(),
@@ -5863,14 +5962,437 @@ function exportData() {
     setupComplete: state.setupComplete,
     homeOrder: currentHomeOrder(),
   };
+}
+
+function hasSecureVault() {
+  return Boolean(localStorage.getItem(SECURE_VAULT_KEY));
+}
+
+function isEncryptedBackup(value) {
+  return Boolean(
+    value
+    && typeof value === "object"
+    && value.format === SECURE_VAULT_FORMAT
+    && Number(value.version) === SECURE_VAULT_VERSION
+    && value.kdf?.salt
+    && value.cipher?.iv
+    && value.ciphertext,
+  );
+}
+
+function buildSecureVaultPayload() {
+  return {
+    app: "financat-e-mia",
+    version: SECURE_VAULT_VERSION,
+    savedAt: new Date().toISOString(),
+    finance: buildFinanceBackup(),
+    credentials: {
+      receiptAiToken: receiptAiTokenMemory,
+    },
+  };
+}
+
+function bytesToBase64(bytes) {
+  let binary = "";
+  const source = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  for (let index = 0; index < source.length; index += 0x8000) {
+    binary += String.fromCharCode(...source.subarray(index, index + 0x8000));
+  }
+  return btoa(binary);
+}
+
+function base64ToBytes(value) {
+  const binary = atob(String(value || ""));
+  return Uint8Array.from(binary, (character) => character.charCodeAt(0));
+}
+
+async function deriveSecureVaultKey(passcode, salt, iterations = SECURE_VAULT_ITERATIONS) {
+  if (!crypto?.subtle) throw new Error("Ky browser nuk mbështet enkriptimin e sigurt.");
+  const material = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(passcode),
+    "PBKDF2",
+    false,
+    ["deriveKey"],
+  );
+  return crypto.subtle.deriveKey(
+    { name: "PBKDF2", hash: "SHA-256", salt, iterations },
+    material,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt", "decrypt"],
+  );
+}
+
+function secureVaultAdditionalData() {
+  return new TextEncoder().encode(`${SECURE_VAULT_FORMAT}:${SECURE_VAULT_VERSION}`);
+}
+
+async function encryptSecurePayloadWithKey(payload, key, salt, iterations = SECURE_VAULT_ITERATIONS) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const plaintext = new TextEncoder().encode(JSON.stringify(payload));
+  const ciphertext = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv, additionalData: secureVaultAdditionalData(), tagLength: 128 },
+    key,
+    plaintext,
+  );
+  return {
+    format: SECURE_VAULT_FORMAT,
+    version: SECURE_VAULT_VERSION,
+    createdAt: new Date().toISOString(),
+    kdf: {
+      name: "PBKDF2",
+      hash: "SHA-256",
+      iterations,
+      salt: bytesToBase64(salt),
+    },
+    cipher: {
+      name: "AES-GCM",
+      iv: bytesToBase64(iv),
+      tagLength: 128,
+    },
+    ciphertext: bytesToBase64(new Uint8Array(ciphertext)),
+  };
+}
+
+async function encryptSecurePayload(payload, passcode) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const key = await deriveSecureVaultKey(passcode, salt);
+  return {
+    key,
+    vault: await encryptSecurePayloadWithKey(payload, key, salt),
+  };
+}
+
+async function decryptSecureVault(vault, passcode) {
+  if (!isEncryptedBackup(vault)) throw new Error("Backup-i i enkriptuar nuk ka format të vlefshëm.");
+  const iterations = Number(vault.kdf?.iterations);
+  if (!Number.isInteger(iterations) || iterations < 100000 || iterations > 2000000) {
+    throw new Error("Parametrat e enkriptimit nuk janë të vlefshëm.");
+  }
+  const salt = base64ToBytes(vault.kdf.salt);
+  const iv = base64ToBytes(vault.cipher.iv);
+  if (salt.length !== 16 || iv.length !== 12) throw new Error("Backup-i i enkriptuar është dëmtuar.");
+  const key = await deriveSecureVaultKey(passcode, salt, iterations);
+  try {
+    const plaintext = await crypto.subtle.decrypt(
+      { name: "AES-GCM", iv, additionalData: secureVaultAdditionalData(), tagLength: 128 },
+      key,
+      base64ToBytes(vault.ciphertext),
+    );
+    const payload = JSON.parse(new TextDecoder().decode(plaintext));
+    if (payload?.app !== "financat-e-mia" || !payload.finance) throw new Error("invalid-payload");
+    return { key, payload };
+  } catch {
+    throw new Error("Kodi është i pasaktë ose backup-i është dëmtuar.");
+  }
+}
+
+function clearPlaintextSensitiveStorage() {
+  SENSITIVE_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
+}
+
+function storeSensitiveValue(key, value) {
+  if (secureImportInProgress) return;
+  if (hasSecureVault()) {
+    queueSecureVaultSave();
+    return;
+  }
+  localStorage.setItem(key, value);
+}
+
+function queueSecureVaultSave() {
+  if (!hasSecureVault() || !secureVaultUnlocked || !secureVaultKey) return;
+  window.clearTimeout(secureVaultSaveTimer);
+  secureVaultSaveTimer = window.setTimeout(() => {
+    secureVaultWriteChain = secureVaultWriteChain
+      .then(() => persistSecureVaultNow())
+      .catch((error) => {
+        console.error("Secure vault save failed", error);
+        syncSecurityIndicators("Gabim gjatë ruajtjes së enkriptuar.");
+      });
+  }, 60);
+}
+
+async function persistSecureVaultNow() {
+  if (!hasSecureVault() || !secureVaultUnlocked || !secureVaultKey) return;
+  window.clearTimeout(secureVaultSaveTimer);
+  secureVaultSaveTimer = 0;
+  const current = JSON.parse(localStorage.getItem(SECURE_VAULT_KEY));
+  const salt = base64ToBytes(current.kdf.salt);
+  const vault = await encryptSecurePayloadWithKey(
+    buildSecureVaultPayload(),
+    secureVaultKey,
+    salt,
+    Number(current.kdf.iterations),
+  );
+  vault.createdAt = current.createdAt || vault.createdAt;
+  localStorage.setItem(SECURE_VAULT_KEY, JSON.stringify(vault));
+  clearPlaintextSensitiveStorage();
+  syncSecurityIndicators();
+}
+
+async function enableSecureVault(passcode) {
+  const encrypted = await encryptSecurePayload(buildSecureVaultPayload(), passcode);
+  localStorage.setItem(SECURE_VAULT_KEY, JSON.stringify(encrypted.vault));
+  secureVaultKey = encrypted.key;
+  secureVaultUnlocked = true;
+  clearPlaintextSensitiveStorage();
+  syncSecurityIndicators();
+}
+
+async function unlockSecureVault(passcode) {
+  const vault = JSON.parse(localStorage.getItem(SECURE_VAULT_KEY));
+  const { key, payload } = await decryptSecureVault(vault, passcode);
+  secureVaultKey = key;
+  secureVaultUnlocked = true;
+  receiptAiTokenMemory = String(payload.credentials?.receiptAiToken || "").trim();
+  const imported = normalizeImportedBackup(payload.finance);
+  applyImportedBackup(imported);
+  persistFinanceState();
+  if (els.eurToLekRateInput) els.eurToLekRateInput.value = formatRateInput(state.exchangeRate);
+  syncTypeControls();
+  render();
+  applyHomeOrder(state.homeOrder);
+  document.body.classList.remove("secure-vault-locked");
+  syncSecurityIndicators();
+}
+
+async function changeSecureVaultPasscode(passcode) {
+  if (!secureVaultUnlocked) throw new Error("Zhblloko të dhënat përpara se të ndryshosh kodin.");
+  const current = localStorage.getItem(SECURE_VAULT_KEY);
+  if (current) localStorage.setItem(SECURE_VAULT_BACKUP_KEY, current);
+  const encrypted = await encryptSecurePayload(buildSecureVaultPayload(), passcode);
+  localStorage.setItem(SECURE_VAULT_KEY, JSON.stringify(encrypted.vault));
+  secureVaultKey = encrypted.key;
+  clearPlaintextSensitiveStorage();
+  syncSecurityIndicators();
+}
+
+function openSecurityOverlay(mode = "status", options = {}) {
+  if (!els.securityOverlay) return;
+  const required = Boolean(options.required);
+  const active = hasSecureVault();
+  const effectiveMode = mode === "status" && (!active || !secureVaultUnlocked)
+    ? active ? "unlock" : "setup"
+    : mode;
+  els.securityOverlay.dataset.mode = effectiveMode;
+  els.securityOverlay.dataset.required = required ? "true" : "false";
+  els.securityOverlay.hidden = false;
+  els.securityForm.hidden = effectiveMode === "status";
+  els.securityUnlockedActions.hidden = effectiveMode !== "status";
+  els.securityPinConfirmLabel.hidden = ["unlock", "request"].includes(effectiveMode);
+  els.securityPinConfirmInput.required = !["unlock", "request"].includes(effectiveMode);
+  els.securityPinInput.value = "";
+  els.securityPinConfirmInput.value = "";
+  els.closeSecurityBtn.hidden = required || effectiveMode === "unlock";
+  if (required) document.body.classList.add("secure-vault-locked");
+
+  if (effectiveMode === "unlock") {
+    els.securityTitle.textContent = "Zhblloko financat";
+    els.securityDescription.textContent = "Të dhënat në këtë pajisje janë të enkriptuara. Vendos kodin personal për t’i hapur.";
+    els.securityPinLabel.textContent = "Kodi personal";
+    els.securitySubmitBtn.textContent = "Zhblloko";
+    els.securityState.textContent = "Mbrojtja është aktive · AES‑GCM";
+    document.body.classList.add("secure-vault-locked");
+  } else if (effectiveMode === "request") {
+    els.securityTitle.textContent = options.title || "Vendos kodin personal";
+    els.securityDescription.textContent = options.description || "Kodi nevojitet për të hapur të dhënat e enkriptuara.";
+    els.securityPinLabel.textContent = "Kodi personal";
+    els.securitySubmitBtn.textContent = "Vazhdo";
+    els.securityState.textContent = "Kodi nuk ruhet dhe nuk dërgohet askund.";
+  } else if (effectiveMode === "change") {
+    els.securityTitle.textContent = "Ndrysho kodin";
+    els.securityDescription.textContent = "Të dhënat do të rienkriptohen me kodin e ri.";
+    els.securityPinLabel.textContent = "Kodi i ri";
+    els.securitySubmitBtn.textContent = "Ruaj kodin e ri";
+    els.securityState.textContent = "Kodi aktual nuk ruhet dhe nuk mund të shfaqet.";
+  } else if (effectiveMode === "setup") {
+    els.securityTitle.textContent = "Aktivizo sigurinë";
+    els.securityDescription.textContent = "Financat, kodi i AI dhe backup-et lokale do të ruhen vetëm të enkriptuara.";
+    els.securityPinLabel.textContent = "Kodi personal";
+    els.securitySubmitBtn.textContent = "Aktivizo enkriptimin";
+    els.securityState.textContent = "Aktualisht të dhënat ruhen pa enkriptim.";
+  } else {
+    els.securityTitle.textContent = "Siguria aktive";
+    els.securityDescription.textContent = "Financat dhe backup-et ruhen të enkriptuara në këtë pajisje.";
+    els.securityState.textContent = "AES‑256‑GCM · PBKDF2‑SHA‑256 · kodi nuk ruhet";
+  }
+  window.setTimeout(() => {
+    if (!els.securityForm.hidden) els.securityPinInput?.focus();
+  }, 40);
+}
+
+function closeSecurityOverlay() {
+  if (!els.securityOverlay || document.body.classList.contains("secure-vault-locked")) return;
+  if (pendingSecurityPasscodeRequest) {
+    const resolve = pendingSecurityPasscodeRequest;
+    pendingSecurityPasscodeRequest = null;
+    resolve("");
+  }
+  els.securityOverlay.hidden = true;
+  els.securityForm?.reset();
+}
+
+function requestSecurityPasscode(title, description) {
+  if (pendingSecurityPasscodeRequest) return Promise.resolve("");
+  openSecurityOverlay("request", { title, description });
+  return new Promise((resolve) => {
+    pendingSecurityPasscodeRequest = resolve;
+  });
+}
+
+async function handleSecuritySubmit(event) {
+  event.preventDefault();
+  const mode = els.securityOverlay?.dataset.mode || "setup";
+  const passcode = els.securityPinInput?.value || "";
+  const confirmation = els.securityPinConfirmInput?.value || "";
+  if (passcode.length < 8) {
+    els.securityState.textContent = "Kodi duhet të ketë të paktën 8 shenja.";
+    return;
+  }
+  if (["setup", "change"].includes(mode) && passcode !== confirmation) {
+    els.securityState.textContent = "Dy kodet nuk përputhen.";
+    return;
+  }
+
+  if (mode === "request") {
+    const resolve = pendingSecurityPasscodeRequest;
+    pendingSecurityPasscodeRequest = null;
+    els.securityOverlay.hidden = true;
+    els.securityForm.reset();
+    resolve?.(passcode);
+    return;
+  }
+
+  els.securitySubmitBtn.disabled = true;
+  els.securityState.textContent = mode === "unlock" ? "Po zhbllokohen të dhënat…" : "Po enkriptohen të dhënat…";
+  try {
+    if (mode === "unlock") await unlockSecureVault(passcode);
+    else if (mode === "change") await changeSecureVaultPasscode(passcode);
+    else await enableSecureVault(passcode);
+    document.body.classList.remove("secure-vault-locked");
+    els.securityOverlay.hidden = true;
+    syncSecurityIndicators();
+    showInfoToast(mode === "unlock" ? "Të dhënat u zhbllokuan." : mode === "change" ? "Kodi u ndryshua." : "Enkriptimi u aktivizua.");
+    if (mode === "unlock" || mode === "setup") maybeOpenSetup();
+  } catch (error) {
+    els.securityState.textContent = error?.message || "Veprimi i sigurisë dështoi.";
+  } finally {
+    els.securitySubmitBtn.disabled = false;
+  }
+}
+
+async function lockSecureVault() {
+  if (!hasSecureVault()) return;
+  try {
+    await persistSecureVaultNow();
+  } finally {
+    secureVaultKey = null;
+    secureVaultUnlocked = false;
+    receiptAiTokenMemory = "";
+    window.location.reload();
+  }
+}
+
+function syncSecurityIndicators(errorMessage = "") {
+  const active = hasSecureVault();
+  const status = active ? secureVaultUnlocked ? "Aktive" : "E bllokuar" : "Joaktive";
+  if (els.profileSecurityState) els.profileSecurityState.textContent = status;
+  if (els.backupSecurityStatus) {
+    els.backupSecurityStatus.textContent = errorMessage || (active
+      ? "Financat dhe backup-et mbrohen me enkriptim AES‑256‑GCM."
+      : "Aktivizo Sigurinë që backup-i të mbrohet me kod.");
+  }
+}
+
+function loadAiConsents() {
+  try {
+    const value = JSON.parse(localStorage.getItem(AI_CONSENT_KEY));
+    return value && typeof value === "object" ? value : {};
+  } catch {
+    return {};
+  }
+}
+
+const AI_CONSENT_COPY = {
+  receipt: {
+    title: "Dërgo fotografinë e faturës?",
+    description: "Fotografia, kategoritë dhe emrat e llogarive dërgohen përkohësisht te Cloudflare dhe OpenAI për të plotësuar formularin. Kontrolloje rezultatin para ruajtjes.",
+  },
+  voice: {
+    title: "Dërgo regjistrimin zanor?",
+    description: "Audioja dërgohet te Cloudflare dhe OpenAI për transkriptim. Më pas teksti përdoret vetëm për të përgatitur zërin financiar.",
+  },
+  text: {
+    title: "Dërgo tekstin te AI?",
+    description: "Fjalia, kategoritë dhe emrat e llogarive dërgohen te Cloudflare dhe OpenAI për të përgatitur formularin. Asgjë nuk ruhet pa konfirmimin tënd.",
+  },
+  summary: {
+    title: "Dërgo përmbledhjen financiare?",
+    description: "Dërgohen vetëm totalet, mesataret, kategoritë dhe progresi i objektivave—jo lista e plotë e transaksioneve. AI vetëm shpjegon dhe nuk ndryshon të dhëna.",
+  },
+};
+
+function requestAiConsent(kind) {
+  if (loadAiConsents()[kind] === true) return Promise.resolve(true);
+  if (!els.aiConsentOverlay || !AI_CONSENT_COPY[kind]) return Promise.resolve(false);
+  if (pendingAiConsent) return Promise.resolve(false);
+  const copy = AI_CONSENT_COPY[kind];
+  els.aiConsentTitle.textContent = copy.title;
+  els.aiConsentDescription.textContent = copy.description;
+  els.aiConsentRemember.checked = false;
+  els.aiConsentOverlay.hidden = false;
+  return new Promise((resolve) => {
+    pendingAiConsent = { kind, resolve };
+  });
+}
+
+function resolveAiConsent(allowed) {
+  if (!pendingAiConsent) return;
+  const { kind, resolve } = pendingAiConsent;
+  if (allowed && els.aiConsentRemember?.checked) {
+    const consents = loadAiConsents();
+    consents[kind] = true;
+    localStorage.setItem(AI_CONSENT_KEY, JSON.stringify(consents));
+  }
+  pendingAiConsent = null;
+  els.aiConsentOverlay.hidden = true;
+  resolve(Boolean(allowed));
+}
+
+function resetAiConsents() {
+  localStorage.removeItem(AI_CONSENT_KEY);
+  showInfoToast("Paralajmërimet e AI do të shfaqen përsëri.");
+}
+
+function setReceiptAiToken(value) {
+  receiptAiTokenMemory = String(value || "").trim();
+  if (hasSecureVault()) queueSecureVaultSave();
+  else if (receiptAiTokenMemory) localStorage.setItem(RECEIPT_AI_TOKEN_KEY, receiptAiTokenMemory);
+  else localStorage.removeItem(RECEIPT_AI_TOKEN_KEY);
+}
+
+async function exportData() {
+  if (!hasSecureVault()) {
+    openSecurityOverlay("setup");
+    if (els.securityState) els.securityState.textContent = "Aktivizo enkriptimin, pastaj shtyp përsëri Eksporto.";
+    return;
+  }
+  if (!secureVaultUnlocked) {
+    openSecurityOverlay("unlock", { required: true });
+    return;
+  }
+  await persistSecureVaultNow();
+  const backup = JSON.parse(localStorage.getItem(SECURE_VAULT_KEY));
   const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `financat-e-mia-${todayIso()}.json`;
+  link.download = `financat-e-mia-encrypted-${todayIso()}.json`;
   link.click();
   URL.revokeObjectURL(url);
-  showInfoToast("Backup-u JSON u shkarkua.");
+  showInfoToast("Backup-i i enkriptuar u shkarkua.");
 }
 
 function importData(event) {
@@ -5878,9 +6400,20 @@ function importData(event) {
   if (!file) return;
 
   const reader = new FileReader();
-  reader.onload = () => {
+  reader.onload = async () => {
     try {
-      const parsed = JSON.parse(reader.result);
+      let parsed = JSON.parse(reader.result);
+      pendingEncryptedImportPasscode = "";
+      if (isEncryptedBackup(parsed)) {
+        const passcode = await requestSecurityPasscode(
+          "Hap backup-in",
+          "Ky backup është i enkriptuar. Vendos kodin personal me të cilin është krijuar.",
+        );
+        if (!passcode) throw new Error("Importi u anulua.");
+        const decrypted = await decryptSecureVault(parsed, passcode);
+        parsed = decrypted.payload.finance;
+        pendingEncryptedImportPasscode = passcode;
+      }
       const imported = normalizeImportedBackup(parsed);
       if (!imported.hasSupportedData) {
         throw new Error("Ky backup nuk ka të dhëna financiare të njohura.");
@@ -5936,17 +6469,26 @@ function renderImportPreview(imported) {
 
 function closeImportPreview() {
   state.pendingImport = null;
+  pendingEncryptedImportPasscode = "";
   if (els.importPreviewOverlay) els.importPreviewOverlay.hidden = true;
 }
 
-function confirmPendingImport() {
+async function confirmPendingImport() {
   const imported = state.pendingImport;
   if (!imported) return;
 
   const snapshot = snapshotFinanceState();
   createAutoBackup();
-  applyImportedBackup(imported);
-  persistFinanceState();
+  const importedPasscode = pendingEncryptedImportPasscode;
+  secureImportInProgress = Boolean(importedPasscode && !hasSecureVault());
+  try {
+    applyImportedBackup(imported);
+    if (secureImportInProgress) await enableSecureVault(importedPasscode);
+    else persistFinanceState();
+  } finally {
+    secureImportInProgress = false;
+    pendingEncryptedImportPasscode = "";
+  }
   state.pendingImport = null;
   closePanelsAfterImport();
   syncTypeControls();
@@ -6173,6 +6715,7 @@ function importSummaryText(imported) {
 }
 
 function loadEntries() {
+  if (hasSecureVault() && !secureVaultUnlocked) return [];
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
     if (Array.isArray(saved)) return saved.filter(isValidEntry).map(normalizeEntryForImport);
@@ -6181,7 +6724,7 @@ function loadEntries() {
       const legacy = JSON.parse(localStorage.getItem(key));
       if (Array.isArray(legacy)) {
         const entries = legacy.filter(isValidEntry).map(normalizeEntryForImport);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+        storeSensitiveValue(STORAGE_KEY, JSON.stringify(entries));
         return entries;
       }
     }
@@ -6193,6 +6736,7 @@ function loadEntries() {
 }
 
 function loadBanks() {
+  const vaultLocked = hasSecureVault() && !secureVaultUnlocked;
   try {
     const saved = JSON.parse(localStorage.getItem(BANKS_KEY));
     if (Array.isArray(saved) && saved.length) return normalizeBanks(saved.filter(isValidBank));
@@ -6207,7 +6751,7 @@ function loadBanks() {
     { name: "Bankë italiane euro", currency: "EUR", balance: 0, isDefault: false },
   ].map((bank) => ({ ...bank, id: crypto.randomUUID(), createdAt: new Date().toISOString() }));
 
-  localStorage.setItem(BANKS_KEY, JSON.stringify(banks));
+  if (!vaultLocked) storeSensitiveValue(BANKS_KEY, JSON.stringify(banks));
   return banks;
 }
 
@@ -6237,6 +6781,7 @@ function legacySavingsToBanks(savings) {
 }
 
 function loadLegacySavings() {
+  if (hasSecureVault() && !secureVaultUnlocked) return emptyMoneyTotals();
   try {
     return normalizeMoneyTotals(JSON.parse(localStorage.getItem(LEGACY_SAVINGS_KEY)));
   } catch {
@@ -6245,14 +6790,15 @@ function loadLegacySavings() {
 }
 
 function saveEntries() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state.entries));
+  storeSensitiveValue(STORAGE_KEY, JSON.stringify(state.entries));
 }
 
 function saveBanks() {
-  localStorage.setItem(BANKS_KEY, JSON.stringify(state.banks));
+  storeSensitiveValue(BANKS_KEY, JSON.stringify(state.banks));
 }
 
 function loadNetWorthHistory() {
+  if (hasSecureVault() && !secureVaultUnlocked) return [];
   try {
     return normalizeNetWorthHistory(JSON.parse(localStorage.getItem(NET_WORTH_HISTORY_KEY)), loadExchangeRate());
   } catch {
@@ -6261,7 +6807,7 @@ function loadNetWorthHistory() {
 }
 
 function saveNetWorthHistory() {
-  localStorage.setItem(NET_WORTH_HISTORY_KEY, JSON.stringify(normalizeNetWorthHistory(state.netWorthHistory, state.exchangeRate)));
+  storeSensitiveValue(NET_WORTH_HISTORY_KEY, JSON.stringify(normalizeNetWorthHistory(state.netWorthHistory, state.exchangeRate)));
 }
 
 function normalizeNetWorthHistory(items, exchangeRate = DEFAULT_EUR_TO_ALL_RATE) {
@@ -6308,6 +6854,7 @@ function mergeNetWorthHistory(current = [], imported = [], exchangeRate = DEFAUL
 }
 
 function loadRecurringExpenses() {
+  if (hasSecureVault() && !secureVaultUnlocked) return [];
   try {
     return normalizeRecurringExpenses(JSON.parse(localStorage.getItem(RECURRING_KEY)));
   } catch {
@@ -6316,10 +6863,11 @@ function loadRecurringExpenses() {
 }
 
 function saveRecurringExpenses() {
-  localStorage.setItem(RECURRING_KEY, JSON.stringify(state.recurringExpenses));
+  storeSensitiveValue(RECURRING_KEY, JSON.stringify(state.recurringExpenses));
 }
 
 function loadLimits() {
+  if (hasSecureVault() && !secureVaultUnlocked) return { ...DEFAULT_LIMITS };
   try {
     return normalizeLimits(JSON.parse(localStorage.getItem(LIMITS_KEY)));
   } catch {
@@ -6339,10 +6887,11 @@ function normalizeLimits(limits) {
 }
 
 function saveLimits() {
-  localStorage.setItem(LIMITS_KEY, JSON.stringify(state.limits));
+  storeSensitiveValue(LIMITS_KEY, JSON.stringify(state.limits));
 }
 
 function loadSavingsGoal() {
+  if (hasSecureVault() && !secureVaultUnlocked) return { ...DEFAULT_SAVINGS_GOAL };
   try {
     return normalizeSavingsGoal(JSON.parse(localStorage.getItem(SAVINGS_GOAL_KEY)));
   } catch {
@@ -6361,7 +6910,7 @@ function normalizeSavingsGoal(goal) {
 }
 
 function saveSavingsGoal() {
-  localStorage.setItem(SAVINGS_GOAL_KEY, JSON.stringify(state.savingsGoal));
+  storeSensitiveValue(SAVINGS_GOAL_KEY, JSON.stringify(state.savingsGoal));
 }
 
 function cloneDefaultCategories() {
@@ -6400,6 +6949,7 @@ function normalizeCategoriesData(data) {
 }
 
 function loadCategories() {
+  if (hasSecureVault() && !secureVaultUnlocked) return cloneDefaultCategories();
   try {
     return normalizeCategoriesData(JSON.parse(localStorage.getItem(CATEGORIES_KEY)));
   } catch {
@@ -6408,7 +6958,7 @@ function loadCategories() {
 }
 
 function saveCategories() {
-  localStorage.setItem(CATEGORIES_KEY, JSON.stringify(normalizeCategoriesData(state.categories)));
+  storeSensitiveValue(CATEGORIES_KEY, JSON.stringify(normalizeCategoriesData(state.categories)));
 }
 
 function getCategories(type = state.type) {
@@ -6460,6 +7010,7 @@ function mergeCategories(current, imported) {
 }
 
 function loadGoals() {
+  if (hasSecureVault() && !secureVaultUnlocked) return [];
   try {
     return normalizeGoals(JSON.parse(localStorage.getItem(GOALS_KEY)));
   } catch {
@@ -6468,7 +7019,7 @@ function loadGoals() {
 }
 
 function saveGoals() {
-  localStorage.setItem(GOALS_KEY, JSON.stringify(normalizeGoals(state.goals)));
+  storeSensitiveValue(GOALS_KEY, JSON.stringify(normalizeGoals(state.goals)));
 }
 
 function normalizeGoalName(value) {
@@ -6602,12 +7153,13 @@ function upsertPrimaryGoalFromSavingsGoal(goal) {
 }
 
 function loadExchangeRate() {
+  if (hasSecureVault() && !secureVaultUnlocked) return DEFAULT_EUR_TO_ALL_RATE;
   const saved = Number(localStorage.getItem(EXCHANGE_RATE_KEY));
   return Number.isFinite(saved) && saved > 0 ? saved : DEFAULT_EUR_TO_ALL_RATE;
 }
 
 function saveExchangeRate(rate) {
-  localStorage.setItem(EXCHANGE_RATE_KEY, String(rate));
+  storeSensitiveValue(EXCHANGE_RATE_KEY, String(rate));
 }
 
 function loadTheme() {
@@ -6619,12 +7171,13 @@ function saveTheme() {
 }
 
 function loadSetupComplete() {
+  if (hasSecureVault() && !secureVaultUnlocked) return false;
   return localStorage.getItem(SETUP_KEY) === "true";
 }
 
 function saveSetupComplete(value = state.setupComplete) {
   state.setupComplete = Boolean(value);
-  localStorage.setItem(SETUP_KEY, state.setupComplete ? "true" : "false");
+  storeSensitiveValue(SETUP_KEY, state.setupComplete ? "true" : "false");
 }
 
 function applyTheme() {
@@ -6685,6 +7238,13 @@ function createAutoBackup() {
     getCategories("income").length;
   if (!hasData) return;
 
+  if (hasSecureVault()) {
+    const currentVault = localStorage.getItem(SECURE_VAULT_KEY);
+    if (currentVault) localStorage.setItem(SECURE_VAULT_BACKUP_KEY, currentVault);
+    localStorage.removeItem(BACKUP_KEY);
+    return;
+  }
+
   localStorage.setItem(
     BACKUP_KEY,
     JSON.stringify({
@@ -6706,7 +7266,48 @@ function createAutoBackup() {
   );
 }
 
-function restoreAutoBackup() {
+async function restoreAutoBackup() {
+  if (hasSecureVault()) {
+    const encryptedBackupText = localStorage.getItem(SECURE_VAULT_BACKUP_KEY);
+    if (!encryptedBackupText) {
+      alert("Nuk ka backup lokal të enkriptuar për të rikthyer.");
+      return;
+    }
+
+    const confirmed = confirm("A dëshiron të rikthesh backup-in lokal të enkriptuar? Gjendja aktuale do ruhet si kopja e re rezervë.");
+    if (!confirmed) return;
+
+    const passcode = await requestSecurityPasscode(
+      "Rikthe backup-in",
+      "Vendos kodin personal me të cilin është krijuar kopja e enkriptuar.",
+    );
+    if (!passcode) return;
+
+    try {
+      const encryptedBackup = JSON.parse(encryptedBackupText);
+      const decrypted = await decryptSecureVault(encryptedBackup, passcode);
+      const imported = normalizeImportedBackup(decrypted.payload.finance);
+      if (!imported.hasSupportedData) throw new Error("Backup-i nuk ka të dhëna financiare të vlefshme.");
+
+      const currentVault = localStorage.getItem(SECURE_VAULT_KEY);
+      if (currentVault) localStorage.setItem(SECURE_VAULT_BACKUP_KEY, currentVault);
+      localStorage.setItem(SECURE_VAULT_KEY, encryptedBackupText);
+      secureVaultKey = decrypted.key;
+      secureVaultUnlocked = true;
+      receiptAiTokenMemory = String(decrypted.payload.credentials?.receiptAiToken || "").trim();
+      applyImportedBackup(imported);
+      persistFinanceState();
+      await persistSecureVaultNow();
+      applyHomeOrder(state.homeOrder);
+      syncTypeControls();
+      render();
+      showInfoToast("Backup-i i enkriptuar u rikthye.");
+    } catch (error) {
+      alert(error?.message || "Backup-i i enkriptuar nuk mund të lexohet.");
+    }
+    return;
+  }
+
   try {
     const backup = JSON.parse(localStorage.getItem(BACKUP_KEY));
     if (
