@@ -73,3 +73,24 @@ npm run dev
 - i dërgon OpenAI imazhin me `store: false`;
 - kërkon përgjigje sipas një JSON Schema strikt;
 - normalizon shumën, monedhën, datën, kategorinë dhe nivelin e sigurisë përpara se t’ia kthejë aplikacionit.
+
+## Llogaria dhe backup-i cloud
+
+Frontend-i lidhet drejtpërdrejt me Supabase për hyrjen, profilin, foton e profilit dhe backup-in cloud. URL-ja e projektit dhe `publishable key` janë konfigurim publik i frontend-it; mos vendos kurrë `service_role key` në GitHub Pages.
+
+Para përdorimit kontrollo te **Supabase → Authentication → URL Configuration**:
+
+```text
+Site URL: https://dorielezaj-creator.github.io/Financat/
+Redirect URL: https://dorielezaj-creator.github.io/Financat/
+```
+
+Sinkronizimi përdor tabelat `profiles` dhe `user_vaults`, bucket-in privat `avatars` dhe politikat RLS të projektit. Në `user_vaults.encrypted_payload` ruhet vetëm vault-i që është enkriptuar më parë në pajisje; kodi personal dhe JSON-i financiar i lexueshëm nuk dërgohen në Supabase.
+
+Rrjedha e sinkronizimit është:
+
+- ndryshimet ruhen menjëherë në pajisje dhe punojnë edhe pa internet;
+- kur ka lidhje, ngarkohet versioni i ri i vault-it të enkriptuar;
+- `revision` parandalon mbishkrimin e heshtur nga një pajisje tjetër;
+- kur ndryshojnë të dy versionet, aplikacioni ndalon dhe kërkon të zgjedhësh versionin që do të mbash;
+- para rikthimit nga cloud ruhet një kopje rezervë lokale.

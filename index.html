@@ -7,8 +7,10 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Financat" />
     <meta name="receipt-ai-endpoint" content="https://financat-e-mia-ai.dorielezaj.workers.dev" />
+    <meta name="supabase-url" content="https://dmrxtuttnhantrbyxxks.supabase.co" />
+    <meta name="supabase-publishable-key" content="sb_publishable_Eqp0gclX5Vo0BQayjYvHVw_aW2Kpu_U" />
     <meta name="referrer" content="no-referrer" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' https://financat-e-mia-ai.dorielezaj.workers.dev https://www.bankofalbania.org; form-action 'self'; upgrade-insecure-requests" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' https://financat-e-mia-ai.dorielezaj.workers.dev https://dmrxtuttnhantrbyxxks.supabase.co https://www.bankofalbania.org; form-action 'self'; upgrade-insecure-requests" />
     <title>Financat e Mia</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -16,13 +18,13 @@
     <link rel="manifest" href="manifest.webmanifest?v=20260821-1" />
     <link rel="icon" href="icon.svg?v=20260820-1" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="icon.svg?v=20260820-1" />
-    <link rel="stylesheet" href="styles.css?v=20260907-security-1" />
+    <link rel="stylesheet" href="styles.css?v=20260907-cloud-1" />
   </head>
   <body>
     <main class="app-shell">
       <header class="hero-header">
         <div class="hero-copy">
-          <p>Hi Dorian</p>
+          <p id="heroGreeting">Hi Dorian</p>
           <small id="todayLabel">Sot</small>
         </div>
         <div class="top-actions">
@@ -554,7 +556,7 @@
             <span class="profile-avatar" aria-hidden="true"></span>
             <div>
               <h2 id="profileMenuName">Dorian Elezaj</h2>
-              <small>dorielezaj@gmail.com</small>
+              <small id="profileMenuEmail">Ruajtur në këtë pajisje</small>
             </div>
           </div>
 
@@ -573,11 +575,75 @@
               <span>Siguria</span>
               <strong id="profileSecurityState">Joaktive</strong>
             </button>
+            <button id="profileCloudBtn" type="button">
+              <span>Llogaria cloud</span>
+              <strong id="profileCloudState">Jo e lidhur</strong>
+            </button>
             <button id="profileThemeBtn" type="button">
               <span>Dark mode</span>
               <strong id="profileThemeState">Off</strong>
             </button>
           </div>
+        </div>
+      </section>
+
+      <section id="cloudAccountOverlay" class="editor-overlay cloud-account-overlay" hidden>
+        <div class="cloud-account-sheet" role="dialog" aria-modal="true" aria-labelledby="cloudAccountTitle">
+          <button id="closeCloudAccountBtn" class="icon-button small cloud-account-close" type="button" aria-label="Mbyll">×</button>
+          <span class="cloud-account-mark" aria-hidden="true">☁</span>
+          <span class="dialog-eyebrow">Ruajtja në cloud</span>
+          <h2 id="cloudAccountTitle">Llogaria</h2>
+          <p id="cloudAccountDescription">Hyr që backup-i i enkriptuar të ruhet edhe jashtë telefonit.</p>
+
+          <div id="cloudAuthPanel">
+            <div class="cloud-auth-tabs" role="tablist" aria-label="Hyrje ose regjistrim">
+              <button id="cloudSignInTab" class="active" type="button" role="tab" aria-selected="true">Hyr</button>
+              <button id="cloudSignUpTab" type="button" role="tab" aria-selected="false">Regjistrohu</button>
+            </div>
+            <form id="cloudAuthForm" class="cloud-account-form" autocomplete="on">
+              <label id="cloudFullNameLabel" hidden>
+                Emri i plotë
+                <input id="cloudFullNameInput" type="text" maxlength="80" autocomplete="name" placeholder="Dorian Elezaj" />
+              </label>
+              <label>
+                Email
+                <input id="cloudEmailInput" type="email" maxlength="160" autocomplete="email" required />
+              </label>
+              <label>
+                Fjalëkalimi
+                <input id="cloudPasswordInput" type="password" minlength="8" maxlength="128" autocomplete="current-password" required />
+              </label>
+              <button id="cloudAuthSubmit" class="primary-button" type="submit">Hyr</button>
+            </form>
+          </div>
+
+          <div id="cloudSignedInPanel" class="cloud-signed-in" hidden>
+            <div class="cloud-user-card">
+              <span>Lidhur si</span>
+              <strong id="cloudUserEmail"></strong>
+              <small id="cloudLastSync">Ende pa sinkronizim</small>
+            </div>
+            <form id="cloudProfileForm" class="cloud-account-form">
+              <label>
+                Emri i profilit
+                <input id="cloudProfileNameInput" type="text" maxlength="80" autocomplete="name" />
+              </label>
+              <label class="cloud-avatar-upload">
+                Foto profili
+                <input id="cloudAvatarInput" type="file" accept="image/jpeg,image/png,image/webp" />
+                <small>JPG, PNG ose WebP · maksimumi 5 MB</small>
+              </label>
+              <button id="cloudProfileSaveBtn" class="secondary-button" type="submit">Ruaj profilin</button>
+            </form>
+            <div class="cloud-sync-actions">
+              <button id="cloudSyncNowBtn" class="primary-button" type="button">Sinkronizo tani</button>
+              <button id="cloudUploadBtn" class="secondary-button" type="button">Ruaj këtë pajisje në cloud</button>
+              <button id="cloudDownloadBtn" class="secondary-button" type="button">Rikthe nga cloud</button>
+              <button id="cloudSignOutBtn" class="text-button" type="button">Dil nga llogaria</button>
+            </div>
+          </div>
+          <div id="cloudAccountStatus" class="cloud-account-status" role="status" aria-live="polite"></div>
+          <p class="cloud-privacy-note">Në cloud ngarkohet vetëm vault-i i enkriptuar. Kodi personal dhe të dhënat e lexueshme nuk dërgohen.</p>
         </div>
       </section>
 
@@ -1192,6 +1258,7 @@
       </div>
     </template>
 
-    <script src="app.js?v=20260907-security-1"></script>
+    <script src="app.js?v=20260907-cloud-1"></script>
+    <script src="cloud-sync.js?v=20260907-cloud-1"></script>
   </body>
 </html>
