@@ -1633,6 +1633,11 @@ body:has(.entry-page-overlay:not([hidden])) .add-entry-button {
   font-weight: 800;
 }
 
+.profile-menu-card .profile-logout-button {
+  color: var(--expense);
+  font-weight: 700;
+}
+
 .profile-close-button {
   position: absolute;
   top: 28px;
@@ -3110,11 +3115,36 @@ select:focus {
 
 /* Cloud account — authenticated, encrypted Supabase backup */
 .cloud-account-overlay {
-  z-index: 175;
+  z-index: 220;
   align-items: end;
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 18px;
+}
+
+body.auth-pending,
+body.auth-required {
+  overflow: hidden;
+}
+
+body.auth-pending .app-shell > :not(.cloud-account-overlay),
+body.auth-required .app-shell > :not(.cloud-account-overlay) {
+  pointer-events: none;
+  user-select: none;
+}
+
+body.auth-pending .app-shell > :not(.cloud-account-overlay) {
+  visibility: hidden;
+}
+
+.cloud-account-overlay[data-required="true"] {
+  align-items: center;
+  background: var(--bg);
+  backdrop-filter: none;
+}
+
+.cloud-account-overlay[data-required="true"] .cloud-account-sheet {
+  margin-block: auto;
 }
 
 .cloud-account-sheet {
@@ -6648,6 +6678,13 @@ body.secure-vault-locked .app-shell > :not(.security-overlay) {
   pointer-events: none;
   user-select: none;
   filter: blur(7px);
+}
+
+body.secure-vault-locked.auth-required .app-shell > .cloud-account-overlay {
+  pointer-events: auto;
+  user-select: auto;
+  filter: none;
+  visibility: visible;
 }
 
 @media (min-width: 640px) {

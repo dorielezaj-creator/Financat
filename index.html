@@ -18,9 +18,9 @@
     <link rel="manifest" href="manifest.webmanifest?v=20260821-1" />
     <link rel="icon" href="icon.svg?v=20260820-1" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="icon.svg?v=20260820-1" />
-    <link rel="stylesheet" href="styles.css?v=20260907-cloud-1" />
+    <link rel="stylesheet" href="styles.css?v=20260907-auth-1" />
   </head>
-  <body>
+  <body class="auth-pending">
     <main class="app-shell">
       <header class="hero-header">
         <div class="hero-copy">
@@ -571,18 +571,11 @@
             <button id="profileRecurringBtn" type="button">Shpenzime fikse</button>
             <button id="profileIncomeBtn" type="button">Të ardhurat</button>
             <button id="profileSetupBtn" type="button">Setup fillestar</button>
-            <button id="profileSecurityBtn" type="button">
-              <span>Siguria</span>
-              <strong id="profileSecurityState">Joaktive</strong>
-            </button>
-            <button id="profileCloudBtn" type="button">
-              <span>Llogaria cloud</span>
-              <strong id="profileCloudState">Jo e lidhur</strong>
-            </button>
             <button id="profileThemeBtn" type="button">
               <span>Dark mode</span>
               <strong id="profileThemeState">Off</strong>
             </button>
+            <button id="profileLogoutBtn" class="profile-logout-button" type="button">Dil nga llogaria</button>
           </div>
         </div>
       </section>
@@ -591,9 +584,9 @@
         <div class="cloud-account-sheet" role="dialog" aria-modal="true" aria-labelledby="cloudAccountTitle">
           <button id="closeCloudAccountBtn" class="icon-button small cloud-account-close" type="button" aria-label="Mbyll">×</button>
           <span class="cloud-account-mark" aria-hidden="true">☁</span>
-          <span class="dialog-eyebrow">Ruajtja në cloud</span>
-          <h2 id="cloudAccountTitle">Llogaria</h2>
-          <p id="cloudAccountDescription">Hyr që backup-i i enkriptuar të ruhet edhe jashtë telefonit.</p>
+          <span class="dialog-eyebrow">Financat e Mia</span>
+          <h2 id="cloudAccountTitle">Mirë se erdhe</h2>
+          <p id="cloudAccountDescription">Hyr ose krijo llogari për të vazhduar.</p>
 
           <div id="cloudAuthPanel">
             <div class="cloud-auth-tabs" role="tablist" aria-label="Hyrje ose regjistrim">
@@ -1259,6 +1252,6 @@
     </template>
 
     <script src="app.js?v=20260907-cloud-1"></script>
-    <script src="cloud-sync.js?v=20260907-cloud-1"></script>
+    <script src="cloud-sync.js?v=20260907-auth-1"></script>
   </body>
 </html>

@@ -22,6 +22,7 @@
     syncTimer: 0,
     retryTimer: 0,
     vaultWatchTimer: 0,
+    authRequired: true,
     observedVaultValue: localStorage.getItem(LOCAL_VAULT_KEY),
     avatarUrl: "",
   };
@@ -29,8 +30,7 @@
   const ui = {
     overlay: document.querySelector("#cloudAccountOverlay"),
     close: document.querySelector("#closeCloudAccountBtn"),
-    profileButton: document.querySelector("#profileCloudBtn"),
-    profileState: document.querySelector("#profileCloudState"),
+    menuLogout: document.querySelector("#profileLogoutBtn"),
     description: document.querySelector("#cloudAccountDescription"),
     authPanel: document.querySelector("#cloudAuthPanel"),
     signedInPanel: document.querySelector("#cloudSignedInPanel"),
@@ -58,7 +58,10 @@
     greeting: document.querySelector("#heroGreeting"),
   };
 
-  if (!SUPABASE_URL || !SUPABASE_KEY || !ui.overlay) return;
+  if (!SUPABASE_URL || !SUPABASE_KEY || !ui.overlay) {
+    document.body.classList.remove("auth-pending");
+    return;
+  }
 
   function parseJson(value, fallback = null) {
     try {
@@ -75,13 +78,9 @@
     ui.status.classList.toggle("is-warning", tone === "warning");
   }
 
-  function setCloudBadge(label) {
-    if (ui.profileState) ui.profileState.textContent = label;
-  }
-
   function setBusy(isBusy) {
     cloudState.busy = isBusy;
-    [ui.authSubmit, ui.profileSave, ui.syncNow, ui.upload, ui.download, ui.signOut]
+    [ui.authSubmit, ui.profileSave, ui.syncNow, ui.upload, ui.download, ui.signOut, ui.menuLogout]
       .filter(Boolean)
       .forEach((button) => {
         button.disabled = isBusy;
@@ -105,8 +104,8 @@
     if (ui.authSubmit) ui.authSubmit.textContent = isSignup ? "Krijo llogarinë" : "Hyr";
     if (ui.description) {
       ui.description.textContent = isSignup
-        ? "Krijo llogarinë që vault-i i enkriptuar të ruhet edhe në cloud."
-        : "Hyr që backup-i i enkriptuar të sinkronizohet mes pajisjeve.";
+        ? "Krijo llogarinë për t’i pasur financat e tua të sigurta dhe të sinkronizuara."
+        : "Hyr për të hapur financat e tua dhe për t’i sinkronizuar në mënyrë të sigurt.";
     }
     setStatus("");
   }
@@ -121,8 +120,23 @@
     }, 40);
   }
 
+  function setAuthRequired(required) {
+    cloudState.authRequired = Boolean(required);
+    document.body.classList.remove("auth-pending");
+    document.body.classList.toggle("auth-required", cloudState.authRequired);
+    ui.overlay.dataset.required = String(cloudState.authRequired);
+    if (ui.close) ui.close.hidden = cloudState.authRequired;
+    if (cloudState.authRequired) {
+      openCloudAccount();
+    } else {
+      ui.overlay.hidden = true;
+      document.body.classList.remove("cloud-account-open");
+      setStatus("");
+    }
+  }
+
   function closeCloudAccount() {
-    if (cloudState.busy) return;
+    if (cloudState.busy || cloudState.authRequired) return;
     ui.overlay.hidden = true;
     document.body.classList.remove("cloud-account-open");
     ui.authForm?.reset();
@@ -135,18 +149,16 @@
     if (ui.signedInPanel) ui.signedInPanel.hidden = !signedIn;
     if (ui.description) {
       ui.description.textContent = signedIn
-        ? "Financat mbeten të enkriptuara para se të largohen nga kjo pajisje."
+        ? "Financat sinkronizohen automatikisht dhe mbeten të enkriptuara."
         : cloudState.mode === "signup"
-          ? "Krijo llogarinë që vault-i i enkriptuar të ruhet edhe në cloud."
-          : "Hyr që backup-i i enkriptuar të sinkronizohet mes pajisjeve.";
+          ? "Krijo llogarinë për t’i pasur financat e tua të sigurta dhe të sinkronizuara."
+          : "Hyr për të hapur financat e tua dhe për t’i sinkronizuar në mënyrë të sigurt.";
     }
     if (signedIn) {
       if (ui.userEmail) ui.userEmail.textContent = cloudState.user.email || "Llogari Supabase";
       if (ui.profileName) ui.profileName.value = cloudState.profile?.full_name || userDisplayName();
-      setCloudBadge("Lidhur");
-    } else {
-      setCloudBadge(navigator.onLine ? "Jo e lidhur" : "Offline");
     }
+    if (ui.menuLogout) ui.menuLogout.hidden = !signedIn;
   }
 
   function userDisplayName() {
@@ -340,14 +352,15 @@
     if (!cloudState.session) {
       renderAuthState();
       applyProfileToApp();
+      setAuthRequired(true);
       return;
     }
     cloudState.user = cloudState.session.user || null;
     if (!navigator.onLine) {
       renderAuthState();
       applyProfileToApp();
-      setCloudBadge("Offline");
       setStatus("Nuk ka internet. Llogaria mbetet e ruajtur dhe sinkronizimi do të rifillojë automatikisht.", "warning");
+      setAuthRequired(!cloudState.user);
       return;
     }
     try {
@@ -361,8 +374,8 @@
       if (error?.offline) {
         renderAuthState();
         applyProfileToApp();
-        setCloudBadge("Offline");
         setStatus("Nuk ka internet. Llogaria mbetet e ruajtur dhe sinkronizimi do të rifillojë automatikisht.", "warning");
+        setAuthRequired(!cloudState.user);
         return;
       }
       localStorage.removeItem(AUTH_STORAGE_KEY);
@@ -371,7 +384,8 @@
       cloudState.profile = null;
       renderAuthState();
       applyProfileToApp();
-      setCloudBadge(navigator.onLine ? "Hyr përsëri" : "Offline");
+      setAuthRequired(true);
+      setStatus("Sesioni ka përfunduar. Hyr përsëri për të vazhduar.", "warning");
     }
   }
 
@@ -379,11 +393,14 @@
     await loadOrCreateProfile(options.preferredName || "");
     renderAuthState();
     applyProfileToApp();
+    setAuthRequired(false);
     scheduleCloudSync(120);
   }
 
   async function signOut() {
     if (cloudState.busy) return;
+    if (!window.confirm("Dëshiron të dalësh nga llogaria?")) return;
+    if (typeof window.closeProfileMenu === "function") window.closeProfileMenu();
     setBusy(true);
     setStatus("Po mbyllet sesioni…");
     try {
@@ -402,6 +419,8 @@
       renderAuthState();
       applyProfileToApp();
       setStatus("Dole nga llogaria. Të dhënat lokale nuk u prekën.");
+      setAuthRequired(true);
+      window.setTimeout(() => window.location.reload(), 180);
     }
   }
 
@@ -616,7 +635,6 @@
       syncedAt,
       serverUpdatedAt: row?.updated_at || syncedAt,
     });
-    setCloudBadge("Sinkronizuar");
     setStatus("Të dhënat janë të sinkronizuara.");
   }
 
@@ -637,7 +655,6 @@
     cloudState.syncing = true;
     try {
     if (!navigator.onLine) {
-      setCloudBadge("Offline");
       setStatus("Nuk ka internet. Ndryshimet mbeten të ruajtura në pajisje.", "warning");
       scheduleRetry();
       return;
@@ -721,7 +738,6 @@
         await performCloudSync();
       } catch (error) {
         console.warn("Cloud sync failed", error);
-        setCloudBadge(error?.offline ? "Offline" : error?.conflict ? "Konflikt" : "Gabim");
         setStatus(error.message || "Sinkronizimi dështoi.", error?.conflict ? "warning" : "error");
         if (error?.offline) scheduleRetry();
       }
@@ -743,7 +759,6 @@
       await performCloudSync(options);
       if (!options.forceDownload) showToast("Backup-i cloud u sinkronizua.");
     } catch (error) {
-      setCloudBadge(error?.offline ? "Offline" : error?.conflict ? "Konflikt" : "Gabim");
       setStatus(error.message || "Sinkronizimi dështoi.", error?.conflict ? "warning" : "error");
     } finally {
       setBusy(false);
@@ -761,20 +776,18 @@
   }
 
   async function handleOnline() {
-    setCloudBadge(cloudState.user ? "Po lidhet…" : "Jo e lidhur");
     if (cloudState.session && !cloudState.user) await restoreAuthSession();
     scheduleCloudSync(100);
   }
 
   function handleOffline() {
     if (cloudState.user) {
-      setCloudBadge("Offline");
       setStatus("Nuk ka internet. Aplikacioni vazhdon të punojë dhe do të sinkronizohet më vonë.", "warning");
     }
   }
 
   function bindEvents() {
-    ui.profileButton?.addEventListener("click", openCloudAccount);
+    ui.menuLogout?.addEventListener("click", signOut);
     ui.close?.addEventListener("click", closeCloudAccount);
     ui.overlay?.addEventListener("click", (event) => {
       if (event.target === ui.overlay) closeCloudAccount();
@@ -800,21 +813,32 @@
     setAuthMode("signin");
     renderAuthState();
     consumeAuthRedirect();
+    setAuthRequired(true);
     const meta = loadSyncMeta();
     if (meta?.syncedAt && ui.lastSync) ui.lastSync.textContent = `Sinkronizuar ${formatSyncTime(meta.syncedAt)}`;
-    await restoreAuthSession();
+    const hasStoredSession = Boolean(loadSession());
+    if (hasStoredSession) {
+      setBusy(true);
+      setStatus("Po kontrollohet sesioni…");
+    }
+    try {
+      await restoreAuthSession();
+    } finally {
+      setBusy(false);
+    }
   }
 
   window.scheduleCloudSync = scheduleCloudSync;
   window.financeCloud = Object.freeze({
     sync: () => performCloudSync(),
     open: openCloudAccount,
+    signOut,
     isSignedIn: () => Boolean(cloudState.user),
   });
 
   init().catch((error) => {
     console.error("Cloud account initialization failed", error);
-    setCloudBadge("Gabim");
     setStatus(error.message || "Llogaria cloud nuk u inicializua.", "error");
+    setAuthRequired(true);
   });
 })();
