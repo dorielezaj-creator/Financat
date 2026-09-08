@@ -6930,3 +6930,178 @@ body:has(.app-full-page:not([hidden])) .add-entry-button {
   outline: 2px solid var(--green);
   outline-offset: 2px;
 }
+
+/* Keep the main navigation usable on its four primary pages. */
+body.secondary-zone-open:not(.auth-pending):not(.auth-required):not(.secure-vault-locked):not(:has(.app-full-page:not(.primary-zone-page):not([hidden]))) .app-nav {
+  z-index: 70;
+  display: grid !important;
+}
+
+body.secondary-zone-open:not(.auth-pending):not(.auth-required):not(.secure-vault-locked):not(:has(.app-full-page:not(.primary-zone-page):not([hidden]))) .add-entry-button {
+  z-index: 71;
+  display: grid !important;
+}
+
+.editor-overlay.primary-zone-page > :first-child {
+  padding-bottom: max(210px, calc(env(safe-area-inset-bottom) + 190px));
+}
+
+/* Clean entry page: Home-sized typography, compact fields, clear action. */
+#entryOverlay .entry-panel {
+  width: min(100%, 420px);
+  gap: 16px;
+  padding-inline: 16px;
+  color: var(--home-text, var(--text));
+}
+
+#entryOverlay .entry-panel .section-heading {
+  margin-inline: -16px;
+  padding-inline: 16px;
+}
+
+#entryOverlay #entryForm {
+  gap: 17px;
+}
+
+#entryOverlay #entryForm .form-grid {
+  gap: 12px;
+}
+
+#entryOverlay #entryForm label {
+  gap: 8px;
+  color: var(--home-muted, var(--muted));
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+#entryOverlay #entryForm input,
+#entryOverlay #entryForm select {
+  min-height: 54px;
+  padding-inline: 16px;
+  border-color: var(--home-line, var(--line));
+  border-radius: 16px;
+  background: var(--home-card, var(--card));
+  color: var(--home-text, var(--text));
+  font-size: 17px;
+  font-weight: 500;
+}
+
+#entryOverlay .entry-form-actions {
+  width: 100%;
+  gap: 8px;
+  padding-top: 5px;
+}
+
+#entryOverlay .entry-form-actions .primary-button {
+  width: 100%;
+  height: 56px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--green);
+  color: #000;
+}
+
+#entryOverlay[data-entry-type="expense"] .entry-form-actions .primary-button {
+  background: var(--expense);
+}
+
+#entryOverlay .entry-form-actions .primary-button::before {
+  content: none;
+}
+
+#entryOverlay .entry-form-actions .primary-button span {
+  position: static;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  color: inherit;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+#entryOverlay .entry-delete-button {
+  min-height: 44px;
+  color: var(--expense);
+  font-size: 14px;
+}
+
+/* Fixed expenses page follows the same spacing and scale as Home. */
+#recurringOverlay .recurring-window {
+  width: min(100%, 420px);
+  gap: 18px;
+  padding-inline: 16px;
+  background: var(--home-bg, var(--bg));
+}
+
+#recurringOverlay .profile-pill.compact {
+  width: 100%;
+  padding-inline: 16px;
+  border-radius: 20px;
+  background: var(--home-card, var(--card));
+}
+
+#recurringOverlay .profile-page-title {
+  font-size: 34px;
+  font-weight: 500;
+  letter-spacing: -1px;
+  line-height: 1;
+}
+
+#recurringOverlay .recurring-summary-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+#recurringOverlay .recurring-summary-card {
+  min-width: 0;
+  min-height: 132px;
+  align-content: space-between;
+  padding: 16px;
+  border: 0;
+  border-radius: 20px;
+  background: var(--home-card, var(--card));
+}
+
+#recurringOverlay .recurring-summary-card:last-child {
+  grid-column: 1 / -1;
+  min-height: 108px;
+}
+
+#recurringOverlay .recurring-summary-card span {
+  color: var(--home-muted, var(--muted));
+  font-size: 13px;
+  font-weight: 600;
+}
+
+#recurringOverlay .recurring-summary-card strong {
+  font-size: 24px;
+  font-weight: 600;
+}
+
+#recurringOverlay .recurring-summary-card small {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+#recurringOverlay .recurring-add-inline {
+  width: 100%;
+  min-height: 52px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--home-text, var(--text));
+  color: var(--home-bg, var(--bg));
+  font-size: 15px;
+  font-weight: 650;
+}
+
+@media (max-width: 360px) {
+  #entryOverlay #entryForm .amount-grid,
+  #recurringOverlay .recurring-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  #recurringOverlay .recurring-summary-card:last-child {
+    grid-column: auto;
+  }
+}
