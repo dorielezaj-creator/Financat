@@ -9,6 +9,8 @@
   const SYNC_META_PREFIX = "financat-e-mia:cloud-sync:v1:";
   const LOCAL_VAULT_KEY = "financat-e-mia:secure-vault:v1";
   const LOCAL_VAULT_BACKUP_KEY = "financat-e-mia:secure-vault-backup:v1";
+  const LOCAL_VAULT_OWNER_KEY = "financat-e-mia:secure-vault-owner:v1";
+  const USER_VAULT_PREFIX = "financat-e-mia:user-vault:v1:";
   const VAULT_FORMAT = "financat-e-mia-encrypted";
   const AUTO_SYNC_DELAY_MS = 900;
 
@@ -68,6 +70,70 @@
       return JSON.parse(value);
     } catch {
       return fallback;
+    }
+  }
+
+  function userVaultStorageKey(userId) {
+    return `${USER_VAULT_PREFIX}${String(userId || "").trim()}`;
+  }
+
+  function archiveActiveVaultForOwner(ownerId = localStorage.getItem(LOCAL_VAULT_OWNER_KEY)) {
+    const userId = String(ownerId || "").trim();
+    const vault = localStorage.getItem(LOCAL_VAULT_KEY);
+    if (!userId || !vault) return;
+    localStorage.setItem(userVaultStorageKey(userId), vault);
+  }
+
+  function activateVaultForCurrentUser() {
+    const userId = String(cloudState.user?.id || "").trim();
+    if (!userId) return false;
+
+    const activeVault = localStorage.getItem(LOCAL_VAULT_KEY);
+    const activeOwner = String(localStorage.getItem(LOCAL_VAULT_OWNER_KEY) || "").trim();
+    const savedVault = localStorage.getItem(userVaultStorageKey(userId));
+
+    // One-time migration: the vault that existed before account isolation belongs
+    // to the first authenticated user on this browser.
+    if (activeVault && !activeOwner) {
+      localStorage.setItem(LOCAL_VAULT_OWNER_KEY, userId);
+      localStorage.setItem(userVaultStorageKey(userId), activeVault);
+      return false;
+    }
+
+    if (activeVault && activeOwner === userId) {
+      localStorage.setItem(userVaultStorageKey(userId), activeVault);
+      return false;
+    }
+
+    if (activeVault && activeOwner && activeOwner !== userId) {
+      archiveActiveVaultForOwner(activeOwner);
+    }
+
+    if (savedVault) {
+      localStorage.setItem(LOCAL_VAULT_KEY, savedVault);
+      localStorage.removeItem(LOCAL_VAULT_BACKUP_KEY);
+      localStorage.setItem(LOCAL_VAULT_OWNER_KEY, userId);
+      return true;
+    }
+
+    const replacedAnotherUsersVault = Boolean(activeVault && activeOwner && activeOwner !== userId);
+    localStorage.removeItem(LOCAL_VAULT_KEY);
+    localStorage.removeItem(LOCAL_VAULT_BACKUP_KEY);
+    localStorage.removeItem(LOCAL_VAULT_OWNER_KEY);
+    if (typeof window.clearPlaintextSensitiveStorage === "function") {
+      window.clearPlaintextSensitiveStorage();
+    }
+    return replacedAnotherUsersVault;
+  }
+
+  function clearActiveVaultForLogout() {
+    const userId = String(cloudState.user?.id || localStorage.getItem(LOCAL_VAULT_OWNER_KEY) || "").trim();
+    archiveActiveVaultForOwner(userId);
+    localStorage.removeItem(LOCAL_VAULT_KEY);
+    localStorage.removeItem(LOCAL_VAULT_BACKUP_KEY);
+    localStorage.removeItem(LOCAL_VAULT_OWNER_KEY);
+    if (typeof window.clearPlaintextSensitiveStorage === "function") {
+      window.clearPlaintextSensitiveStorage();
     }
   }
 
@@ -390,6 +456,11 @@
   }
 
   async function finishSignIn(options = {}) {
+    if (activateVaultForCurrentUser()) {
+      setStatus("Po hapen të dhënat e kësaj llogarie…");
+      window.setTimeout(() => window.location.reload(), 120);
+      return;
+    }
     await loadOrCreateProfile(options.preferredName || "");
     renderAuthState();
     applyProfileToApp();
@@ -410,6 +481,7 @@
     } finally {
       window.clearTimeout(cloudState.syncTimer);
       window.clearTimeout(cloudState.retryTimer);
+      clearActiveVaultForLogout();
       localStorage.removeItem(AUTH_STORAGE_KEY);
       cloudState.session = null;
       cloudState.user = null;
@@ -418,7 +490,7 @@
       setBusy(false);
       renderAuthState();
       applyProfileToApp();
-      setStatus("Dole nga llogaria. Të dhënat lokale nuk u prekën.");
+      setStatus("Dole nga llogaria. Të dhënat e enkriptuara u shkëputën nga sesioni.");
       setAuthRequired(true);
       window.setTimeout(() => window.location.reload(), 180);
     }
@@ -547,6 +619,9 @@
   }
 
   function localVault() {
+    const owner = String(localStorage.getItem(LOCAL_VAULT_OWNER_KEY) || "").trim();
+    const userId = String(cloudState.user?.id || "").trim();
+    if (owner && userId && owner !== userId) return null;
     const vault = parseJson(localStorage.getItem(LOCAL_VAULT_KEY), null);
     return isVault(vault) ? vault : null;
   }
@@ -629,6 +704,11 @@
 
   async function rememberSuccessfulSync(vault, row) {
     const syncedAt = new Date().toISOString();
+    const userId = String(cloudState.user?.id || "").trim();
+    if (userId) {
+      localStorage.setItem(LOCAL_VAULT_OWNER_KEY, userId);
+      localStorage.setItem(userVaultStorageKey(userId), JSON.stringify(vault));
+    }
     saveSyncMeta({
       revision: Number(row?.revision) || 0,
       fingerprint: await fingerprintVault(vault),
@@ -644,6 +724,7 @@
     const current = localStorage.getItem(LOCAL_VAULT_KEY);
     if (current) localStorage.setItem(LOCAL_VAULT_BACKUP_KEY, current);
     localStorage.setItem(LOCAL_VAULT_KEY, JSON.stringify(remote));
+    localStorage.setItem(LOCAL_VAULT_OWNER_KEY, String(cloudState.user?.id || ""));
     if (typeof window.clearPlaintextSensitiveStorage === "function") window.clearPlaintextSensitiveStorage();
     await rememberSuccessfulSync(remote, row);
     setStatus("Backup-i nga cloud u rikthye. Po hapen të dhënat…");
@@ -842,3 +923,4 @@
     setAuthRequired(true);
   });
 })();
+
