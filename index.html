@@ -18,7 +18,7 @@
     <link rel="manifest" href="manifest.webmanifest?v=20260821-1" />
     <link rel="icon" href="icon.svg?v=20260820-1" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="icon.svg?v=20260820-1" />
-    <link rel="stylesheet" href="styles.css?v=20260907-auth-1" />
+    <link rel="stylesheet" href="styles.css?v=20260908-fullscreen-1" />
   </head>
   <body class="auth-pending">
     <main class="app-shell">
@@ -233,6 +233,10 @@
           <p id="securityDescription">Enkripto të gjitha financat dhe backup-et me një kod që e di vetëm ti.</p>
           <div id="securityState" class="security-state" aria-live="polite"></div>
           <form id="securityForm" class="security-form" autocomplete="off">
+            <label id="securityCurrentPinLabel" hidden>
+              Kodi aktual
+              <input id="securityCurrentPinInput" type="password" minlength="8" maxlength="128" autocomplete="current-password" />
+            </label>
             <label>
               <span id="securityPinLabel">Kodi personal</span>
               <input id="securityPinInput" type="password" minlength="8" maxlength="128" autocomplete="new-password" required />
@@ -254,7 +258,7 @@
 
       <button id="addEntryBtn" class="add-entry-button" type="button" aria-label="Shto zë">+</button>
 
-      <section id="quickAddOverlay" class="editor-overlay quick-add-overlay" hidden>
+      <section id="quickAddOverlay" class="editor-overlay quick-add-overlay app-full-page" hidden>
         <div class="quick-add-sheet" role="dialog" aria-modal="true" aria-labelledby="quickAddTitle">
           <button id="closeQuickAddBtn" class="icon-button small quick-add-close" type="button" aria-label="Mbyll">×</button>
           <span class="dialog-eyebrow">Zë i ri</span>
@@ -401,7 +405,7 @@
         <p id="dailySelectedValue" class="daily-selected-value" hidden></p>
       </section>
 
-      <section id="accountsOverlay" class="editor-overlay" hidden>
+      <section id="accountsOverlay" class="editor-overlay app-full-page" hidden>
         <div class="accounts-panel accounts-window" aria-labelledby="accountsTitle">
           <div class="section-heading compact">
             <div>
@@ -421,7 +425,7 @@
         </div>
       </section>
 
-      <section id="recurringOverlay" class="editor-overlay profile-page-overlay" hidden>
+      <section id="recurringOverlay" class="editor-overlay profile-page-overlay app-full-page" hidden>
         <div class="profile-page-window recurring-window" role="dialog" aria-modal="true" aria-labelledby="recurringTitle">
           <button id="closeRecurringBtn" class="icon-button small profile-close-button" type="button" aria-label="Mbyll">×</button>
           <div class="profile-pill compact">
@@ -456,7 +460,7 @@
         </div>
       </section>
 
-      <section id="expenseArchiveOverlay" class="editor-overlay entry-page-overlay" hidden>
+      <section id="expenseArchiveOverlay" class="editor-overlay entry-page-overlay app-full-page" hidden>
         <div class="archive-window" aria-labelledby="expenseArchiveTitle">
           <div class="archive-header">
             <h2 id="expenseArchiveTitle">Shpenzimet</h2>
@@ -471,7 +475,7 @@
         </div>
       </section>
 
-      <section id="incomeArchiveOverlay" class="editor-overlay entry-page-overlay" hidden>
+      <section id="incomeArchiveOverlay" class="editor-overlay entry-page-overlay app-full-page" hidden>
         <div class="archive-window" aria-labelledby="incomeArchiveTitle">
           <div class="archive-header">
             <h2 id="incomeArchiveTitle">Të ardhurat</h2>
@@ -486,7 +490,7 @@
         </div>
       </section>
 
-      <section id="incomeDetailOverlay" class="editor-overlay entry-page-overlay income-detail-overlay" hidden>
+      <section id="incomeDetailOverlay" class="editor-overlay entry-page-overlay income-detail-overlay app-full-page" hidden>
         <div class="archive-window savings-detail-window income-detail-window" aria-labelledby="incomeDetailTitle">
           <div class="archive-header savings-detail-header">
             <h2 id="incomeDetailTitle">Të ardhura</h2>
@@ -518,7 +522,7 @@
         </div>
       </section>
 
-      <section id="savingsDetailOverlay" class="editor-overlay entry-page-overlay savings-detail-overlay" hidden>
+      <section id="savingsDetailOverlay" class="editor-overlay entry-page-overlay savings-detail-overlay app-full-page" hidden>
         <div class="archive-window savings-detail-window" aria-labelledby="savingsDetailTitle">
           <div class="archive-header savings-detail-header">
             <h2 id="savingsDetailTitle">Kursimet</h2>
@@ -550,8 +554,9 @@
         </div>
       </section>
 
-      <section id="profileMenuOverlay" class="editor-overlay profile-menu-overlay" hidden>
+      <section id="profileMenuOverlay" class="editor-overlay profile-menu-overlay app-full-page" hidden>
         <div class="profile-menu-window" role="dialog" aria-modal="true" aria-labelledby="profileMenuName">
+          <button id="closeProfileMenuBtn" class="icon-button small app-page-close-button" type="button" aria-label="Mbyll">×</button>
           <div class="profile-pill">
             <span class="profile-avatar" aria-hidden="true"></span>
             <div>
@@ -575,6 +580,7 @@
               <span>Dark mode</span>
               <strong id="profileThemeState">Off</strong>
             </button>
+            <button id="profileSecurityBtn" type="button">Ndrysho kodin e sigurisë</button>
             <button id="profileLogoutBtn" class="profile-logout-button" type="button">Dil nga llogaria</button>
           </div>
         </div>
@@ -640,7 +646,7 @@
         </div>
       </section>
 
-      <section id="transactionsOverlay" class="editor-overlay entry-page-overlay transactions-overlay" hidden>
+      <section id="transactionsOverlay" class="editor-overlay entry-page-overlay transactions-overlay app-full-page" hidden>
         <div class="archive-window transactions-window" aria-labelledby="transactionsTitle">
           <div class="archive-header">
             <h2 id="transactionsTitle">Zërat</h2>
@@ -690,7 +696,7 @@
         </div>
       </section>
 
-      <section id="netWorthOverlay" class="editor-overlay entry-page-overlay net-worth-overlay" hidden>
+      <section id="netWorthOverlay" class="editor-overlay entry-page-overlay net-worth-overlay app-full-page" hidden>
         <div class="archive-window net-worth-window" aria-labelledby="netWorthTitle">
           <div class="archive-header">
             <h2 id="netWorthTitle">Pasuria ime</h2>
@@ -714,7 +720,7 @@
         </div>
       </section>
 
-      <section id="insightsOverlay" class="editor-overlay entry-page-overlay insights-overlay" hidden>
+      <section id="insightsOverlay" class="editor-overlay entry-page-overlay insights-overlay app-full-page" hidden>
         <div class="archive-window insights-window" aria-labelledby="insightsWindowTitle">
           <div class="archive-header">
             <h2 id="insightsWindowTitle">Insights</h2>
@@ -795,7 +801,7 @@
         </div>
       </section>
 
-      <section id="goalsOverlay" class="editor-overlay entry-page-overlay goals-overlay" hidden>
+      <section id="goalsOverlay" class="editor-overlay entry-page-overlay goals-overlay app-full-page" hidden>
         <div class="archive-window goals-window" aria-labelledby="goalsTitle">
           <div class="archive-header">
             <h2 id="goalsTitle">Objektivat</h2>
@@ -829,7 +835,7 @@
         </div>
       </section>
 
-      <section id="goalEditorOverlay" class="editor-overlay profile-page-overlay" hidden>
+      <section id="goalEditorOverlay" class="editor-overlay profile-page-overlay app-full-page" hidden>
         <form id="goalForm" class="profile-page-window goal-editor-window" autocomplete="off">
           <input id="goalIdInput" type="hidden" />
           <button id="cancelGoalBtn" class="icon-button small profile-close-button" type="button" aria-label="Mbyll">×</button>
@@ -898,7 +904,7 @@
         </form>
       </section>
 
-      <section id="categoriesOverlay" class="editor-overlay entry-page-overlay categories-overlay" hidden>
+      <section id="categoriesOverlay" class="editor-overlay entry-page-overlay categories-overlay app-full-page" hidden>
         <div class="archive-window categories-window" aria-labelledby="categoriesTitle">
           <div class="archive-header">
             <h2 id="categoriesTitle">Kategoritë</h2>
@@ -917,7 +923,7 @@
         </div>
       </section>
 
-      <section id="savingsGoalOverlay" class="editor-overlay profile-page-overlay" hidden>
+      <section id="savingsGoalOverlay" class="editor-overlay profile-page-overlay app-full-page" hidden>
         <form id="savingsGoalForm" class="profile-page-window" autocomplete="off">
           <button id="closeSavingsGoalBtn" class="icon-button small profile-close-button" type="button" aria-label="Mbyll">×</button>
           <div class="profile-pill compact">
@@ -965,7 +971,7 @@
         </form>
       </section>
 
-      <section id="formulaOverlay" class="editor-overlay profile-page-overlay" hidden>
+      <section id="formulaOverlay" class="editor-overlay profile-page-overlay app-full-page" hidden>
         <div class="formula-window" role="dialog" aria-modal="true" aria-labelledby="formulaTitle">
           <button id="closeFormulaBtn" class="icon-button small profile-close-button" type="button" aria-label="Mbyll">×</button>
           <span id="formulaEyebrow" class="formula-eyebrow">Formula</span>
@@ -975,7 +981,7 @@
         </div>
       </section>
 
-      <section id="setupOverlay" class="editor-overlay profile-page-overlay" hidden>
+      <section id="setupOverlay" class="editor-overlay profile-page-overlay app-full-page" hidden>
         <form id="setupForm" class="setup-window" autocomplete="off">
           <button id="closeSetupBtn" class="icon-button small profile-close-button" type="button" aria-label="Mbyll">×</button>
           <span class="setup-eyebrow">Setup fillestar</span>
@@ -1020,7 +1026,7 @@
         </form>
       </section>
 
-      <section id="accountEditorOverlay" class="editor-overlay" hidden>
+      <section id="accountEditorOverlay" class="editor-overlay app-full-page" hidden>
         <form id="accountForm" class="editor-sheet" autocomplete="off">
           <input id="accountIdInput" name="accountId" type="hidden" />
           <div class="editor-header">
@@ -1053,7 +1059,7 @@
         </form>
       </section>
 
-      <section id="recurringEditorOverlay" class="editor-overlay" hidden>
+      <section id="recurringEditorOverlay" class="editor-overlay app-full-page" hidden>
         <form id="recurringForm" class="editor-sheet recurring-editor-sheet" autocomplete="off">
           <input id="recurringIdInput" name="recurringId" type="hidden" />
           <div class="editor-header">
@@ -1095,7 +1101,7 @@
         </form>
       </section>
 
-      <section id="limitsOverlay" class="editor-overlay" hidden>
+      <section id="limitsOverlay" class="editor-overlay app-full-page" hidden>
         <form id="limitsForm" class="editor-sheet" autocomplete="off">
           <div class="editor-header">
             <h2>Limitet mujore</h2>
@@ -1148,19 +1154,19 @@
         </article>
       </section>
 
-      <section id="entryOverlay" class="editor-overlay" hidden>
-      <section class="entry-panel editor-sheet" aria-labelledby="entryTitle">
+      <section id="entryOverlay" class="editor-overlay app-full-page" hidden>
+      <section class="entry-panel editor-sheet" role="dialog" aria-modal="true" aria-labelledby="entryTitle">
         <div class="section-heading">
           <h2 id="entryTitle">Regjistro zë</h2>
-          <button id="cancelEntryBtn" class="icon-button small" type="button" aria-label="Mbyll">×</button>
-          <div class="segmented" role="group" aria-label="Lloji i zërit">
+          <button id="cancelEntryBtn" class="icon-button small app-page-close-button" type="button" aria-label="Mbyll">×</button>
+          <div id="entryTypeSelector" class="segmented" role="group" aria-label="Lloji i zërit" hidden>
             <button class="active" type="button" data-type="expense">Shpenzime</button>
             <button type="button" data-type="income">Të ardhura</button>
           </div>
         </div>
 
         <form id="entryForm" autocomplete="off">
-          <div id="receiptAiTools" class="receipt-ai-tools">
+          <div id="receiptAiTools" class="receipt-ai-tools" hidden>
             <div class="receipt-ai-actions">
               <label class="receipt-upload-button">
                 Foto fature
@@ -1174,11 +1180,11 @@
           <div class="form-grid amount-grid">
             <label>
               Vlera
-              <input id="amountInput" name="amount" type="number" inputmode="decimal" min="0" step="0.01" placeholder="p.sh. 1200" required />
+              <input id="amountInput" name="amount" type="number" inputmode="decimal" enterkeyhint="next" data-entry-step min="0" step="0.01" placeholder="p.sh. 1200" required />
             </label>
             <label>
               Monedha
-              <select id="currencyInput" name="currency">
+              <select id="currencyInput" name="currency" data-entry-step>
                 <option value="ALL">Lekë</option>
                 <option value="EUR">Euro</option>
               </select>
@@ -1187,22 +1193,22 @@
 
           <label>
             Përshkrimi
-            <input id="noteInput" name="note" type="text" maxlength="60" placeholder="p.sh. kafe, qira, rrogë" required />
+            <input id="noteInput" name="note" type="text" maxlength="60" enterkeyhint="next" data-entry-step placeholder="p.sh. kafe, qira, rrogë" required />
           </label>
 
           <label>
             Kategoria
-            <select id="categoryInput" name="category"></select>
+            <select id="categoryInput" name="category" data-entry-step></select>
           </label>
 
           <label>
             Llogaria
-            <select id="bankInput" name="bank" required></select>
+            <select id="bankInput" name="bank" data-entry-step required></select>
           </label>
 
           <label>
             Data
-            <input id="dateInput" name="date" type="date" required />
+            <input id="dateInput" name="date" type="date" enterkeyhint="done" data-entry-step required />
           </label>
 
           <div class="entry-form-actions">
@@ -1251,8 +1257,7 @@
       </div>
     </template>
 
-    <script src="app.js?v=20260907-cloud-1"></script>
-    <script src="cloud-sync.js?v=20260908-account-isolation-1"></script>
+    <script src="app.js?v=20260908-fullscreen-1"></script>
+    <script src="cloud-sync.js?v=20260907-auth-1"></script>
   </body>
 </html>
-

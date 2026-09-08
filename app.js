@@ -181,6 +181,7 @@ const els = {
   gaugeArc: document.querySelector("#gaugeArc"),
   addEntryBtn: document.querySelector("#addEntryBtn"),
   entryOverlay: document.querySelector("#entryOverlay"),
+  entryTitle: document.querySelector("#entryTitle"),
   cancelEntryBtn: document.querySelector("#cancelEntryBtn"),
   accountsOverlay: document.querySelector("#accountsOverlay"),
   openAccountsBtn: document.querySelector("#openAccountsBtn"),
@@ -382,6 +383,7 @@ const els = {
   backupSecurityStatus: document.querySelector("#backupSecurityStatus"),
   themeToggle: document.querySelector("#themeToggle"),
   profileMenuOverlay: document.querySelector("#profileMenuOverlay"),
+  closeProfileMenuBtn: document.querySelector("#closeProfileMenuBtn"),
   profilePersonalBtn: document.querySelector("#profilePersonalBtn"),
   profileSavingsBtn: document.querySelector("#profileSavingsBtn"),
   profileCategoriesBtn: document.querySelector("#profileCategoriesBtn"),
@@ -529,6 +531,8 @@ const els = {
   securityDescription: document.querySelector("#securityDescription"),
   securityState: document.querySelector("#securityState"),
   securityForm: document.querySelector("#securityForm"),
+  securityCurrentPinLabel: document.querySelector("#securityCurrentPinLabel"),
+  securityCurrentPinInput: document.querySelector("#securityCurrentPinInput"),
   securityPinLabel: document.querySelector("#securityPinLabel"),
   securityPinInput: document.querySelector("#securityPinInput"),
   securityPinConfirmLabel: document.querySelector("#securityPinConfirmLabel"),
@@ -751,6 +755,7 @@ els.deleteAccountBtn.addEventListener("click", () => {
 els.accountList.addEventListener("click", handleAccountListClick);
 els.accountListModal.addEventListener("click", handleAccountListClick);
 els.netWorthList?.addEventListener("click", handleAccountListClick);
+document.addEventListener("keydown", handleExpandableActionRowKeydown);
 
 function handleAccountListClick(event) {
   const defaultButton = event.target.closest("[data-default-bank]");
@@ -766,12 +771,23 @@ function handleAccountListClick(event) {
     });
     saveBanks();
     render();
+    return;
   }
 
-  if (editButton) openAccountEditor(editButton.dataset.editBank);
-  if (deleteButton) deleteBank(deleteButton.dataset.deleteBank);
+  if (editButton) {
+    openAccountEditor(editButton.dataset.editBank);
+    return;
+  }
+
+  if (deleteButton) {
+    deleteBank(deleteButton.dataset.deleteBank);
+    return;
+  }
+
+  toggleExpandableActionRow(event);
 }
 
+els.entryForm.addEventListener("keydown", handleEntryFormEnterNavigation);
 els.entryForm.addEventListener("submit", (event) => {
   event.preventDefault();
   const amount = Number(els.amountInput.value);
@@ -964,12 +980,13 @@ els.backupToggle.addEventListener("click", () => {
   els.backupActions.hidden = isOpen;
 });
 els.themeToggle.addEventListener("click", openProfileMenu);
+els.closeProfileMenuBtn?.addEventListener("click", closeProfileMenu);
 els.profileMenuOverlay?.addEventListener("click", (event) => {
   if (event.target === els.profileMenuOverlay) closeProfileMenu();
 });
 els.profileSecurityBtn?.addEventListener("click", () => {
   closeProfileMenu();
-  openSecurityOverlay(hasSecureVault() && secureVaultUnlocked ? "status" : hasSecureVault() ? "unlock" : "setup");
+  openSecurityOverlay(hasSecureVault() && secureVaultUnlocked ? "change" : hasSecureVault() ? "unlock" : "setup");
 });
 els.profilePersonalBtn?.addEventListener("click", () => {
   closeProfileMenu();
@@ -3456,6 +3473,7 @@ function renderAccounts() {
         <span>${bank.currency === "EUR" ? "Euro" : "Lekë"}${bank.isDefault ? " · default" : ""}</span>
       </div>
       <div class="account-balance">${bank.currency === "EUR" ? moneyEuro(bank.balance) : moneyLek(bank.balance)}</div>
+      <span class="row-actions-hint" aria-hidden="true">•••</span>
       <div class="account-actions">
         <button type="button" data-default-bank="${bank.id}">Default</button>
         <button type="button" data-edit-bank="${bank.id}">Edit</button>
@@ -3464,7 +3482,9 @@ function renderAccounts() {
     `;
     lists.forEach((list) => {
       const row = document.createElement("article");
-      row.className = "account-row";
+      row.className = "account-row has-collapsible-actions";
+      row.tabIndex = 0;
+      row.setAttribute("aria-expanded", "false");
       row.innerHTML = markup;
       row.querySelector(".account-main strong").textContent = bank.name;
       list.append(row);
@@ -3518,11 +3538,15 @@ function renderRecurringWindow() {
 
 function openRecurringWindow() {
   renderRecurringWindow();
+  document.body.classList.add("recurring-page-open");
   els.recurringOverlay.hidden = false;
+  els.recurringOverlay.scrollTop = 0;
 }
 
 function closeRecurringWindow() {
   els.recurringOverlay.hidden = true;
+  els.recurringOverlay.scrollTop = 0;
+  document.body.classList.remove("recurring-page-open");
 }
 
 function handleRecurringListClick(event) {
@@ -5151,6 +5175,13 @@ function openEntryEditor(type = state.type, entryId = "") {
     renderBankOptions();
     els.bankInput.value = entry.bankId || "";
   }
+  els.entryTitle.textContent = entry
+    ? state.type === "expense"
+      ? "Edito shpenzimin"
+      : "Edito të ardhurën"
+    : state.type === "expense"
+      ? "Shto shpenzim"
+      : "Shto të ardhur";
   els.submitLabel.textContent = entry ? "Ruaj ndryshimet" : state.type === "expense" ? "Shto shpenzim" : "Shto të ardhur";
   els.deleteEntryBtn.hidden = !entry;
   els.entryOverlay.hidden = false;
@@ -5236,8 +5267,72 @@ function handleEntryListClick(event) {
     return;
   }
 
-  if (!deleteButton) return;
-  deleteEntry(deleteButton.dataset.delete);
+  if (deleteButton) {
+    deleteEntry(deleteButton.dataset.delete);
+    return;
+  }
+
+  toggleExpandableActionRow(event);
+}
+
+function setExpandableActionRowState(row, expanded) {
+  if (!row) return;
+  row.classList.toggle("is-actions-open", expanded);
+  row.setAttribute("aria-expanded", String(expanded));
+}
+
+function closeOtherExpandableActionRows(activeRow = null) {
+  document.querySelectorAll(".has-collapsible-actions.is-actions-open").forEach((row) => {
+    if (row !== activeRow) setExpandableActionRowState(row, false);
+  });
+}
+
+function toggleExpandableActionRow(event) {
+  const target = event.target instanceof Element ? event.target : null;
+  const row = target?.closest(".has-collapsible-actions");
+  if (!row || target?.closest("button, a, input, select, textarea, label")) return;
+
+  const willOpen = !row.classList.contains("is-actions-open");
+  closeOtherExpandableActionRows(row);
+  setExpandableActionRowState(row, willOpen);
+}
+
+function handleExpandableActionRowKeydown(event) {
+  const row = event.target instanceof Element ? event.target.closest(".has-collapsible-actions") : null;
+  if (!row || event.target !== row) return;
+
+  if (event.key === "Escape") {
+    setExpandableActionRowState(row, false);
+    return;
+  }
+
+  if (!['Enter', ' '].includes(event.key)) return;
+  event.preventDefault();
+  const willOpen = !row.classList.contains("is-actions-open");
+  closeOtherExpandableActionRows(row);
+  setExpandableActionRowState(row, willOpen);
+}
+
+function handleEntryFormEnterNavigation(event) {
+  if (event.key !== "Enter" || event.isComposing || event.metaKey || event.ctrlKey || event.altKey) return;
+  const target = event.target instanceof HTMLElement ? event.target : null;
+  if (!target?.matches("[data-entry-step]")) return;
+
+  const steps = Array.from(els.entryForm.querySelectorAll("[data-entry-step]")).filter(
+    (field) => !field.disabled && !field.hidden,
+  );
+  const currentIndex = steps.indexOf(target);
+  if (currentIndex < 0) return;
+
+  event.preventDefault();
+  const nextField = steps[currentIndex + 1];
+  if (nextField) {
+    nextField.focus({ preventScroll: true });
+    nextField.scrollIntoView({ behavior: "smooth", block: "center" });
+    return;
+  }
+
+  els.entryForm.requestSubmit();
 }
 
 function duplicateEntry(entryId) {
@@ -5619,7 +5714,9 @@ function renderEntries() {
 function createEntryRow(entry, variant = "history") {
   const bank = findBank(entry.bankId);
   const row = document.createElement("article");
-  row.className = variant === "preview" ? "entry-row pill-row" : "entry-row";
+  row.className = variant === "preview" ? "entry-row pill-row has-collapsible-actions" : "entry-row has-collapsible-actions";
+  row.tabIndex = 0;
+  row.setAttribute("aria-expanded", "false");
   row.innerHTML = `
       <div class="entry-left">
         <div class="entry-title"></div>
@@ -5628,6 +5725,7 @@ function createEntryRow(entry, variant = "history") {
       <div class="entry-amount ${entry.type}">
         <strong>${entry.type === "income" ? "+" : "-"}${moneyOriginal(entry)}</strong>
       </div>
+      <span class="row-actions-hint" aria-hidden="true">•••</span>
       <div class="entry-actions">
         <button class="duplicate-entry-button" type="button" data-duplicate-entry="${entry.id}">Kopjo</button>
         <button class="edit-entry-button" type="button" data-edit-entry="${entry.id}">Edit</button>
@@ -5723,7 +5821,7 @@ function syncTypeControls() {
   const options = getCategories(state.type);
   els.categoryInput.innerHTML = options.map((category) => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`).join("");
   if (options.includes(selectedCategory)) els.categoryInput.value = selectedCategory;
-  els.receiptAiTools.hidden = state.type !== "expense";
+  els.receiptAiTools.hidden = true;
   if (state.type !== "expense") setReceiptAiStatus("");
   els.submitLabel.textContent = state.type === "expense" ? "Shto shpenzim" : "Shto të ardhur";
   renderBankOptions();
@@ -6158,11 +6256,13 @@ async function unlockSecureVault(passcode) {
   syncSecurityIndicators();
 }
 
-async function changeSecureVaultPasscode(passcode) {
+async function changeSecureVaultPasscode(currentPasscode, newPasscode) {
   if (!secureVaultUnlocked) throw new Error("Zhblloko të dhënat përpara se të ndryshosh kodin.");
   const current = localStorage.getItem(SECURE_VAULT_KEY);
-  if (current) localStorage.setItem(SECURE_VAULT_BACKUP_KEY, current);
-  const encrypted = await encryptSecurePayload(buildSecureVaultPayload(), passcode);
+  if (!current) throw new Error("Nuk u gjet vault-i i enkriptuar.");
+  await decryptSecureVault(JSON.parse(current), currentPasscode);
+  localStorage.setItem(SECURE_VAULT_BACKUP_KEY, current);
+  const encrypted = await encryptSecurePayload(buildSecureVaultPayload(), newPasscode);
   localStorage.setItem(SECURE_VAULT_KEY, JSON.stringify(encrypted.vault));
   secureVaultKey = encrypted.key;
   clearPlaintextSensitiveStorage();
@@ -6181,8 +6281,11 @@ function openSecurityOverlay(mode = "status", options = {}) {
   els.securityOverlay.hidden = false;
   els.securityForm.hidden = effectiveMode === "status";
   els.securityUnlockedActions.hidden = effectiveMode !== "status";
+  els.securityCurrentPinLabel.hidden = effectiveMode !== "change";
+  els.securityCurrentPinInput.required = effectiveMode === "change";
   els.securityPinConfirmLabel.hidden = ["unlock", "request"].includes(effectiveMode);
   els.securityPinConfirmInput.required = !["unlock", "request"].includes(effectiveMode);
+  els.securityCurrentPinInput.value = "";
   els.securityPinInput.value = "";
   els.securityPinConfirmInput.value = "";
   els.closeSecurityBtn.hidden = required || effectiveMode === "unlock";
@@ -6202,11 +6305,11 @@ function openSecurityOverlay(mode = "status", options = {}) {
     els.securitySubmitBtn.textContent = "Vazhdo";
     els.securityState.textContent = "Kodi nuk ruhet dhe nuk dërgohet askund.";
   } else if (effectiveMode === "change") {
-    els.securityTitle.textContent = "Ndrysho kodin";
-    els.securityDescription.textContent = "Të dhënat do të rienkriptohen me kodin e ri.";
+    els.securityTitle.textContent = "Ndrysho kodin e sigurisë";
+    els.securityDescription.textContent = "Vendos kodin aktual dhe zgjidh një kod të ri. Të dhënat do të rienkriptohen pa u humbur.";
     els.securityPinLabel.textContent = "Kodi i ri";
     els.securitySubmitBtn.textContent = "Ruaj kodin e ri";
-    els.securityState.textContent = "Kodi aktual nuk ruhet dhe nuk mund të shfaqet.";
+    els.securityState.textContent = "Kodi aktual verifikohet vetëm në këtë pajisje dhe nuk dërgohet askund.";
   } else if (effectiveMode === "setup") {
     els.securityTitle.textContent = "Aktivizo sigurinë";
     els.securityDescription.textContent = "Financat, kodi i AI dhe backup-et lokale do të ruhen vetëm të enkriptuara.";
@@ -6219,7 +6322,10 @@ function openSecurityOverlay(mode = "status", options = {}) {
     els.securityState.textContent = "AES‑256‑GCM · PBKDF2‑SHA‑256 · kodi nuk ruhet";
   }
   window.setTimeout(() => {
-    if (!els.securityForm.hidden) els.securityPinInput?.focus();
+    if (!els.securityForm.hidden) {
+      if (effectiveMode === "change") els.securityCurrentPinInput?.focus();
+      else els.securityPinInput?.focus();
+    }
   }, 40);
 }
 
@@ -6245,14 +6351,23 @@ function requestSecurityPasscode(title, description) {
 async function handleSecuritySubmit(event) {
   event.preventDefault();
   const mode = els.securityOverlay?.dataset.mode || "setup";
+  const currentPasscode = els.securityCurrentPinInput?.value || "";
   const passcode = els.securityPinInput?.value || "";
   const confirmation = els.securityPinConfirmInput?.value || "";
+  if (mode === "change" && currentPasscode.length < 8) {
+    els.securityState.textContent = "Vendos kodin aktual.";
+    return;
+  }
   if (passcode.length < 8) {
     els.securityState.textContent = "Kodi duhet të ketë të paktën 8 shenja.";
     return;
   }
   if (["setup", "change"].includes(mode) && passcode !== confirmation) {
     els.securityState.textContent = "Dy kodet nuk përputhen.";
+    return;
+  }
+  if (mode === "change" && currentPasscode === passcode) {
+    els.securityState.textContent = "Kodi i ri duhet të jetë ndryshe nga kodi aktual.";
     return;
   }
 
@@ -6269,7 +6384,7 @@ async function handleSecuritySubmit(event) {
   els.securityState.textContent = mode === "unlock" ? "Po zhbllokohen të dhënat…" : "Po enkriptohen të dhënat…";
   try {
     if (mode === "unlock") await unlockSecureVault(passcode);
-    else if (mode === "change") await changeSecureVaultPasscode(passcode);
+    else if (mode === "change") await changeSecureVaultPasscode(currentPasscode, passcode);
     else await enableSecureVault(passcode);
     document.body.classList.remove("secure-vault-locked");
     els.securityOverlay.hidden = true;
@@ -6298,6 +6413,9 @@ async function lockSecureVault() {
 function syncSecurityIndicators(errorMessage = "") {
   const active = hasSecureVault();
   const status = active ? secureVaultUnlocked ? "Aktive" : "E bllokuar" : "Joaktive";
+  if (els.profileSecurityBtn) {
+    els.profileSecurityBtn.textContent = active ? "Ndrysho kodin e sigurisë" : "Vendos kodin e sigurisë";
+  }
   if (els.profileSecurityState) els.profileSecurityState.textContent = status;
   if (els.backupSecurityStatus) {
     els.backupSecurityStatus.textContent = errorMessage || (active
