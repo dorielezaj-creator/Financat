@@ -128,6 +128,7 @@ const state = {
   },
   dailyCurrency: "TOTAL",
   selectedDailyDate: "",
+  budgetActivityDate: todayIso(),
   incomeDetailRange: "month",
   savingsDetailRange: "month",
   homePlanTab: "savings",
@@ -257,6 +258,7 @@ const els = {
   homeExpenseOpen: document.querySelector("#homeExpenseOpen"),
   homeIncomeLimitOpen: document.querySelector("#homeIncomeLimitOpen"),
   homeSavingsLimitOpen: document.querySelector("#homeSavingsLimitOpen"),
+  safeSpendCard: document.querySelector("#safeSpendCard"),
   safeSpendOpen: document.querySelector("#safeSpendOpen"),
   safeSpendInfo: document.querySelector("#safeSpendInfo"),
   safeSpendLek: document.querySelector("#safeSpendLek"),
@@ -268,6 +270,26 @@ const els = {
   safeSpendPercent: document.querySelector("#safeSpendPercent"),
   safeSpendProgressText: document.querySelector("#safeSpendProgressText"),
   safeSpendForecast: document.querySelector("#safeSpendForecast"),
+  budgetActivityOverlay: document.querySelector("#budgetActivityOverlay"),
+  closeBudgetActivityBtn: document.querySelector("#closeBudgetActivityBtn"),
+  budgetActivityTitle: document.querySelector("#budgetActivityTitle"),
+  budgetDayStrip: document.querySelector("#budgetDayStrip"),
+  budgetHeroRingValue: document.querySelector("#budgetHeroRingValue"),
+  budgetHeroPercent: document.querySelector("#budgetHeroPercent"),
+  budgetHeroSafe: document.querySelector("#budgetHeroSafe"),
+  budgetHeroSpent: document.querySelector("#budgetHeroSpent"),
+  budgetHeroRemaining: document.querySelector("#budgetHeroRemaining"),
+  budgetHeroStatus: document.querySelector("#budgetHeroStatus"),
+  budgetActivityCharts: document.querySelector("#budgetActivityCharts"),
+  budgetExpenseYearLabel: document.querySelector("#budgetExpenseYearLabel"),
+  budgetExpenseYearTotal: document.querySelector("#budgetExpenseYearTotal"),
+  budgetExpenseYearChart: document.querySelector("#budgetExpenseYearChart"),
+  budgetIncomeYearLabel: document.querySelector("#budgetIncomeYearLabel"),
+  budgetIncomeYearTotal: document.querySelector("#budgetIncomeYearTotal"),
+  budgetIncomeYearChart: document.querySelector("#budgetIncomeYearChart"),
+  budgetSavingsYearLabel: document.querySelector("#budgetSavingsYearLabel"),
+  budgetSavingsYearTotal: document.querySelector("#budgetSavingsYearTotal"),
+  budgetSavingsYearChart: document.querySelector("#budgetSavingsYearChart"),
   quickAccountsOpen: document.querySelector("#quickAccountsOpen"),
   quickAccountsInfo: document.querySelector("#quickAccountsInfo"),
   quickAccountLek: document.querySelector("#quickAccountLek"),
@@ -637,7 +659,20 @@ els.homeSavingsLimitOpen?.addEventListener("click", openSavingsDetail);
 els.incomeYearDots?.addEventListener("click", handleHomeMonthChartClick);
 els.savingsYearDots?.addEventListener("click", handleHomeMonthChartClick);
 els.monthSummaryProgress?.addEventListener("click", handleHomeMonthChartClick);
-els.safeSpendOpen?.addEventListener("click", openGoalsWindow);
+els.safeSpendOpen?.addEventListener("click", openBudgetActivityWindow);
+els.safeSpendCard?.addEventListener("click", (event) => {
+  if (event.target.closest("button")) return;
+  if (Date.now() < homeReorderSession.suppressClickUntil) return;
+  openBudgetActivityWindow();
+});
+els.safeSpendCard?.addEventListener("keydown", (event) => {
+  if (event.target !== els.safeSpendCard || (event.key !== "Enter" && event.key !== " ")) return;
+  event.preventDefault();
+  openBudgetActivityWindow();
+});
+els.closeBudgetActivityBtn?.addEventListener("click", closeBudgetActivityWindow);
+els.budgetDayStrip?.addEventListener("click", handleBudgetDayClick);
+els.budgetActivityCharts?.addEventListener("click", handleHomeMonthChartClick);
 els.savingsPlanOpen?.addEventListener("click", openSavingsPlanDetail);
 els.savingsPlanInfo?.addEventListener("click", () => openFormulaOverlay("plan"));
 els.savingsPlanList?.addEventListener("click", handlePlanLegendClick);
@@ -1144,6 +1179,7 @@ function render() {
   renderAccounts();
   renderRecurringWindow();
   renderPreviewEntries();
+  if (els.budgetActivityOverlay && !els.budgetActivityOverlay.hidden) renderBudgetActivityWindow();
   if (els.incomeDetailOverlay && !els.incomeDetailOverlay.hidden) renderIncomeDetail();
   if (els.savingsDetailOverlay && !els.savingsDetailOverlay.hidden) renderSavingsDetail();
   renderListVisibility();
@@ -1464,6 +1500,215 @@ function renderSafeSpendCard(budget) {
       ring.setAttribute("aria-label", `${remainingPercent}% buxhet i mbetur`);
     }
   }
+}
+
+function openBudgetActivityWindow() {
+  if (!els.budgetActivityOverlay) return;
+  state.budgetActivityDate = todayIso();
+  renderBudgetActivityWindow();
+  els.budgetActivityOverlay.hidden = false;
+  els.budgetActivityOverlay.scrollTop = 0;
+  document.body.classList.add("budget-activity-open");
+  state.activeZone = "home";
+  syncZoneNav();
+  requestAnimationFrame(() => scrollSelectedBudgetDay("end"));
+}
+
+function closeBudgetActivityWindow() {
+  if (!els.budgetActivityOverlay) return;
+  els.budgetActivityOverlay.hidden = true;
+  document.body.classList.remove("budget-activity-open");
+}
+
+function handleBudgetDayClick(event) {
+  const button = event.target.closest("[data-budget-day]");
+  if (!button) return;
+  state.budgetActivityDate = button.dataset.budgetDay || todayIso();
+  renderBudgetActivityWindow();
+  requestAnimationFrame(() => scrollSelectedBudgetDay("center"));
+}
+
+function scrollSelectedBudgetDay(inline = "center") {
+  els.budgetDayStrip?.querySelector("[data-budget-day].is-selected")?.scrollIntoView({
+    behavior: "smooth",
+    block: "nearest",
+    inline,
+  });
+}
+
+function renderBudgetActivityWindow() {
+  if (!els.budgetActivityOverlay || !els.budgetDayStrip) return;
+  const selectedIso = /^\d{4}-\d{2}-\d{2}$/.test(state.budgetActivityDate || "")
+    ? state.budgetActivityDate
+    : todayIso();
+  const selectedDate = parseLocalDate(selectedIso);
+  const snapshot = budgetActivitySnapshot(selectedDate);
+  const percentLeft = Math.round(snapshot.budget.remainingRatio * 100);
+  const spendableLek = Math.max(snapshot.budget.remainingLek, 0);
+
+  state.budgetActivityDate = selectedIso;
+  setText(els.budgetActivityTitle, budgetActivityDateLabel(selectedDate));
+  setText(els.budgetHeroPercent, `${percentLeft}%`);
+  setText(els.budgetHeroSafe, moneyLekShort(Math.max(snapshot.budget.dailySafeLek, 0)));
+  setText(els.budgetHeroSpent, moneyLekShort(snapshot.budget.spentTodayLek));
+  setText(els.budgetHeroRemaining, moneyLekShort(spendableLek));
+
+  if (els.budgetHeroRingValue) {
+    els.budgetHeroRingValue.style.strokeDasharray = `${percentLeft} ${100 - percentLeft}`;
+    const ring = els.budgetHeroRingValue.closest(".budget-hero-ring");
+    ring?.setAttribute("aria-label", `${percentLeft}% buxhet i mbetur më ${formatDate(selectedIso)}`);
+  }
+
+  renderBudgetHeroStatus(snapshot);
+  renderBudgetDayStrip(selectedIso);
+  renderBudgetActivityYearCharts(new Date());
+}
+
+function budgetActivitySnapshot(date) {
+  const iso = toLocalIso(date);
+  const key = monthKey(date);
+  const entriesToDate = state.entries.filter((entry) => entry.date.startsWith(key) && entry.date <= iso);
+  const spentToday = entriesToDate
+    .filter((entry) => entry.type === "expense" && entry.date === iso)
+    .reduce(sumMoneyTotals, emptyMoneyTotals());
+  const spentMonth = entriesToDate
+    .filter((entry) => entry.type === "expense")
+    .reduce(sumMoneyTotals, emptyMoneyTotals());
+  const incomeMonth = entriesToDate
+    .filter((entry) => entry.type === "income")
+    .reduce(sumMoneyTotals, emptyMoneyTotals());
+
+  return {
+    date,
+    iso,
+    budget: monthlyBudgetInsight(date, spentToday, spentMonth, incomeMonth),
+  };
+}
+
+function budgetActivityDateLabel(date) {
+  const iso = toLocalIso(date);
+  const prefix = iso === todayIso() ? "Sot" : capitalizeFirst(dayNames[date.getDay()]);
+  return `${prefix}, ${date.getDate()} ${monthNames[date.getMonth()]} ${date.getFullYear()}`;
+}
+
+function renderBudgetHeroStatus(snapshot) {
+  if (!els.budgetHeroStatus) return;
+  const budget = snapshot.budget;
+  const dailyPlan = Math.max(budget.dailySpendBudgetLek, 0);
+  const spent = Math.max(budget.spentTodayLek, 0);
+  els.budgetHeroStatus.classList.remove("is-positive", "is-warning", "is-neutral");
+
+  if (budget.monthlyBudgetLek <= 0) {
+    els.budgetHeroStatus.classList.add("is-neutral");
+    els.budgetHeroStatus.textContent = "Pa buxhet mujor · shto të ardhura ose rregullo objektivin.";
+    return;
+  }
+
+  if (spent > dailyPlan) {
+    els.budgetHeroStatus.classList.add("is-warning");
+    els.budgetHeroStatus.textContent = `Mbi buxhetin ditor me ${moneyLekShort(spent - dailyPlan)}.`;
+    return;
+  }
+
+  els.budgetHeroStatus.classList.add("is-positive");
+  els.budgetHeroStatus.textContent = `Brenda buxhetit ditor · ${moneyLekShort(dailyPlan - spent)} të mbetura.`;
+}
+
+function renderBudgetDayStrip(selectedIso) {
+  if (!els.budgetDayStrip) return;
+  const weekdayLabels = ["Di", "Hë", "Ma", "Më", "En", "Pr", "Sh"];
+  const end = parseLocalDate(todayIso());
+  const days = Array.from({ length: 42 }, (_, index) => addDays(end, index - 41));
+
+  els.budgetDayStrip.innerHTML = days.map((date) => {
+    const snapshot = budgetActivitySnapshot(date);
+    const percentLeft = Math.round(snapshot.budget.remainingRatio * 100);
+    const dailyPlan = Math.max(snapshot.budget.dailySpendBudgetLek, 0);
+    const overspent = dailyPlan > 0 && snapshot.budget.spentTodayLek > dailyPlan;
+    const selected = snapshot.iso === selectedIso;
+    const classes = [
+      "budget-day-button",
+      selected ? "is-selected" : "",
+      overspent ? "is-over" : "",
+      snapshot.budget.monthlyBudgetLek <= 0 ? "is-empty" : "",
+    ].filter(Boolean).join(" ");
+    const aria = `${formatDate(snapshot.iso)}, ${percentLeft}% buxhet i mbetur${overspent ? ", mbi buxhetin ditor" : ""}`;
+    return `
+      <button class="${classes}" type="button" role="listitem" data-budget-day="${snapshot.iso}" aria-label="${escapeHtml(aria)}" aria-pressed="${selected}">
+        <span>${weekdayLabels[date.getDay()]}</span>
+        <svg viewBox="0 0 44 44" aria-hidden="true" focusable="false">
+          <circle class="budget-day-ring-track" cx="22" cy="22" r="17" pathLength="100"></circle>
+          <circle class="budget-day-ring-value" cx="22" cy="22" r="17" pathLength="100" style="stroke-dasharray:${percentLeft} ${100 - percentLeft}"></circle>
+        </svg>
+        <strong>${date.getDate()}</strong>
+      </button>
+    `;
+  }).join("");
+}
+
+function renderBudgetActivityYearCharts(now) {
+  const year = now.getFullYear();
+  const expenseTotals = monthlyTotalsByType(year, "expense");
+  const incomeTotals = monthlyTotalsByType(year, "income");
+  const savingsTotals = monthlySavingsTotals(year, now);
+
+  renderBudgetActivityYearCard({
+    chart: els.budgetExpenseYearChart,
+    total: els.budgetExpenseYearTotal,
+    yearLabel: els.budgetExpenseYearLabel,
+    totals: expenseTotals,
+    label: "Shpenzime",
+    year,
+    now,
+  });
+  renderBudgetActivityYearCard({
+    chart: els.budgetIncomeYearChart,
+    total: els.budgetIncomeYearTotal,
+    yearLabel: els.budgetIncomeYearLabel,
+    totals: incomeTotals,
+    label: "Të ardhura",
+    year,
+    now,
+  });
+  renderBudgetActivityYearCard({
+    chart: els.budgetSavingsYearChart,
+    total: els.budgetSavingsYearTotal,
+    yearLabel: els.budgetSavingsYearLabel,
+    totals: savingsTotals,
+    label: "Kursime",
+    year,
+    now,
+  });
+}
+
+function renderBudgetActivityYearCard({ chart, total, yearLabel, totals, label, year, now }) {
+  if (!chart) return;
+  const monthLabels = ["Jan", "Shk", "Mar", "Pri", "Maj", "Qer", "Kor", "Gus", "Sht", "Tet", "Nën", "Dhj"];
+  const values = totals.map((monthTotals, index) => index <= now.getMonth() ? totalsToLek(monthTotals) : 0);
+  const maxValue = Math.max(...values.map((value) => Math.abs(value)), 1);
+  const annualTotal = values.reduce((sum, value) => sum + value, 0);
+
+  setText(total, moneyLekShort(annualTotal));
+  setText(yearLabel, String(year));
+  chart.innerHTML = values.map((value, index) => {
+    const isFuture = index > now.getMonth();
+    const hasValue = Math.abs(value) > 0;
+    const height = scaledMonthlyBarHeight(Math.abs(value), maxValue);
+    const message = `${label} · ${capitalizeFirst(monthNames[index])} ${year}: ${moneyLekShort(value)}`;
+    const classes = [
+      "budget-year-column",
+      hasValue ? "has-value" : "is-empty",
+      value < 0 ? "is-negative" : "",
+      index === now.getMonth() ? "is-current" : "",
+      isFuture ? "is-future" : "",
+    ].filter(Boolean).join(" ");
+    return `
+      <button class="${classes}" type="button" style="--bar-height:${height}%" data-chart-message="${escapeHtml(message)}" aria-label="${escapeHtml(message)}">
+        <span aria-hidden="true"></span>
+        <small aria-hidden="true">${monthLabels[index]}</small>
+      </button>
+    `;
+  }).join("");
 }
 
 function budgetForecastText(budget) {
@@ -1790,6 +2035,7 @@ function resetPageSwipeSession() {
 }
 
 function goToZone(zone = "home") {
+  if (els.budgetActivityOverlay && !els.budgetActivityOverlay.hidden) closeBudgetActivityWindow();
   state.activeZone = zone;
   if (zone === "transactions") {
     openTransactionsWindow();

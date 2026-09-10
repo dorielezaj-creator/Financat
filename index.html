@@ -18,7 +18,7 @@
     <link rel="manifest" href="manifest.webmanifest?v=20260821-1" />
     <link rel="icon" href="icon.svg?v=20260820-1" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="icon.svg?v=20260820-1" />
-    <link rel="stylesheet" href="styles.css?v=20260910-account-trends-1" />
+    <link rel="stylesheet" href="styles.css?v=20260910-budget-activity-1" />
   </head>
   <body class="auth-pending">
     <main class="app-shell">
@@ -43,8 +43,8 @@
       </nav>
 
       <section id="overviewHome" class="overview-home pdf-home-v2" aria-labelledby="overviewTitle" data-reorder-enabled="true">
-        <article class="safe-spend-card" aria-label="Sa mund të shpenzosh sot" data-home-block="safe-spend" data-home-block-label="Buxheti ditor">
-          <button id="safeSpendOpen" class="overview-arrow" type="button" aria-label="Ndrysho objektivin e kursimeve">›</button>
+        <article id="safeSpendCard" class="safe-spend-card" role="button" tabindex="0" aria-label="Hap aktivitetin financiar" data-home-block="safe-spend" data-home-block-label="Buxheti ditor">
+          <button id="safeSpendOpen" class="overview-arrow" type="button" aria-label="Hap aktivitetin financiar">›</button>
           <button id="safeSpendInfo" class="info-chip safe-info-chip" type="button" aria-label="Shpjego formulën">?</button>
           <div class="safe-spend-copy">
             <span>Sot mund të shpenzosh:</span>
@@ -467,6 +467,75 @@
 
           <button id="newRecurringBtn" class="secondary-button compact-button recurring-add-inline" type="button">+ Shto shpenzim fiks</button>
           <div id="recurringList" class="recurring-list"></div>
+        </div>
+      </section>
+
+      <section id="budgetActivityOverlay" class="editor-overlay entry-page-overlay budget-activity-overlay app-full-page" hidden>
+        <div class="budget-activity-window" aria-labelledby="budgetActivityTitle">
+          <header class="budget-activity-header">
+            <button id="closeBudgetActivityBtn" class="icon-button small page-back-button" type="button" aria-label="Kthehu">←</button>
+            <div>
+              <span>Aktiviteti financiar</span>
+              <h2 id="budgetActivityTitle">Sot</h2>
+            </div>
+          </header>
+
+          <div id="budgetDayStrip" class="budget-day-strip" role="list" aria-label="Zgjidh një ditë të kaluar"></div>
+
+          <article class="budget-activity-hero" aria-label="Buxheti i ditës së zgjedhur">
+            <div class="budget-hero-ring" role="img" aria-label="0% buxhet i mbetur">
+              <svg viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+                <circle class="budget-hero-ring-track" cx="50" cy="50" r="42" pathLength="100"></circle>
+                <circle id="budgetHeroRingValue" class="budget-hero-ring-value" cx="50" cy="50" r="42" pathLength="100"></circle>
+              </svg>
+              <div>
+                <strong id="budgetHeroPercent">0%</strong>
+                <span>buxhet i mbetur</span>
+              </div>
+            </div>
+
+            <div class="budget-hero-values">
+              <div>
+                <span>Buxheti ditor</span>
+                <strong id="budgetHeroSafe">0 L</strong>
+              </div>
+              <div>
+                <span>Shpenzuar</span>
+                <strong id="budgetHeroSpent">0 L</strong>
+              </div>
+              <div>
+                <span>Buxheti i mbetur</span>
+                <strong id="budgetHeroRemaining">0 L</strong>
+              </div>
+            </div>
+            <p id="budgetHeroStatus" class="budget-hero-status">Pa të dhëna për këtë ditë.</p>
+          </article>
+
+          <section id="budgetActivityCharts" class="budget-monthly-sections" aria-label="Grafikët mujorë të vitit">
+            <article class="budget-monthly-card is-expense">
+              <div class="budget-monthly-heading">
+                <div><span>Shpenzime</span><small id="budgetExpenseYearLabel">Viti</small></div>
+                <strong id="budgetExpenseYearTotal">0 L</strong>
+              </div>
+              <div id="budgetExpenseYearChart" class="budget-year-chart" aria-label="Shpenzimet sipas muajve"></div>
+            </article>
+
+            <article class="budget-monthly-card is-income">
+              <div class="budget-monthly-heading">
+                <div><span>Të ardhura</span><small id="budgetIncomeYearLabel">Viti</small></div>
+                <strong id="budgetIncomeYearTotal">0 L</strong>
+              </div>
+              <div id="budgetIncomeYearChart" class="budget-year-chart" aria-label="Të ardhurat sipas muajve"></div>
+            </article>
+
+            <article class="budget-monthly-card is-savings">
+              <div class="budget-monthly-heading">
+                <div><span>Kursime</span><small id="budgetSavingsYearLabel">Viti</small></div>
+                <strong id="budgetSavingsYearTotal">0 L</strong>
+              </div>
+              <div id="budgetSavingsYearChart" class="budget-year-chart" aria-label="Kursimet sipas muajve"></div>
+            </article>
+          </section>
         </div>
       </section>
 
@@ -1237,7 +1306,7 @@
       </div>
     </template>
 
-    <script src="app.js?v=20260910-account-trends-1"></script>
+    <script src="app.js?v=20260910-budget-activity-1"></script>
     <script src="cloud-sync.js?v=20260907-auth-1"></script>
   </body>
 </html>
