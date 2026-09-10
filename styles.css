@@ -7544,26 +7544,32 @@ body.secondary-zone-open:not(.auth-pending):not(.auth-required):not(.secure-vaul
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  gap: 7px;
+  gap: 4px;
   scroll-snap-align: center;
-  padding: 6px 0 5px;
+  padding: 3px 0;
   border: 0;
-  border-radius: 24px;
+  border-radius: 0;
   background: transparent;
   color: var(--home-muted);
 }
 
 .budget-day-label {
-  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: transparent;
   font-size: 11px;
   font-weight: 750;
   line-height: 1;
 }
 
 .budget-day-ring {
-  width: 58px;
-  height: 58px;
-  flex: 0 0 58px;
+  width: 54px;
+  height: 54px;
+  flex: 0 0 54px;
   position: relative;
   display: grid;
   place-items: center;
@@ -7583,15 +7589,6 @@ body.secondary-zone-open:not(.auth-pending):not(.auth-required):not(.secure-vaul
   background: var(--day-ring-center);
 }
 
-.budget-day-ring > b {
-  position: relative;
-  z-index: 1;
-  color: var(--home-text);
-  font-size: 13px;
-  font-weight: 750;
-  line-height: 1;
-}
-
 .budget-day-button.is-over {
   --day-ring-tone: #ee68ae;
 }
@@ -7601,13 +7598,14 @@ body.secondary-zone-open:not(.auth-pending):not(.auth-required):not(.secure-vaul
 }
 
 .budget-day-button.is-selected {
-  --day-ring-center: var(--home-control);
-  background: var(--home-control);
-  color: var(--safe-spend-green);
+  --day-ring-center: var(--home-bg);
+  background: transparent;
+  color: var(--home-muted);
 }
 
-.budget-day-button.is-selected .budget-day-ring > b {
-  color: var(--safe-spend-green);
+.budget-day-button.is-selected .budget-day-label {
+  background: var(--safe-spend-green);
+  color: #fff;
 }
 
 .budget-day-button:focus-visible {

@@ -1619,7 +1619,7 @@ function renderBudgetHeroStatus(snapshot) {
 
 function renderBudgetDayStrip(selectedIso) {
   if (!els.budgetDayStrip) return;
-  const weekdayLabels = ["Di", "Hë", "Ma", "Më", "En", "Pr", "Sh"];
+  const weekdayLabels = ["D", "H", "M", "M", "E", "P", "S"];
   const end = parseLocalDate(todayIso());
   const days = Array.from({ length: 42 }, (_, index) => addDays(end, index - 41));
 
@@ -1639,7 +1639,7 @@ function renderBudgetDayStrip(selectedIso) {
     return `
       <button class="${classes}" type="button" role="listitem" data-budget-day="${snapshot.iso}" aria-label="${escapeHtml(aria)}" aria-pressed="${selected}">
         <span class="budget-day-label">${weekdayLabels[date.getDay()]}</span>
-        <span class="budget-day-ring" style="--day-ring:${percentLeft}%" aria-hidden="true"><b>${date.getDate()}</b></span>
+        <span class="budget-day-ring" style="--day-ring:${percentLeft}%" aria-hidden="true"></span>
       </button>
     `;
   }).join("");
