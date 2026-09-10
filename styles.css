@@ -7510,13 +7510,18 @@ body.secondary-zone-open:not(.auth-pending):not(.auth-required):not(.secure-vaul
 }
 
 .budget-day-strip {
+  position: relative;
+  z-index: 3;
   min-width: 0;
+  min-height: 100px;
+  height: 100px;
   display: flex;
+  align-items: flex-start;
   gap: 8px;
   overflow-x: auto;
   overflow-y: hidden;
   margin-inline: -20px;
-  padding: 2px 20px 8px;
+  padding: 4px 20px 12px;
   scroll-padding-inline: 20px;
   scroll-snap-type: x proximity;
   overscroll-behavior-inline: contain;
@@ -7531,9 +7536,10 @@ body.secondary-zone-open:not(.auth-pending):not(.auth-required):not(.secure-vaul
 .budget-day-button {
   width: 56px;
   min-width: 56px;
-  height: 80px;
+  height: 84px;
+  flex: 0 0 56px;
   display: grid;
-  grid-template-rows: 18px 50px;
+  grid-template-rows: 18px 58px;
   place-items: center;
   scroll-snap-align: center;
   padding: 4px 0 0;
@@ -7556,8 +7562,8 @@ body.secondary-zone-open:not(.auth-pending):not(.auth-required):not(.secure-vaul
 }
 
 .budget-day-button svg {
-  width: 48px;
-  height: 48px;
+  width: 52px;
+  height: 52px;
   overflow: visible;
   transform: rotate(-90deg);
 }
@@ -7910,4 +7916,24 @@ body.budget-activity-open .add-entry-button {
   .budget-monthly-heading > strong {
     font-size: 22px;
   }
+}
+
+/* Keep the final content clear of the floating + button and bottom navigation. */
+.app-shell {
+  padding-bottom: max(340px, calc(env(safe-area-inset-bottom) + 320px));
+  scroll-padding-bottom: max(340px, calc(env(safe-area-inset-bottom) + 320px));
+}
+
+.editor-overlay.primary-zone-page {
+  scroll-padding-bottom: max(340px, calc(env(safe-area-inset-bottom) + 320px));
+}
+
+.editor-overlay.primary-zone-page > :first-child {
+  padding-bottom: max(340px, calc(env(safe-area-inset-bottom) + 320px));
+}
+
+/* One goal fills both Home columns; two or more return to the split layout. */
+.home-goals-grid.has-single-goal .home-goal-card {
+  flex-basis: 100%;
+  width: 100%;
 }

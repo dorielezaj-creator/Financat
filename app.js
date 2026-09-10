@@ -1231,6 +1231,7 @@ function renderOverview(now, monthEntries, yearEntries, spentToday, spentMonth, 
 function renderHomeGoals() {
   if (!els.homeGoalsGrid) return;
   const goals = normalizeGoals(state.goals).filter((goal) => goal.active !== false);
+  els.homeGoalsGrid.classList.toggle("has-single-goal", goals.length === 1);
   if (!goals.length) { els.homeGoalsGrid.innerHTML = ""; els.homeGoalsGrid.hidden = true; return; }
   els.homeGoalsGrid.hidden = false;
   els.homeGoalsGrid.classList.toggle("is-scrollable", goals.length > 2);
@@ -1529,11 +1530,13 @@ function handleBudgetDayClick(event) {
 }
 
 function scrollSelectedBudgetDay(inline = "center") {
-  els.budgetDayStrip?.querySelector("[data-budget-day].is-selected")?.scrollIntoView({
-    behavior: "smooth",
-    block: "nearest",
-    inline,
-  });
+  const strip = els.budgetDayStrip;
+  const selected = strip?.querySelector("[data-budget-day].is-selected");
+  if (!strip || !selected) return;
+  const targetLeft = inline === "end"
+    ? strip.scrollWidth - strip.clientWidth
+    : selected.offsetLeft - (strip.clientWidth - selected.offsetWidth) / 2;
+  strip.scrollTo({ left: Math.max(targetLeft, 0), behavior: "smooth" });
 }
 
 function renderBudgetActivityWindow() {
