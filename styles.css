@@ -7513,15 +7513,15 @@ body.secondary-zone-open:not(.auth-pending):not(.auth-required):not(.secure-vaul
   position: relative;
   z-index: 3;
   min-width: 0;
-  min-height: 100px;
-  height: 100px;
+  min-height: 112px;
+  height: 112px;
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: 10px;
   overflow-x: auto;
   overflow-y: hidden;
   margin-inline: -20px;
-  padding: 4px 20px 12px;
+  padding: 6px 20px 14px;
   scroll-padding-inline: 20px;
   scroll-snap-type: x proximity;
   overscroll-behavior-inline: contain;
@@ -7534,56 +7534,57 @@ body.secondary-zone-open:not(.auth-pending):not(.auth-required):not(.secure-vaul
 }
 
 .budget-day-button {
-  width: 56px;
-  min-width: 56px;
-  height: 84px;
-  flex: 0 0 56px;
-  display: grid;
-  grid-template-rows: 18px 58px;
-  place-items: center;
+  --day-ring-tone: var(--safe-spend-green);
+  --day-ring-center: var(--home-bg);
+  width: 62px;
+  min-width: 62px;
+  height: 92px;
+  flex: 0 0 62px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 7px;
   scroll-snap-align: center;
-  padding: 4px 0 0;
+  padding: 6px 0 5px;
   border: 0;
-  border-radius: 22px;
+  border-radius: 24px;
   background: transparent;
   color: var(--home-muted);
 }
 
-.budget-day-button > span {
+.budget-day-label {
+  flex: 0 0 auto;
   font-size: 11px;
   font-weight: 750;
   line-height: 1;
 }
 
-.budget-day-button svg,
-.budget-day-button > strong {
-  grid-column: 1;
-  grid-row: 2;
+.budget-day-ring {
+  width: 58px;
+  height: 58px;
+  flex: 0 0 58px;
+  position: relative;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    var(--day-ring-tone) 0 var(--day-ring, 0%),
+    var(--home-track) var(--day-ring, 0%) 100%
+  );
 }
 
-.budget-day-button svg {
-  width: 52px;
-  height: 52px;
-  overflow: visible;
-  transform: rotate(-90deg);
+.budget-day-ring::after {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border-radius: 50%;
+  background: var(--day-ring-center);
 }
 
-.budget-day-ring-track,
-.budget-day-ring-value {
-  fill: none;
-  stroke-width: 6;
-}
-
-.budget-day-ring-track {
-  stroke: var(--home-track);
-}
-
-.budget-day-ring-value {
-  stroke: var(--safe-spend-green);
-  stroke-linecap: round;
-}
-
-.budget-day-button > strong {
+.budget-day-ring > b {
+  position: relative;
   z-index: 1;
   color: var(--home-text);
   font-size: 13px;
@@ -7591,20 +7592,21 @@ body.secondary-zone-open:not(.auth-pending):not(.auth-required):not(.secure-vaul
   line-height: 1;
 }
 
-.budget-day-button.is-over .budget-day-ring-value {
-  stroke: #ee68ae;
+.budget-day-button.is-over {
+  --day-ring-tone: #ee68ae;
 }
 
-.budget-day-button.is-empty .budget-day-ring-value {
-  stroke: var(--home-bar);
+.budget-day-button.is-empty {
+  --day-ring-tone: var(--home-bar);
 }
 
 .budget-day-button.is-selected {
+  --day-ring-center: var(--home-control);
   background: var(--home-control);
   color: var(--safe-spend-green);
 }
 
-.budget-day-button.is-selected > strong {
+.budget-day-button.is-selected .budget-day-ring > b {
   color: var(--safe-spend-green);
 }
 
@@ -7920,16 +7922,34 @@ body.budget-activity-open .add-entry-button {
 
 /* Keep the final content clear of the floating + button and bottom navigation. */
 .app-shell {
-  padding-bottom: max(340px, calc(env(safe-area-inset-bottom) + 320px));
-  scroll-padding-bottom: max(340px, calc(env(safe-area-inset-bottom) + 320px));
+  padding-bottom: max(24px, env(safe-area-inset-bottom));
+  scroll-padding-bottom: max(320px, calc(env(safe-area-inset-bottom) + 290px));
 }
 
 .editor-overlay.primary-zone-page {
-  scroll-padding-bottom: max(340px, calc(env(safe-area-inset-bottom) + 320px));
+  scroll-padding-bottom: max(320px, calc(env(safe-area-inset-bottom) + 290px));
 }
 
 .editor-overlay.primary-zone-page > :first-child {
-  padding-bottom: max(340px, calc(env(safe-area-inset-bottom) + 320px));
+  padding-bottom: max(24px, env(safe-area-inset-bottom));
+}
+
+.floating-controls-spacer {
+  width: 100%;
+  min-width: 100%;
+  height: max(320px, calc(env(safe-area-inset-bottom) + 290px));
+  min-height: max(320px, calc(env(safe-area-inset-bottom) + 290px));
+  display: block;
+  grid-column: 1 / -1;
+  flex: 0 0 max(320px, calc(env(safe-area-inset-bottom) + 290px));
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.floating-controls-spacer.is-nav-only {
+  height: max(150px, calc(env(safe-area-inset-bottom) + 120px));
+  min-height: max(150px, calc(env(safe-area-inset-bottom) + 120px));
+  flex-basis: max(150px, calc(env(safe-area-inset-bottom) + 120px));
 }
 
 /* One goal fills both Home columns; two or more return to the split layout. */

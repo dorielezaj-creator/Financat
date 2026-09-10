@@ -1638,12 +1638,8 @@ function renderBudgetDayStrip(selectedIso) {
     const aria = `${formatDate(snapshot.iso)}, ${percentLeft}% buxhet i mbetur${overspent ? ", mbi buxhetin ditor" : ""}`;
     return `
       <button class="${classes}" type="button" role="listitem" data-budget-day="${snapshot.iso}" aria-label="${escapeHtml(aria)}" aria-pressed="${selected}">
-        <span>${weekdayLabels[date.getDay()]}</span>
-        <svg viewBox="0 0 44 44" aria-hidden="true" focusable="false">
-          <circle class="budget-day-ring-track" cx="22" cy="22" r="17" pathLength="100"></circle>
-          <circle class="budget-day-ring-value" cx="22" cy="22" r="17" pathLength="100" style="stroke-dasharray:${percentLeft} ${100 - percentLeft}"></circle>
-        </svg>
-        <strong>${date.getDate()}</strong>
+        <span class="budget-day-label">${weekdayLabels[date.getDay()]}</span>
+        <span class="budget-day-ring" style="--day-ring:${percentLeft}%" aria-hidden="true"><b>${date.getDate()}</b></span>
       </button>
     `;
   }).join("");

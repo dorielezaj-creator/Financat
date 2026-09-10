@@ -18,7 +18,7 @@
     <link rel="manifest" href="manifest.webmanifest?v=20260821-1" />
     <link rel="icon" href="icon.svg?v=20260820-1" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="icon.svg?v=20260820-1" />
-    <link rel="stylesheet" href="styles.css?v=20260910-day-strip-fix-1" />
+    <link rel="stylesheet" href="styles.css?v=20260910-mobile-layout-fix-1" />
   </head>
   <body class="auth-pending">
     <main class="app-shell">
@@ -536,6 +536,7 @@
               <div id="budgetSavingsYearChart" class="budget-year-chart" aria-label="Kursimet sipas muajve"></div>
             </article>
           </section>
+          <div class="floating-controls-spacer is-nav-only" aria-hidden="true"></div>
         </div>
       </section>
 
@@ -742,6 +743,7 @@
           </div>
 
           <div id="transactionsList" class="archive-list transactions-list"></div>
+          <div class="floating-controls-spacer" aria-hidden="true"></div>
         </div>
       </section>
 
@@ -766,6 +768,7 @@
 
           <div id="netWorthTrend" class="net-worth-trend" aria-label="Grafiku i pasurisë sipas muajve"></div>
           <div id="netWorthList" class="account-list net-worth-list"></div>
+          <div class="floating-controls-spacer" aria-hidden="true"></div>
         </div>
       </section>
 
@@ -847,6 +850,7 @@
           </section>
 
           <div id="insightsList" class="insights-list"></div>
+          <div class="floating-controls-spacer" aria-hidden="true"></div>
         </div>
       </section>
 
@@ -1289,6 +1293,7 @@
         <div id="entryList" class="entry-list"></div>
       </section>
 
+      <div class="floating-controls-spacer floating-controls-spacer-home" aria-hidden="true"></div>
     </main>
     <div id="undoToast" class="undo-toast" role="status" aria-live="polite" hidden>
       <span id="undoToastMessage">Veprimi u krye.</span>
@@ -1306,7 +1311,7 @@
       </div>
     </template>
 
-    <script src="app.js?v=20260910-day-strip-fix-1"></script>
+    <script src="app.js?v=20260910-mobile-layout-fix-1"></script>
     <script src="cloud-sync.js?v=20260907-auth-1"></script>
   </body>
 </html>
