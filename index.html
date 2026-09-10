@@ -18,7 +18,7 @@
     <link rel="manifest" href="manifest.webmanifest?v=20260821-1" />
     <link rel="icon" href="icon.svg?v=20260820-1" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="icon.svg?v=20260820-1" />
-    <link rel="stylesheet" href="styles.css?v=20260908-clean-pages-2" />
+    <link rel="stylesheet" href="styles.css?v=20260910-account-trends-1" />
   </head>
   <body class="auth-pending">
     <main class="app-shell">
@@ -51,18 +51,26 @@
             <strong id="safeSpendLek">0 L</strong>
             <small id="safeSpendEuro">≈ 0€ / ditë</small>
           </div>
+          <div class="safe-spend-today">
+            <span>Shpenzuar sot</span>
+            <strong id="safeSpendToday">0 L</strong>
+          </div>
           <div class="safe-spend-meta">
             <div>
               <span>Buxheti i mbetur</span>
               <strong id="safeSpendRemaining">0 L</strong>
             </div>
             <div>
-              <span>Ditë të mbetura</span>
+              <span>Mbeten edhe</span>
               <strong id="safeSpendDays">0 ditë</strong>
             </div>
           </div>
-          <div class="safe-spend-progress" aria-hidden="true">
-            <span id="safeSpendProgress"></span>
+          <div class="safe-spend-progress" role="img" aria-label="0% buxhet i mbetur">
+            <svg viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+              <circle class="safe-spend-ring-track" cx="50" cy="50" r="42" pathLength="100"></circle>
+              <circle id="safeSpendProgress" class="safe-spend-ring-value" cx="50" cy="50" r="42" pathLength="100"></circle>
+            </svg>
+            <strong id="safeSpendPercent">0%</strong>
           </div>
           <p id="safeSpendProgressText" class="safe-spend-progress-text">0% buxhet i mbetur</p>
           <p id="safeSpendForecast" class="safe-spend-forecast">Vendos të ardhura dhe objektiv kursimi për parashikim.</p>
@@ -84,7 +92,7 @@
         </article>
 
         <article class="month-summary-card" data-home-block="month" data-home-block-label="Përmbledhja mujore">
-          <button id="quickExpenseOpen" class="overview-arrow" type="button" aria-label="Hap shpenzimet">›</button>
+          <button id="quickExpenseOpen" class="overview-arrow" type="button" aria-label="Hap listën e zërave">›</button>
           <h2>Këtë muaj</h2>
           <div class="month-summary-values">
             <div><span>Shpenzuar</span><strong id="quickExpenseLek">0 L</strong><small id="quickExpenseEuro">0€</small></div>
@@ -98,14 +106,16 @@
         </article>
 
         <div class="balance-grid" data-home-block="balances" data-home-block-label="Gjendja e llogarive">
-          <article class="balance-card">
+          <article class="balance-card balance-card-lek">
             <h2>Gjendja</h2><span>Lek</span>
             <strong id="quickAccountLek">0 L</strong>
+            <div id="quickAccountLekTrend" class="balance-mini-chart" role="group" aria-label="Ecuria mujore e gjendjes në Lekë"></div>
           </article>
-          <article class="balance-card">
+          <article class="balance-card balance-card-euro">
             <button id="quickAccountsOpen" class="overview-arrow" type="button" aria-label="Hap gjendjen">›</button>
             <h2>Gjendja</h2><span>Euro</span>
             <strong id="quickAccountEuro">0€</strong>
+            <div id="quickAccountEuroTrend" class="balance-mini-chart" role="group" aria-label="Ecuria mujore e gjendjes në Euro"></div>
           </article>
         </div>
 
@@ -457,36 +467,6 @@
 
           <button id="newRecurringBtn" class="secondary-button compact-button recurring-add-inline" type="button">+ Shto shpenzim fiks</button>
           <div id="recurringList" class="recurring-list"></div>
-        </div>
-      </section>
-
-      <section id="expenseArchiveOverlay" class="editor-overlay entry-page-overlay app-full-page" hidden>
-        <div class="archive-window" aria-labelledby="expenseArchiveTitle">
-          <div class="archive-header">
-            <h2 id="expenseArchiveTitle">Shpenzimet</h2>
-            <button id="closeExpenseArchiveBtn" class="icon-button small page-back-button" type="button" aria-label="Kthehu">←</button>
-          </div>
-          <div class="archive-search" role="search">
-            <label class="sr-only" for="expenseArchiveSearch">Kërko shpenzime</label>
-            <input id="expenseArchiveSearch" type="search" placeholder="Kërko zë, kategori, llogari..." autocomplete="off" />
-            <button id="expenseArchiveSearchClear" type="button" aria-label="Pastro kërkimin" hidden>×</button>
-          </div>
-          <div id="expenseArchiveList" class="archive-list"></div>
-        </div>
-      </section>
-
-      <section id="incomeArchiveOverlay" class="editor-overlay entry-page-overlay app-full-page" hidden>
-        <div class="archive-window" aria-labelledby="incomeArchiveTitle">
-          <div class="archive-header">
-            <h2 id="incomeArchiveTitle">Të ardhurat</h2>
-            <button id="closeIncomeArchiveBtn" class="icon-button small page-back-button" type="button" aria-label="Kthehu">←</button>
-          </div>
-          <div class="archive-search" role="search">
-            <label class="sr-only" for="incomeArchiveSearch">Kërko të ardhura</label>
-            <input id="incomeArchiveSearch" type="search" placeholder="Kërko zë, kategori, llogari..." autocomplete="off" />
-            <button id="incomeArchiveSearchClear" type="button" aria-label="Pastro kërkimin" hidden>×</button>
-          </div>
-          <div id="incomeArchiveList" class="archive-list"></div>
         </div>
       </section>
 
@@ -1257,7 +1237,7 @@
       </div>
     </template>
 
-    <script src="app.js?v=20260908-clean-pages-2"></script>
+    <script src="app.js?v=20260910-account-trends-1"></script>
     <script src="cloud-sync.js?v=20260907-auth-1"></script>
   </body>
 </html>

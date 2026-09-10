@@ -7105,3 +7105,306 @@ body.secondary-zone-open:not(.auth-pending):not(.auth-required):not(.secure-vaul
     grid-column: auto;
   }
 }
+
+/* Daily budget card — reference layout with a green, rounded progress ring. */
+:root {
+  --safe-spend-green: #00d978;
+}
+
+.safe-spend-card {
+  min-height: 228px;
+  grid-template-columns: minmax(0, 1fr) 142px;
+  grid-template-rows: auto auto 1fr;
+  column-gap: 10px;
+  row-gap: 11px;
+  padding: 22px 20px 18px;
+}
+
+.safe-spend-copy {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.safe-spend-today {
+  grid-column: 1;
+  grid-row: 2;
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.safe-spend-today span {
+  color: var(--home-subtext);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.safe-spend-today strong {
+  color: var(--home-text);
+  font-size: 21px;
+  font-weight: 600;
+  line-height: 1;
+  overflow-wrap: anywhere;
+}
+
+.safe-spend-meta {
+  grid-column: 1;
+  grid-row: 3;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: end;
+  gap: 8px;
+}
+
+.safe-spend-meta span {
+  line-height: 1.1;
+}
+
+.safe-spend-progress {
+  grid-column: 2;
+  grid-row: 1 / span 3;
+  width: 142px;
+  height: 142px;
+  overflow: visible;
+  background: transparent !important;
+}
+
+.safe-spend-progress::before,
+.safe-spend-progress::after {
+  content: none;
+}
+
+.safe-spend-progress svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+  transform: rotate(-90deg);
+}
+
+.safe-spend-ring-track,
+.safe-spend-ring-value {
+  fill: none;
+  stroke-width: 14;
+}
+
+.safe-spend-ring-track {
+  stroke: var(--home-track);
+}
+
+.safe-spend-ring-value {
+  stroke: var(--safe-spend-green);
+  stroke-linecap: round;
+  stroke-dasharray: 0 100;
+  transition: stroke-dasharray 220ms ease;
+}
+
+.safe-spend-progress > strong {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  color: var(--home-muted);
+  font-size: 36px;
+  font-weight: 600;
+  letter-spacing: -1px;
+  line-height: 1;
+}
+
+/* Keep the plan selector on the same top line as its arrow. */
+.savings-plan-card {
+  padding-top: 24px;
+}
+
+.savings-plan-card > .overview-arrow {
+  top: 25px;
+}
+
+.savings-plan-card > .plan-tabs {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  justify-self: auto;
+  transform: translateX(-50%);
+}
+
+.savings-plan-card > .savings-plan-list {
+  margin-top: 47px;
+}
+
+@media (max-width: 390px) {
+  .safe-spend-card {
+    min-height: 218px;
+    grid-template-columns: minmax(0, 1fr) 124px;
+    column-gap: 8px;
+    padding-inline: 18px;
+  }
+
+  .safe-spend-progress {
+    width: 124px;
+    height: 124px;
+  }
+
+  .safe-spend-progress > strong {
+    font-size: 32px;
+  }
+}
+
+@media (max-width: 360px) {
+  .safe-spend-card {
+    grid-template-columns: minmax(0, 1fr) 108px;
+    column-gap: 6px;
+    padding-inline: 16px;
+  }
+
+  .safe-spend-copy strong {
+    font-size: 38px;
+  }
+
+  .safe-spend-progress {
+    width: 108px;
+    height: 108px;
+  }
+
+  .safe-spend-progress > strong {
+    font-size: 28px;
+  }
+
+  .safe-spend-today strong {
+    font-size: 18px;
+  }
+
+  .safe-spend-meta span {
+    font-size: 10px;
+  }
+
+  .safe-spend-meta strong {
+    font-size: 14px;
+  }
+}
+
+/* Account balance cards — compact 12-month history inspired by the reference. */
+.balance-card {
+  min-height: 222px;
+  grid-template-rows: auto auto auto 1fr;
+  align-content: start;
+}
+
+.balance-card > strong {
+  margin-top: 7px;
+  align-self: start;
+}
+
+.balance-card-lek {
+  --balance-trend-color: #9b7bea;
+}
+
+.balance-card-euro {
+  --balance-trend-color: #08aeef;
+}
+
+.balance-mini-chart {
+  min-width: 0;
+  display: grid;
+  grid-template-rows: 61px 11px;
+  gap: 5px;
+  align-self: end;
+  margin-top: 10px;
+}
+
+.balance-mini-plot {
+  min-width: 0;
+  height: 61px;
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  align-items: stretch;
+}
+
+.balance-mini-column {
+  position: relative;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  align-items: end;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-left: 1px solid color-mix(in srgb, var(--home-muted) 48%, transparent);
+  background: transparent;
+  appearance: none;
+}
+
+.balance-mini-column:last-child {
+  border-right: 1px solid color-mix(in srgb, var(--home-muted) 48%, transparent);
+}
+
+.balance-mini-column::after {
+  content: "";
+  width: 3px;
+  height: var(--bar-height, 4%);
+  min-height: 3px;
+  border-radius: 999px;
+  background: var(--balance-trend-color);
+  transition: height 220ms ease, opacity 160ms ease;
+}
+
+.balance-mini-column.is-current::after {
+  width: 4px;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--balance-trend-color) 25%, transparent);
+}
+
+.balance-mini-column.is-empty::after,
+.balance-mini-column.is-future::after {
+  height: 3px;
+  background: var(--home-bar);
+  opacity: .45;
+}
+
+.balance-mini-column.is-negative::after {
+  background: var(--expense);
+}
+
+.balance-mini-column:focus-visible {
+  outline: 2px solid var(--balance-trend-color);
+  outline-offset: 2px;
+}
+
+.balance-mini-axis {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  align-items: start;
+  color: var(--home-muted);
+  font-size: 8px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.balance-mini-axis span {
+  justify-self: start;
+  transform: translateX(1px);
+}
+
+@media (max-width: 360px) {
+  .balance-card {
+    min-height: 208px;
+    padding-inline: 12px;
+  }
+
+  .balance-card > strong {
+    font-size: 22px;
+  }
+
+  .balance-mini-chart {
+    grid-template-rows: 54px 10px;
+  }
+
+  .balance-mini-plot {
+    height: 54px;
+  }
+
+  .balance-mini-axis {
+    font-size: 7px;
+  }
+}

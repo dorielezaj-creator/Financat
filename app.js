@@ -261,15 +261,19 @@ const els = {
   safeSpendInfo: document.querySelector("#safeSpendInfo"),
   safeSpendLek: document.querySelector("#safeSpendLek"),
   safeSpendEuro: document.querySelector("#safeSpendEuro"),
+  safeSpendToday: document.querySelector("#safeSpendToday"),
   safeSpendRemaining: document.querySelector("#safeSpendRemaining"),
   safeSpendDays: document.querySelector("#safeSpendDays"),
   safeSpendProgress: document.querySelector("#safeSpendProgress"),
+  safeSpendPercent: document.querySelector("#safeSpendPercent"),
   safeSpendProgressText: document.querySelector("#safeSpendProgressText"),
   safeSpendForecast: document.querySelector("#safeSpendForecast"),
   quickAccountsOpen: document.querySelector("#quickAccountsOpen"),
   quickAccountsInfo: document.querySelector("#quickAccountsInfo"),
   quickAccountLek: document.querySelector("#quickAccountLek"),
   quickAccountEuro: document.querySelector("#quickAccountEuro"),
+  quickAccountLekTrend: document.querySelector("#quickAccountLekTrend"),
+  quickAccountEuroTrend: document.querySelector("#quickAccountEuroTrend"),
   quickExpenseOpen: document.querySelector("#quickExpenseOpen"),
   quickExpenseInfo: document.querySelector("#quickExpenseInfo"),
   quickAverageOpen: document.querySelector("#quickAverageOpen"),
@@ -647,7 +651,9 @@ document.querySelectorAll("[data-home-plan-tab]").forEach((button) => {
 els.safeSpendInfo?.addEventListener("click", () => openFormulaOverlay("safe"));
 els.quickAccountsOpen?.addEventListener("click", openNetWorthWindow);
 els.quickAccountsInfo?.addEventListener("click", () => openFormulaOverlay("accounts"));
-els.quickExpenseOpen?.addEventListener("click", openExpenseArchive);
+els.quickAccountLekTrend?.addEventListener("click", handleHomeMonthChartClick);
+els.quickAccountEuroTrend?.addEventListener("click", handleHomeMonthChartClick);
+els.quickExpenseOpen?.addEventListener("click", () => openTransactionsWindow("all"));
 els.quickExpenseInfo?.addEventListener("click", () => openFormulaOverlay("expense"));
 els.quickAverageOpen?.addEventListener("click", openInsightsWindow);
 els.quickAverageInfo?.addEventListener("click", () => openFormulaOverlay("forecast"));
@@ -834,8 +840,8 @@ els.entryForm.addEventListener("submit", (event) => {
 els.entryList.addEventListener("click", handleEntryListClick);
 els.expensePreviewList.addEventListener("click", handleExpensePreviewClick);
 els.incomePreviewList.addEventListener("click", handleIncomePreviewClick);
-els.expenseArchiveList.addEventListener("click", handleEntryListClick);
-els.incomeArchiveList.addEventListener("click", handleEntryListClick);
+els.expenseArchiveList?.addEventListener("click", handleEntryListClick);
+els.incomeArchiveList?.addEventListener("click", handleEntryListClick);
 els.transactionsList?.addEventListener("click", handleEntryListClick);
 els.closeTransactionsBtn?.addEventListener("click", closeTransactionsWindow);
 els.transactionsOverlay?.addEventListener("click", (event) => {
@@ -887,12 +893,12 @@ els.expenseArchiveSearch?.addEventListener("input", (event) => updateArchiveSear
 els.incomeArchiveSearch?.addEventListener("input", (event) => updateArchiveSearch("income", event.target.value));
 els.expenseArchiveSearchClear?.addEventListener("click", () => clearArchiveSearch("expense"));
 els.incomeArchiveSearchClear?.addEventListener("click", () => clearArchiveSearch("income"));
-els.closeExpenseArchiveBtn.addEventListener("click", closeExpenseArchive);
-els.closeIncomeArchiveBtn.addEventListener("click", closeIncomeArchive);
-els.expenseArchiveOverlay.addEventListener("click", (event) => {
+els.closeExpenseArchiveBtn?.addEventListener("click", closeExpenseArchive);
+els.closeIncomeArchiveBtn?.addEventListener("click", closeIncomeArchive);
+els.expenseArchiveOverlay?.addEventListener("click", (event) => {
   if (event.target === els.expenseArchiveOverlay) closeExpenseArchive();
 });
-els.incomeArchiveOverlay.addEventListener("click", (event) => {
+els.incomeArchiveOverlay?.addEventListener("click", (event) => {
   if (event.target === els.incomeArchiveOverlay) closeIncomeArchive();
 });
 els.closeIncomeDetailBtn?.addEventListener("click", closeIncomeDetail);
@@ -1212,6 +1218,7 @@ function renderQuickMetrics(now, spentToday, spentMonthToDate, accountTotals, in
   renderHomeSetupHint(incomeMonth);
   setText(els.quickAccountLek, moneyLekShort(accountTotals.ALL));
   setText(els.quickAccountEuro, moneyEuroCompact(accountTotals.EUR));
+  renderHomeBalanceTrends(now, accountTotals);
   setText(els.quickExpenseLek, moneyLekShort(spentMonthToDate.ALL));
   setText(els.quickExpenseEuro, moneyEuroCompact(spentMonthToDate.EUR));
   setText(els.monthSpendableLek, moneyLekShort(Math.max(budget.remainingLek, 0)));
@@ -1320,6 +1327,76 @@ function renderBalanceComparison(accountTotals) {
   setText(els.balanceCompareEuro, signedEuro);
 }
 
+function renderHomeBalanceTrends(now = new Date(), accountTotals = bankTotals()) {
+  renderHomeBalanceTrend(els.quickAccountLekTrend, "ALL", now, accountTotals.ALL);
+  renderHomeBalanceTrend(els.quickAccountEuroTrend, "EUR", now, accountTotals.EUR);
+}
+
+function renderHomeBalanceTrend(container, currency, now, currentBalance) {
+  if (!container) return;
+
+  const year = now.getFullYear();
+  const currentMonthIndex = now.getMonth();
+  const currentDate = toLocalIso(now);
+  const currencyEntries = state.entries.filter((entry) => normalizeCurrency(entry.currency) === currency);
+  const history = normalizeNetWorthHistory(state.netWorthHistory, state.exchangeRate);
+  const latestByMonth = new Map();
+  history
+    .filter((item) => String(item.date || "").startsWith(String(year)))
+    .forEach((item) => latestByMonth.set(String(item.date).slice(0, 7), item));
+
+  const evidenceDates = [
+    ...currencyEntries.map((entry) => String(entry.date || "")),
+    ...history.map((item) => String(item.date || "")),
+  ].filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date) && date <= currentDate).sort();
+  const earliestEvidence = evidenceDates[0] || "";
+
+  const points = Array.from({ length: 12 }, (_, index) => {
+    const key = `${year}-${String(index + 1).padStart(2, "0")}`;
+    const endDate = toLocalIso(new Date(year, index + 1, 0));
+    const snapshot = latestByMonth.get(key);
+    const isFuture = index > currentMonthIndex;
+    const hasValue = !isFuture && (index === currentMonthIndex || Boolean(snapshot) || Boolean(earliestEvidence && earliestEvidence <= endDate));
+    const laterMovement = currencyEntries
+      .filter((entry) => String(entry.date || "") > endDate)
+      .reduce((sum, entry) => sum + (entry.type === "income" ? 1 : -1) * (Number(entry.amount) || 0), 0);
+    const snapshotValue = currency === "EUR" ? snapshot?.accountsEuro : snapshot?.accountsLek;
+    const value = snapshot && Number.isFinite(Number(snapshotValue))
+      ? Number(snapshotValue)
+      : index === currentMonthIndex
+        ? Number(currentBalance) || 0
+        : (Number(currentBalance) || 0) - laterMovement;
+
+    return { hasValue, isFuture, key, value: hasValue ? value : 0 };
+  });
+
+  const maxValue = Math.max(...points.filter((point) => point.hasValue).map((point) => Math.abs(point.value)), 1);
+  const bars = points.map((point, index) => {
+    const height = point.hasValue ? scaledMonthlyBarHeight(Math.abs(point.value), maxValue) : 4;
+    const valueLabel = currency === "EUR" ? moneyEuroCompact(point.value) : moneyLekShort(point.value);
+    const message = point.hasValue
+      ? `${capitalizeFirst(monthNames[index])}: ${valueLabel}`
+      : `${capitalizeFirst(monthNames[index])}: pa të dhëna`;
+    const classes = [
+      "balance-mini-column",
+      point.hasValue ? "has-value" : "is-empty",
+      point.value < 0 ? "is-negative" : "",
+      index === currentMonthIndex ? "is-current" : "",
+      point.isFuture ? "is-future" : "",
+    ].filter(Boolean).join(" ");
+    return `<button class="${classes}" type="button" style="--bar-height:${height}%" title="${escapeHtml(message)}" aria-label="${escapeHtml(message)}" data-chart-message="${escapeHtml(message)}"></button>`;
+  }).join("");
+
+  const axis = [
+    { label: "Jan", column: 1 },
+    { label: "Pri", column: 4 },
+    { label: "Kor", column: 7 },
+    { label: "Tet", column: 10 },
+  ].map((item) => `<span style="grid-column:${item.column}">${item.label}</span>`).join("");
+
+  container.innerHTML = `<div class="balance-mini-plot">${bars}</div><div class="balance-mini-axis" aria-hidden="true">${axis}</div>`;
+}
+
 function monthlyBudgetInsight(now, spentToday, spentMonthToDate, incomeMonth) {
   const monthDays = daysInMonth(now);
   const daysElapsed = Math.max(now.getDate(), 1);
@@ -1357,6 +1434,7 @@ function monthlyBudgetInsight(now, spentToday, spentMonthToDate, incomeMonth) {
     savedToDateLek,
     spendBudgetToDateLek,
     spentMonthLek,
+    spentTodayLek,
     todaySavingsLek,
   };
 }
@@ -1371,14 +1449,20 @@ function renderSafeSpendCard(budget) {
   const remainingPercent = Math.round(budget.remainingRatio * 100);
   setText(els.safeSpendLek, moneyLekShort(dailySafeLek));
   setText(els.safeSpendEuro, `≈ ${moneyEuroCompact(dailySafeLek / state.exchangeRate)} / ditë`);
+  setText(els.safeSpendToday, moneyLekShort(Math.max(budget.spentTodayLek, 0)));
   setText(els.safeSpendRemaining, moneyLekShort(spendableLek));
   setText(els.safeSpendDays, `${budget.daysRemaining} ditë`);
+  setText(els.safeSpendPercent, `${remainingPercent}%`);
   setText(els.safeSpendProgressText, `${remainingPercent}% buxhet i mbetur deri më ${endOfMonthLabel(new Date())}`);
   setText(els.safeSpendForecast, budgetForecastText(budget));
   if (els.safeSpendProgress) {
-    const ring = els.safeSpendProgress.parentElement;
+    els.safeSpendProgress.style.strokeDasharray = `${remainingPercent} ${100 - remainingPercent}`;
+    const ring = els.safeSpendProgress.closest(".safe-spend-progress");
     ring?.style.setProperty("--ring", `${remainingPercent}%`);
-    if (ring) ring.dataset.percent = `${remainingPercent}%`;
+    if (ring) {
+      ring.dataset.percent = `${remainingPercent}%`;
+      ring.setAttribute("aria-label", `${remainingPercent}% buxhet i mbetur`);
+    }
   }
 }
 
@@ -1745,10 +1829,11 @@ function syncZoneNav() {
   });
 }
 
-function openTransactionsWindow() {
+function openTransactionsWindow(typeFilter = null) {
   state.activeZone = "transactions";
   if (els.netWorthOverlay) els.netWorthOverlay.hidden = true;
   if (els.insightsOverlay) els.insightsOverlay.hidden = true;
+  if (["all", "expense", "income"].includes(typeFilter)) state.transactionFilter = typeFilter;
   state.transactionSearch = "";
   if (els.transactionsSearch) els.transactionsSearch.value = "";
   renderTransactions();
@@ -5391,8 +5476,8 @@ function renderPreviewEntries() {
   const incomeEntries = state.entries.filter((entry) => entry.type === "income" && entry.date.startsWith(currentMonth));
   renderEntryPreviewList("expense", els.expensePreviewList, expenseEntries, currentMonth);
   renderEntryPreviewList("income", els.incomePreviewList, incomeEntries, currentMonth);
-  if (!els.expenseArchiveOverlay.hidden) renderExpenseArchive();
-  if (!els.incomeArchiveOverlay.hidden) renderIncomeArchive();
+  if (els.expenseArchiveOverlay && !els.expenseArchiveOverlay.hidden) renderExpenseArchive();
+  if (els.incomeArchiveOverlay && !els.incomeArchiveOverlay.hidden) renderIncomeArchive();
 }
 
 function renderEntryPreviewList(type, container, entries, currentMonth) {
@@ -5443,13 +5528,11 @@ function handleIncomePreviewClick(event) {
 }
 
 function openExpenseArchive() {
-  state.archiveSearch.expense = "";
-  renderEntryArchive("expense");
-  els.expenseArchiveOverlay.hidden = false;
+  openTransactionsWindow("expense");
 }
 
 function closeExpenseArchive() {
-  els.expenseArchiveOverlay.hidden = true;
+  if (els.expenseArchiveOverlay) els.expenseArchiveOverlay.hidden = true;
 }
 
 function renderExpenseArchive() {
@@ -5457,13 +5540,11 @@ function renderExpenseArchive() {
 }
 
 function openIncomeArchive() {
-  state.archiveSearch.income = "";
-  renderEntryArchive("income");
-  els.incomeArchiveOverlay.hidden = false;
+  openTransactionsWindow("income");
 }
 
 function closeIncomeArchive() {
-  els.incomeArchiveOverlay.hidden = true;
+  if (els.incomeArchiveOverlay) els.incomeArchiveOverlay.hidden = true;
 }
 
 function renderIncomeArchive() {
@@ -5476,6 +5557,7 @@ function renderEntryArchive(type) {
   const currentMonth = monthKey(new Date());
   const hasCurrentMonth = months.some((month) => month.key === currentMonth);
   const list = type === "income" ? els.incomeArchiveList : els.expenseArchiveList;
+  if (!list) return;
   const emptyText = query
     ? `Nuk u gjet asnjë zë për “${escapeHtml(state.archiveSearch[type])}”.`
     : type === "income"
