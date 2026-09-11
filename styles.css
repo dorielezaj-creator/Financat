@@ -8010,12 +8010,34 @@ body.budget-activity-open .add-entry-button {
 }
 
 .editor-overlay.app-full-page > :first-child {
-  padding-bottom: max(340px, calc(env(safe-area-inset-bottom) + 310px)) !important;
+  padding-bottom: max(24px, env(safe-area-inset-bottom)) !important;
+}
+
+/* A real final scroll item keeps the last row above both floating controls. */
+.editor-overlay.app-full-page > :first-child::after {
+  content: "";
+  width: 100%;
+  min-width: 100%;
+  height: max(300px, calc(env(safe-area-inset-bottom) + 270px));
+  min-height: max(300px, calc(env(safe-area-inset-bottom) + 270px));
+  display: block;
+  grid-column: 1 / -1;
+  flex: 0 0 max(300px, calc(env(safe-area-inset-bottom) + 270px));
+  pointer-events: none;
+}
+
+/* Global add layers must always sit above the page that launched them. */
+#quickAddOverlay {
+  z-index: 140 !important;
+}
+
+#entryOverlay {
+  z-index: 145 !important;
 }
 
 /* The global add command never disappears inside the authenticated app. */
 body:not(.auth-pending):not(.auth-required):not(.secure-vault-locked) .add-entry-button {
-  z-index: 110;
+  z-index: 150;
   display: grid !important;
 }
 
