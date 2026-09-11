@@ -25,6 +25,7 @@ let quickAddVoiceTimer = null;
 let quickAddVoiceDiscard = false;
 let quickAddVoiceSession = 0;
 let quickAddAiController = null;
+let addFlowOrigin = null;
 let financialAssistantController = null;
 let monthlyInsightsController = null;
 let secureVaultKey = null;
@@ -5221,17 +5222,23 @@ function openQuickAdd() {
     openEntryEditor("expense");
     return;
   }
+
+  captureAddFlowOrigin();
+  if (els.entryOverlay && !els.entryOverlay.hidden) hideEntryEditor();
   els.quickAddOverlay.hidden = false;
+  els.addEntryBtn?.setAttribute("aria-expanded", "true");
   setQuickAddAiStatus("AI do ta përgatisë zërin; ti e kontrollon para ruajtjes.");
   window.setTimeout(() => els.quickAddAiInput?.focus(), 40);
 }
 
-function closeQuickAdd() {
+function closeQuickAdd({ restoreOrigin = true } = {}) {
   cancelQuickAddAiRequest();
   stopQuickAddVoice({ discard: true });
   if (els.quickAddOverlay) els.quickAddOverlay.hidden = true;
+  els.addEntryBtn?.setAttribute("aria-expanded", "false");
   if (els.quickAddAiInput) els.quickAddAiInput.value = "";
   setQuickAddAiStatus("Shkruaj ose fol; AI e përgatit zërin dhe ti e kontrollon para ruajtjes.");
+  if (restoreOrigin) restoreAddFlowOrigin();
 }
 
 async function toggleQuickAddVoice() {
@@ -5467,7 +5474,7 @@ async function handleQuickAddAi(options = {}) {
     if (!response.ok) throw new Error(result.error || "AI nuk e kuptoi zërin.");
 
     const parsed = validateQuickAddResult(result);
-    closeQuickAdd();
+    closeQuickAdd({ restoreOrigin: false });
     openEntryEditor(parsed.type);
     applyQuickAddResult(parsed);
 
@@ -5590,11 +5597,12 @@ function setQuickAddAiBusy(isBusy) {
 }
 
 function chooseQuickAddType(type) {
-  closeQuickAdd();
+  closeQuickAdd({ restoreOrigin: false });
   openEntryEditor(type === "income" ? "income" : "expense");
 }
 
 function openEntryEditor(type = state.type, entryId = "") {
+  captureAddFlowOrigin();
   const entry = state.entries.find((item) => item.id === entryId);
   state.editingEntryId = entry?.id || "";
   state.type = entry?.type || type;
@@ -5620,10 +5628,11 @@ function openEntryEditor(type = state.type, entryId = "") {
   els.deleteEntryBtn.hidden = !entry;
   els.entryOverlay.hidden = false;
   document.body.classList.add("entry-editor-open");
+  els.addEntryBtn?.setAttribute("aria-expanded", "true");
   els.amountInput.focus();
 }
 
-function closeEntryEditor() {
+function hideEntryEditor() {
   state.editingEntryId = "";
   els.entryOverlay.hidden = true;
   document.body.classList.remove("entry-editor-open");
@@ -5631,6 +5640,43 @@ function closeEntryEditor() {
   els.deleteEntryBtn.hidden = true;
   els.dateInput.value = todayIso();
   syncTypeControls();
+}
+
+function closeEntryEditor({ restoreOrigin = true } = {}) {
+  hideEntryEditor();
+  els.addEntryBtn?.setAttribute("aria-expanded", "false");
+  if (restoreOrigin) restoreAddFlowOrigin();
+}
+
+function captureAddFlowOrigin() {
+  if (addFlowOrigin) return;
+  const visiblePage = document.querySelector(".app-full-page:not(#quickAddOverlay):not(#entryOverlay):not([hidden])");
+  addFlowOrigin = {
+    zone: state.activeZone,
+    overlayId: visiblePage?.id || "",
+    scrollTop: visiblePage ? visiblePage.scrollTop : window.scrollY,
+  };
+}
+
+function restoreAddFlowOrigin() {
+  const origin = addFlowOrigin;
+  addFlowOrigin = null;
+  if (!origin) return;
+
+  if (origin.overlayId) {
+    const originOverlay = document.getElementById(origin.overlayId);
+    if (originOverlay) {
+      originOverlay.hidden = false;
+      window.requestAnimationFrame(() => {
+        originOverlay.scrollTop = origin.scrollTop;
+      });
+    }
+  } else {
+    window.requestAnimationFrame(() => window.scrollTo({ top: origin.scrollTop, behavior: "auto" }));
+  }
+
+  state.activeZone = origin.zone;
+  syncZoneNav();
 }
 
 function openAccountEditor(bankId = "") {
@@ -6305,7 +6351,7 @@ async function handleReceiptImage(event) {
     const receipt = validateReceiptResult(result);
 
     if (els.quickAddOverlay && !els.quickAddOverlay.hidden) {
-      closeQuickAdd();
+      closeQuickAdd({ restoreOrigin: false });
       openEntryEditor("expense");
     }
 
@@ -7195,6 +7241,8 @@ function closePanelsAfterImport() {
   document.querySelectorAll(".editor-overlay").forEach((overlay) => {
     overlay.hidden = true;
   });
+  addFlowOrigin = null;
+  els.addEntryBtn?.setAttribute("aria-expanded", "false");
   state.activeZone = "home";
   state.editingEntryId = "";
   state.editingRecurringId = "";
