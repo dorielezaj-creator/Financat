@@ -129,6 +129,7 @@ const state = {
   dailyCurrency: "TOTAL",
   selectedDailyDate: "",
   budgetActivityDate: todayIso(),
+  budgetActivityMetric: "expense",
   incomeDetailRange: "month",
   savingsDetailRange: "month",
   homePlanTab: "savings",
@@ -274,8 +275,14 @@ const els = {
   closeBudgetActivityBtn: document.querySelector("#closeBudgetActivityBtn"),
   budgetActivityTitle: document.querySelector("#budgetActivityTitle"),
   budgetDayStrip: document.querySelector("#budgetDayStrip"),
-  budgetHeroRingValue: document.querySelector("#budgetHeroRingValue"),
+  budgetHeroRing: document.querySelector("#budgetHeroRing"),
+  budgetHeroExpenseRing: document.querySelector("#budgetHeroExpenseRing"),
+  budgetHeroSavingsRing: document.querySelector("#budgetHeroSavingsRing"),
+  budgetHeroFixedRing: document.querySelector("#budgetHeroFixedRing"),
   budgetHeroPercent: document.querySelector("#budgetHeroPercent"),
+  budgetHeroMetricLabel: document.querySelector("#budgetHeroMetricLabel"),
+  budgetHeroMetricValue: document.querySelector("#budgetHeroMetricValue"),
+  budgetHeroLegend: document.querySelector("#budgetHeroLegend"),
   budgetHeroSafe: document.querySelector("#budgetHeroSafe"),
   budgetHeroSpent: document.querySelector("#budgetHeroSpent"),
   budgetHeroRemaining: document.querySelector("#budgetHeroRemaining"),
@@ -672,6 +679,8 @@ els.safeSpendCard?.addEventListener("keydown", (event) => {
 });
 els.closeBudgetActivityBtn?.addEventListener("click", closeBudgetActivityWindow);
 els.budgetDayStrip?.addEventListener("click", handleBudgetDayClick);
+els.budgetHeroRing?.addEventListener("click", handleBudgetMetricClick);
+els.budgetHeroLegend?.addEventListener("click", handleBudgetMetricClick);
 els.budgetActivityCharts?.addEventListener("click", handleHomeMonthChartClick);
 els.savingsPlanOpen?.addEventListener("click", openSavingsPlanDetail);
 els.savingsPlanInfo?.addEventListener("click", () => openFormulaOverlay("plan"));
@@ -1506,6 +1515,7 @@ function renderSafeSpendCard(budget) {
 function openBudgetActivityWindow() {
   if (!els.budgetActivityOverlay) return;
   state.budgetActivityDate = todayIso();
+  state.budgetActivityMetric = "expense";
   renderBudgetActivityWindow();
   els.budgetActivityOverlay.hidden = false;
   els.budgetActivityOverlay.scrollTop = 0;
@@ -1529,6 +1539,15 @@ function handleBudgetDayClick(event) {
   requestAnimationFrame(() => scrollSelectedBudgetDay("center"));
 }
 
+function handleBudgetMetricClick(event) {
+  const target = event.target.closest("[data-budget-metric], [data-budget-ring-metric]");
+  if (!target) return;
+  const metric = target.dataset.budgetMetric || target.dataset.budgetRingMetric;
+  if (!["expense", "savings", "fixed"].includes(metric)) return;
+  state.budgetActivityMetric = metric;
+  renderBudgetActivityWindow();
+}
+
 function scrollSelectedBudgetDay(inline = "center") {
   const strip = els.budgetDayStrip;
   const selected = strip?.querySelector("[data-budget-day].is-selected");
@@ -1546,28 +1565,98 @@ function renderBudgetActivityWindow() {
     : todayIso();
   const selectedDate = parseLocalDate(selectedIso);
   const snapshot = budgetActivitySnapshot(selectedDate);
-  const percentLeft = Math.round(snapshot.budget.remainingRatio * 100);
   const spendableLek = Math.max(snapshot.budget.remainingLek, 0);
+  const metrics = budgetActivityMetrics(snapshot);
+  const selectedMetric = ["expense", "savings", "fixed"].includes(state.budgetActivityMetric)
+    ? state.budgetActivityMetric
+    : "expense";
+  state.budgetActivityMetric = selectedMetric;
 
   state.budgetActivityDate = selectedIso;
   setText(els.budgetActivityTitle, budgetActivityDateLabel(selectedDate));
-  setText(els.budgetHeroPercent, `${percentLeft}%`);
+  renderBudgetActivityRings(metrics, selectedMetric, selectedIso);
   setText(els.budgetHeroSafe, moneyLekShort(Math.max(snapshot.budget.dailySafeLek, 0)));
   setText(els.budgetHeroSpent, moneyLekShort(snapshot.budget.spentTodayLek));
   setText(els.budgetHeroRemaining, moneyLekShort(spendableLek));
 
-  if (els.budgetHeroRingValue) {
-    els.budgetHeroRingValue.style.strokeDasharray = `${percentLeft} ${100 - percentLeft}`;
-    const ring = els.budgetHeroRingValue.closest(".budget-hero-ring");
-    ring?.setAttribute("aria-label", `${percentLeft}% buxhet i mbetur më ${formatDate(selectedIso)}`);
-  }
-
-  renderBudgetHeroStatus(snapshot);
+  renderBudgetHeroStatus(snapshot, metrics, selectedMetric);
   renderBudgetDayStrip(selectedIso);
-  renderBudgetActivityYearCharts(new Date());
+  renderBudgetActivityYearCharts(selectedDate);
 }
 
-function budgetActivitySnapshot(date) {
+function budgetActivityMetrics(snapshot) {
+  const budget = snapshot.budget;
+  const expenseTarget = Math.max(budget.monthlyBudgetLek, 0);
+  const expenseValue = Math.max(budget.spentMonthLek, 0);
+  const savingsTarget = Math.max(budget.monthlyTargetLek, 0);
+  const savingsValue = budget.monthlyIncomeLek - budget.spentMonthLek;
+  const fixed = snapshot.fixed;
+
+  return {
+    expense: {
+      key: "expense",
+      label: "Shpenzime",
+      percent: ratioPercent(expenseValue, expenseTarget),
+      value: `${moneyLekShort(expenseValue)} / ${moneyLekShort(expenseTarget)}`,
+      available: expenseTarget > 0,
+    },
+    savings: {
+      key: "savings",
+      label: "Kursime",
+      percent: ratioPercent(Math.max(savingsValue, 0), savingsTarget),
+      value: `${moneyLekShort(savingsValue)} / ${moneyLekShort(savingsTarget)}`,
+      available: savingsTarget > 0,
+    },
+    fixed: {
+      key: "fixed",
+      label: "Fikse",
+      percent: ratioPercent(fixed.paidCount, fixed.totalCount),
+      value: fixed.totalCount > 0 ? `${fixed.paidCount} / ${fixed.totalCount} të paguara` : "Pa shpenzime fikse",
+      available: fixed.totalCount > 0,
+    },
+  };
+}
+
+function ratioPercent(value, target) {
+  if (!(target > 0)) return 0;
+  return Math.round(clamp01(Math.max(Number(value) || 0, 0) / target) * 100);
+}
+
+function renderBudgetActivityRings(metrics, selectedMetric, selectedIso) {
+  const ringElements = {
+    expense: els.budgetHeroExpenseRing,
+    savings: els.budgetHeroSavingsRing,
+    fixed: els.budgetHeroFixedRing,
+  };
+
+  Object.entries(ringElements).forEach(([key, ring]) => {
+    const metric = metrics[key];
+    if (!ring || !metric) return;
+    ring.style.strokeDasharray = `${metric.percent} ${100 - metric.percent}`;
+    ring.classList.toggle("is-active", key === selectedMetric);
+    ring.classList.toggle("is-unavailable", !metric.available);
+  });
+
+  const selected = metrics[selectedMetric];
+  setText(els.budgetHeroPercent, selected.available ? `${selected.percent}%` : "—");
+  setText(els.budgetHeroMetricLabel, selected.label);
+  setText(els.budgetHeroMetricValue, selected.value);
+
+  els.budgetHeroLegend?.querySelectorAll("[data-budget-metric]").forEach((button) => {
+    const active = button.dataset.budgetMetric === selectedMetric;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+
+  if (els.budgetHeroRing) {
+    const summary = Object.values(metrics)
+      .map((metric) => `${metric.label}: ${metric.available ? `${metric.percent}%` : "pa objektiv"}`)
+      .join(", ");
+    els.budgetHeroRing.setAttribute("aria-label", `${summary}, më ${formatDate(selectedIso)}`);
+  }
+}
+
+function budgetActivitySnapshot(date, includeFixed = true) {
   const iso = toLocalIso(date);
   const key = monthKey(date);
   const entriesToDate = state.entries.filter((entry) => entry.date.startsWith(key) && entry.date <= iso);
@@ -1585,6 +1674,7 @@ function budgetActivitySnapshot(date) {
     date,
     iso,
     budget: monthlyBudgetInsight(date, spentToday, spentMonth, incomeMonth),
+    fixed: includeFixed ? recurringProgressForDate(date) : null,
   };
 }
 
@@ -1594,27 +1684,45 @@ function budgetActivityDateLabel(date) {
   return `${prefix}, ${date.getDate()} ${monthNames[date.getMonth()]} ${date.getFullYear()}`;
 }
 
-function renderBudgetHeroStatus(snapshot) {
+function renderBudgetHeroStatus(snapshot, metrics, selectedMetric) {
   if (!els.budgetHeroStatus) return;
   const budget = snapshot.budget;
-  const dailyPlan = Math.max(budget.dailySpendBudgetLek, 0);
-  const spent = Math.max(budget.spentTodayLek, 0);
+  const metric = metrics[selectedMetric];
   els.budgetHeroStatus.classList.remove("is-positive", "is-warning", "is-neutral");
 
-  if (budget.monthlyBudgetLek <= 0) {
+  if (!metric.available) {
     els.budgetHeroStatus.classList.add("is-neutral");
-    els.budgetHeroStatus.textContent = "Pa buxhet mujor · shto të ardhura ose rregullo objektivin.";
+    els.budgetHeroStatus.textContent = selectedMetric === "fixed"
+      ? "Nuk ka shpenzime fikse aktive për këtë muaj."
+      : selectedMetric === "savings"
+        ? "Pa objektiv kursimi · vendos një objektiv mujor për ta matur progresin."
+        : "Pa buxhet mujor · shto të ardhura ose rregullo objektivin.";
     return;
   }
 
-  if (spent > dailyPlan) {
-    els.budgetHeroStatus.classList.add("is-warning");
-    els.budgetHeroStatus.textContent = `Mbi buxhetin ditor me ${moneyLekShort(spent - dailyPlan)}.`;
+  if (selectedMetric === "expense") {
+    const overBudget = budget.spentMonthLek > budget.monthlyBudgetLek;
+    els.budgetHeroStatus.classList.add(overBudget ? "is-warning" : "is-neutral");
+    els.budgetHeroStatus.textContent = overBudget
+      ? `Buxheti mujor është tejkaluar me ${moneyLekShort(budget.spentMonthLek - budget.monthlyBudgetLek)}.`
+      : `Ke përdorur ${metric.percent}% të buxhetit mujor deri në këtë ditë.`;
     return;
   }
 
-  els.budgetHeroStatus.classList.add("is-positive");
-  els.budgetHeroStatus.textContent = `Brenda buxhetit ditor · ${moneyLekShort(dailyPlan - spent)} të mbetura.`;
+  if (selectedMetric === "savings") {
+    const currentSavings = budget.monthlyIncomeLek - budget.spentMonthLek;
+    const reached = currentSavings >= budget.monthlyTargetLek;
+    els.budgetHeroStatus.classList.add(reached ? "is-positive" : currentSavings < 0 ? "is-warning" : "is-neutral");
+    els.budgetHeroStatus.textContent = reached
+      ? "Objektivi mujor i kursimit është arritur."
+      : `Mungojnë ${moneyLekShort(Math.max(budget.monthlyTargetLek - currentSavings, 0))} për objektivin mujor.`;
+    return;
+  }
+
+  els.budgetHeroStatus.classList.add(snapshot.fixed.paidCount === snapshot.fixed.totalCount ? "is-positive" : "is-neutral");
+  els.budgetHeroStatus.textContent = snapshot.fixed.paidCount === snapshot.fixed.totalCount
+    ? "Të gjitha shpenzimet fikse të muajit janë regjistruar."
+    : `${snapshot.fixed.totalCount - snapshot.fixed.paidCount} shpenzime fikse mbeten për t’u regjistruar.`;
 }
 
 function renderBudgetDayStrip(selectedIso) {
@@ -1624,7 +1732,7 @@ function renderBudgetDayStrip(selectedIso) {
   const days = Array.from({ length: 42 }, (_, index) => addDays(end, index - 41));
 
   els.budgetDayStrip.innerHTML = days.map((date) => {
-    const snapshot = budgetActivitySnapshot(date);
+    const snapshot = budgetActivitySnapshot(date, false);
     const percentLeft = Math.round(snapshot.budget.remainingRatio * 100);
     const dailyPlan = Math.max(snapshot.budget.dailySpendBudgetLek, 0);
     const overspent = dailyPlan > 0 && snapshot.budget.spentTodayLek > dailyPlan;
@@ -7826,15 +7934,32 @@ function recurringRemainingExpenses(now = new Date()) {
 }
 
 function hasRecurringBeenRecordedThisMonth(item, now = new Date()) {
+  return hasRecurringBeenRecordedByDate(item, now);
+}
+
+function recurringProgressForDate(date = new Date()) {
+  const items = recurringExpensesForMonth(date);
+  const paidItems = items.filter((item) => hasRecurringBeenRecordedByDate(item, date));
+  return {
+    totalCount: items.length,
+    paidCount: paidItems.length,
+    totalLek: recurringTotalsLek(items),
+    paidLek: recurringTotalsLek(paidItems),
+  };
+}
+
+function hasRecurringBeenRecordedByDate(item, date = new Date()) {
   if (!item || item.active === false) return false;
 
-  const key = monthKey(now);
+  const key = monthKey(date);
+  const cutoffIso = toLocalIso(date);
   const currency = normalizeCurrency(item.currency);
   const amount = Number(item.amount) || 0;
   const normalizedName = String(item.name || "").trim().toLowerCase();
 
   return state.entries.some((entry) => {
-    if (entry.type !== "expense" || !String(entry.date || "").startsWith(key)) return false;
+    const entryDate = String(entry.date || "");
+    if (entry.type !== "expense" || !entryDate.startsWith(key) || entryDate > cutoffIso) return false;
     if (normalizeCurrency(entry.currency) !== currency) return false;
     if (Math.abs((Number(entry.amount) || 0) - amount) > 0.01) return false;
 

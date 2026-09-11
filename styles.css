@@ -7625,6 +7625,9 @@ body.secondary-zone-open:not(.auth-pending):not(.auth-required):not(.secure-vaul
   width: min(68vw, 270px);
   height: min(68vw, 270px);
   position: relative;
+  --budget-expense-tone: #ee68ae;
+  --budget-savings-tone: #63d681;
+  --budget-fixed-tone: #2f5df5;
 }
 
 .budget-hero-ring svg {
@@ -7638,7 +7641,7 @@ body.secondary-zone-open:not(.auth-pending):not(.auth-required):not(.secure-vaul
 .budget-hero-ring-track,
 .budget-hero-ring-value {
   fill: none;
-  stroke-width: 13;
+  stroke-width: 7.5;
 }
 
 .budget-hero-ring-track {
@@ -7646,26 +7649,58 @@ body.secondary-zone-open:not(.auth-pending):not(.auth-required):not(.secure-vaul
 }
 
 .budget-hero-ring-value {
-  stroke: var(--safe-spend-green);
   stroke-linecap: round;
   stroke-dasharray: 0 100;
-  transition: stroke-dasharray 220ms ease;
+  transition: stroke-dasharray 220ms ease, opacity 180ms ease, stroke-width 180ms ease;
 }
 
-.budget-hero-ring > div {
+.budget-hero-ring-value.is-expense {
+  stroke: var(--budget-expense-tone);
+}
+
+.budget-hero-ring-value.is-savings {
+  stroke: var(--budget-savings-tone);
+}
+
+.budget-hero-ring-value.is-fixed {
+  stroke: var(--budget-fixed-tone);
+}
+
+.budget-hero-ring-value.is-unavailable {
+  opacity: .2;
+}
+
+.budget-hero-ring-value.is-active {
+  stroke-width: 8.5;
+  filter: drop-shadow(0 0 2px color-mix(in srgb, currentColor 25%, transparent));
+}
+
+.budget-hero-ring-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 11;
+  cursor: pointer;
+  pointer-events: stroke;
+}
+
+.budget-hero-ring-center {
   position: absolute;
   inset: 0;
   display: grid;
   place-content: center;
-  gap: 4px;
+  gap: 3px;
+  width: 38%;
+  height: 38%;
+  margin: auto;
   text-align: center;
+  pointer-events: none;
 }
 
 .budget-hero-ring strong {
   color: var(--home-text);
-  font-size: 50px;
+  font-size: clamp(32px, 10vw, 40px);
   font-weight: 650;
-  letter-spacing: -2.2px;
+  letter-spacing: -1.6px;
   line-height: 1;
 }
 
@@ -7673,6 +7708,70 @@ body.secondary-zone-open:not(.auth-pending):not(.auth-required):not(.secure-vaul
   color: var(--home-muted);
   font-size: 11px;
   font-weight: 650;
+}
+
+.budget-hero-ring small {
+  max-width: 100px;
+  overflow: hidden;
+  color: var(--home-subtext);
+  font-size: 8px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+}
+
+.budget-hero-legend {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.budget-hero-legend button {
+  min-width: 0;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 7px;
+  border: 0;
+  border-radius: 13px;
+  background: transparent;
+  color: var(--home-muted);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.budget-hero-legend button.is-active {
+  background: var(--home-card);
+  color: var(--home-text);
+}
+
+.budget-hero-legend i {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  border-radius: 50%;
+  background: var(--home-muted);
+}
+
+.budget-hero-legend i.is-expense {
+  background: #ee68ae;
+}
+
+.budget-hero-legend i.is-savings {
+  background: #63d681;
+}
+
+.budget-hero-legend i.is-fixed {
+  background: #2f5df5;
+}
+
+.budget-hero-legend button:focus-visible {
+  outline: 2px solid var(--safe-spend-green);
+  outline-offset: 1px;
 }
 
 .budget-hero-values {
@@ -7898,7 +7997,7 @@ body.budget-activity-open .add-entry-button {
   }
 
   .budget-hero-ring strong {
-    font-size: 43px;
+    font-size: 34px;
   }
 
   .budget-hero-values {

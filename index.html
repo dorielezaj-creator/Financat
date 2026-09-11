@@ -18,7 +18,7 @@
     <link rel="manifest" href="manifest.webmanifest?v=20260821-1" />
     <link rel="icon" href="icon.svg?v=20260820-1" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="icon.svg?v=20260820-1" />
-    <link rel="stylesheet" href="styles.css?v=20260910-minimal-day-select-1" />
+    <link rel="stylesheet" href="styles.css?v=20260911-finance-rings-1" />
   </head>
   <body class="auth-pending">
     <main class="app-shell">
@@ -482,16 +482,30 @@
 
           <div id="budgetDayStrip" class="budget-day-strip" role="list" aria-label="Zgjidh një ditë të kaluar"></div>
 
-          <article class="budget-activity-hero" aria-label="Buxheti i ditës së zgjedhur">
-            <div class="budget-hero-ring" role="img" aria-label="0% buxhet i mbetur">
+          <article class="budget-activity-hero" aria-label="Gjendja financiare deri në ditën e zgjedhur">
+            <div id="budgetHeroRing" class="budget-hero-ring" role="group" aria-label="Shpenzime, kursime dhe detyrime fikse">
               <svg viewBox="0 0 100 100" aria-hidden="true" focusable="false">
-                <circle class="budget-hero-ring-track" cx="50" cy="50" r="42" pathLength="100"></circle>
-                <circle id="budgetHeroRingValue" class="budget-hero-ring-value" cx="50" cy="50" r="42" pathLength="100"></circle>
+                <circle class="budget-hero-ring-track is-expense" cx="50" cy="50" r="44" pathLength="100"></circle>
+                <circle id="budgetHeroExpenseRing" class="budget-hero-ring-value is-expense" cx="50" cy="50" r="44" pathLength="100"></circle>
+                <circle class="budget-hero-ring-track is-savings" cx="50" cy="50" r="33" pathLength="100"></circle>
+                <circle id="budgetHeroSavingsRing" class="budget-hero-ring-value is-savings" cx="50" cy="50" r="33" pathLength="100"></circle>
+                <circle class="budget-hero-ring-track is-fixed" cx="50" cy="50" r="22" pathLength="100"></circle>
+                <circle id="budgetHeroFixedRing" class="budget-hero-ring-value is-fixed" cx="50" cy="50" r="22" pathLength="100"></circle>
+                <circle class="budget-hero-ring-hit" data-budget-ring-metric="expense" cx="50" cy="50" r="44"></circle>
+                <circle class="budget-hero-ring-hit" data-budget-ring-metric="savings" cx="50" cy="50" r="33"></circle>
+                <circle class="budget-hero-ring-hit" data-budget-ring-metric="fixed" cx="50" cy="50" r="22"></circle>
               </svg>
-              <div>
+              <div class="budget-hero-ring-center" aria-live="polite">
                 <strong id="budgetHeroPercent">0%</strong>
-                <span>buxhet i mbetur</span>
+                <span id="budgetHeroMetricLabel">Shpenzime</span>
+                <small id="budgetHeroMetricValue">0 / 0 L</small>
               </div>
+            </div>
+
+            <div id="budgetHeroLegend" class="budget-hero-legend" aria-label="Zgjidh treguesin financiar">
+              <button class="is-active" type="button" data-budget-metric="expense" aria-pressed="true"><i class="is-expense"></i>Shpenzime</button>
+              <button type="button" data-budget-metric="savings" aria-pressed="false"><i class="is-savings"></i>Kursime</button>
+              <button type="button" data-budget-metric="fixed" aria-pressed="false"><i class="is-fixed"></i>Fikse</button>
             </div>
 
             <div class="budget-hero-values">
@@ -1311,7 +1325,7 @@
       </div>
     </template>
 
-    <script src="app.js?v=20260910-minimal-day-select-1"></script>
+    <script src="app.js?v=20260911-finance-rings-1"></script>
     <script src="cloud-sync.js?v=20260907-auth-1"></script>
   </body>
 </html>
