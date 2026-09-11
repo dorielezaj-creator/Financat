@@ -7534,8 +7534,6 @@ body.secondary-zone-open:not(.auth-pending):not(.auth-required):not(.secure-vaul
 }
 
 .budget-day-button {
-  --day-ring-tone: var(--safe-spend-green);
-  --day-ring-center: var(--home-bg);
   width: 62px;
   min-width: 62px;
   height: 92px;
@@ -7566,39 +7564,53 @@ body.secondary-zone-open:not(.auth-pending):not(.auth-required):not(.secure-vaul
   line-height: 1;
 }
 
-.budget-day-ring {
+.budget-day-rings {
   width: 54px;
   height: 54px;
   flex: 0 0 54px;
   position: relative;
-  display: grid;
-  place-items: center;
+}
+
+.budget-day-ring {
+  --day-progress: 0%;
+  --day-tone: var(--home-muted);
+  --day-track-tone: color-mix(in srgb, var(--day-tone) 18%, transparent);
+  position: absolute;
   border-radius: 50%;
   background: conic-gradient(
     from 0deg,
-    var(--day-ring-tone) 0 var(--day-ring, 0%),
-    var(--home-track) var(--day-ring, 0%) 100%
+    var(--day-tone) 0 var(--day-progress),
+    var(--day-track-tone) var(--day-progress) 100%
   );
 }
 
 .budget-day-ring::after {
   content: "";
   position: absolute;
-  inset: 7px;
+  inset: 4px;
   border-radius: 50%;
-  background: var(--day-ring-center);
+  background: var(--home-bg);
 }
 
-.budget-day-button.is-over {
-  --day-ring-tone: #ee68ae;
+.budget-day-ring.is-expense {
+  --day-progress: var(--day-expense);
+  --day-tone: #ee68ae;
+  inset: 0;
 }
 
-.budget-day-button.is-empty {
-  --day-ring-tone: var(--home-bar);
+.budget-day-ring.is-savings {
+  --day-progress: var(--day-savings);
+  --day-tone: #63d681;
+  inset: 8px;
+}
+
+.budget-day-ring.is-fixed {
+  --day-progress: var(--day-fixed);
+  --day-tone: #2f5df5;
+  inset: 16px;
 }
 
 .budget-day-button.is-selected {
-  --day-ring-center: var(--home-bg);
   background: transparent;
   color: var(--home-muted);
 }
@@ -7648,6 +7660,18 @@ body.secondary-zone-open:not(.auth-pending):not(.auth-required):not(.secure-vaul
   stroke: var(--home-track);
 }
 
+.budget-hero-ring-track.is-expense {
+  stroke: color-mix(in srgb, var(--budget-expense-tone) 20%, transparent);
+}
+
+.budget-hero-ring-track.is-savings {
+  stroke: color-mix(in srgb, var(--budget-savings-tone) 20%, transparent);
+}
+
+.budget-hero-ring-track.is-fixed {
+  stroke: color-mix(in srgb, var(--budget-fixed-tone) 20%, transparent);
+}
+
 .budget-hero-ring-value {
   stroke-linecap: round;
   stroke-dasharray: 0 100;
@@ -7671,7 +7695,6 @@ body.secondary-zone-open:not(.auth-pending):not(.auth-required):not(.secure-vaul
 }
 
 .budget-hero-ring-value.is-active {
-  stroke-width: 8.5;
   filter: drop-shadow(0 0 2px color-mix(in srgb, currentColor 25%, transparent));
 }
 
@@ -7681,43 +7704,6 @@ body.secondary-zone-open:not(.auth-pending):not(.auth-required):not(.secure-vaul
   stroke-width: 11;
   cursor: pointer;
   pointer-events: stroke;
-}
-
-.budget-hero-ring-center {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-content: center;
-  gap: 3px;
-  width: 38%;
-  height: 38%;
-  margin: auto;
-  text-align: center;
-  pointer-events: none;
-}
-
-.budget-hero-ring strong {
-  color: var(--home-text);
-  font-size: clamp(32px, 10vw, 40px);
-  font-weight: 650;
-  letter-spacing: -1.6px;
-  line-height: 1;
-}
-
-.budget-hero-ring span {
-  color: var(--home-muted);
-  font-size: 11px;
-  font-weight: 650;
-}
-
-.budget-hero-ring small {
-  max-width: 100px;
-  overflow: hidden;
-  color: var(--home-subtext);
-  font-size: 8px;
-  font-weight: 600;
-  line-height: 1.2;
-  text-overflow: ellipsis;
 }
 
 .budget-hero-legend {
@@ -7994,10 +7980,6 @@ body.budget-activity-open .add-entry-button {
   .budget-hero-ring {
     width: 224px;
     height: 224px;
-  }
-
-  .budget-hero-ring strong {
-    font-size: 34px;
   }
 
   .budget-hero-values {

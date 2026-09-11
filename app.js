@@ -279,9 +279,6 @@ const els = {
   budgetHeroExpenseRing: document.querySelector("#budgetHeroExpenseRing"),
   budgetHeroSavingsRing: document.querySelector("#budgetHeroSavingsRing"),
   budgetHeroFixedRing: document.querySelector("#budgetHeroFixedRing"),
-  budgetHeroPercent: document.querySelector("#budgetHeroPercent"),
-  budgetHeroMetricLabel: document.querySelector("#budgetHeroMetricLabel"),
-  budgetHeroMetricValue: document.querySelector("#budgetHeroMetricValue"),
   budgetHeroLegend: document.querySelector("#budgetHeroLegend"),
   budgetHeroSafe: document.querySelector("#budgetHeroSafe"),
   budgetHeroSpent: document.querySelector("#budgetHeroSpent"),
@@ -1637,11 +1634,6 @@ function renderBudgetActivityRings(metrics, selectedMetric, selectedIso) {
     ring.classList.toggle("is-unavailable", !metric.available);
   });
 
-  const selected = metrics[selectedMetric];
-  setText(els.budgetHeroPercent, selected.available ? `${selected.percent}%` : "—");
-  setText(els.budgetHeroMetricLabel, selected.label);
-  setText(els.budgetHeroMetricValue, selected.value);
-
   els.budgetHeroLegend?.querySelectorAll("[data-budget-metric]").forEach((button) => {
     const active = button.dataset.budgetMetric === selectedMetric;
     button.classList.toggle("is-active", active);
@@ -1732,8 +1724,8 @@ function renderBudgetDayStrip(selectedIso) {
   const days = Array.from({ length: 42 }, (_, index) => addDays(end, index - 41));
 
   els.budgetDayStrip.innerHTML = days.map((date) => {
-    const snapshot = budgetActivitySnapshot(date, false);
-    const percentLeft = Math.round(snapshot.budget.remainingRatio * 100);
+    const snapshot = budgetActivitySnapshot(date);
+    const metrics = budgetActivityMetrics(snapshot);
     const dailyPlan = Math.max(snapshot.budget.dailySpendBudgetLek, 0);
     const overspent = dailyPlan > 0 && snapshot.budget.spentTodayLek > dailyPlan;
     const selected = snapshot.iso === selectedIso;
@@ -1743,11 +1735,15 @@ function renderBudgetDayStrip(selectedIso) {
       overspent ? "is-over" : "",
       snapshot.budget.monthlyBudgetLek <= 0 ? "is-empty" : "",
     ].filter(Boolean).join(" ");
-    const aria = `${formatDate(snapshot.iso)}, ${percentLeft}% buxhet i mbetur${overspent ? ", mbi buxhetin ditor" : ""}`;
+    const aria = `${formatDate(snapshot.iso)}, shpenzime ${metrics.expense.percent}%, kursime ${metrics.savings.percent}%, fikse ${metrics.fixed.percent}%${overspent ? ", mbi buxhetin ditor" : ""}`;
     return `
       <button class="${classes}" type="button" role="listitem" data-budget-day="${snapshot.iso}" aria-label="${escapeHtml(aria)}" aria-pressed="${selected}">
         <span class="budget-day-label">${weekdayLabels[date.getDay()]}</span>
-        <span class="budget-day-ring" style="--day-ring:${percentLeft}%" aria-hidden="true"></span>
+        <span class="budget-day-rings" style="--day-expense:${metrics.expense.percent}%;--day-savings:${metrics.savings.percent}%;--day-fixed:${metrics.fixed.percent}%" aria-hidden="true">
+          <i class="budget-day-ring is-expense"></i>
+          <i class="budget-day-ring is-savings"></i>
+          <i class="budget-day-ring is-fixed"></i>
+        </span>
       </button>
     `;
   }).join("");
